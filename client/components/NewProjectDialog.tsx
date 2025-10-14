@@ -405,18 +405,54 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
     const buildFromCdn = async () => {
       const URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
+      const normalizeRows = (data: any): any[] => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if ((data as any).Sheet1 && Array.isArray((data as any).Sheet1)) return (data as any).Sheet1;
+        if ((data as any).sheets && typeof (data as any).sheets === 'object') {
+          const first = Object.values((data as any).sheets)[0] as any[];
+          if (Array.isArray(first)) return first;
+        }
+        const keys = Object.keys(data || {});
+        if (keys.length === 1 && Array.isArray((data as any)[keys[0]])) return (data as any)[keys[0]];
+        return [];
+      };
       try {
         const res = await fetch(URL);
         const json = await res.json();
-        const rows = Array.isArray(json?.Sheet1) ? json.Sheet1 : Array.isArray(json) ? json : [];
-        const nodes: any[] = [];
-        const procSet = new Set<string>();
+        const rows = normalizeRows(json);
+        const processes = new Set<string>();
+        const tree: Record<string, any> = {};
         for (const row of rows) {
-          const proc = String(row['Process'] ?? row['process'] ?? '').trim();
-          if (!proc) continue; procSet.add(proc);
+          const process = String(row['Process'] ?? row['process'] ?? row['PROCESS'] ?? '').trim();
+          if (!process) continue;
+          processes.add(process);
+          let subprocess = String(row['Sub Process'] ?? row['SubProcess'] ?? row['subprocess'] ?? '').trim();
+          let activity = String(row['Activity'] ?? row['activity'] ?? row['ACTIVITY'] ?? '').trim();
+          const risk = String(row['Identification of Risk of Material Misstatement (What could go wrong?) Risk Description'] ?? row['Risk Description'] ?? row['Risk'] ?? row['risk'] ?? '').trim();
+          const control = String(row['Controls in Place'] ?? row['Control'] ?? row['Control Description'] ?? row['controls'] ?? '').trim();
+          if (!subprocess && activity) subprocess = 'General';
+          if (!activity && (risk || control)) activity = 'General';
+          if (!tree[process]) tree[process] = { name: process, subprocesses: {} };
+          if (!subprocess) continue;
+          if (!tree[process].subprocesses[subprocess]) tree[process].subprocesses[subprocess] = { name: subprocess, activities: {} };
+          if (activity) {
+            if (!tree[process].subprocesses[subprocess].activities[activity]) tree[process].subprocesses[subprocess].activities[activity] = { name: activity, risks: {} };
+            const activityNode = tree[process].subprocesses[subprocess].activities[activity];
+            if (risk) {
+              if (!activityNode.risks[risk]) activityNode.risks[risk] = { name: risk, controls: [] };
+              if (control) activityNode.risks[risk].controls.push(control);
+            } else if (control) {
+              const defaultRisk = 'General';
+              if (!activityNode.risks[defaultRisk]) activityNode.risks[defaultRisk] = { name: defaultRisk, controls: [] };
+              activityNode.risks[defaultRisk].controls.push(control);
+            }
+          }
         }
-        Array.from(procSet).forEach((name, idx) => nodes.push({ id: `p${idx}`, type: 'process', name }));
-        return buildFromNodes(nodes);
+        setFrameworkProcesses(Array.from(processes));
+        setFrameworkTree(tree);
+        try { localStorage.setItem('framework:tree', JSON.stringify(tree)); localStorage.setItem('framework:processes', JSON.stringify(Array.from(processes))); } catch {}
+        return tree;
       } catch {
         try {
           const cached = localStorage.getItem('framework:tree');
