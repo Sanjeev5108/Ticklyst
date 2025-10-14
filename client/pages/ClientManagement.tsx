@@ -217,6 +217,7 @@ const sectors = [
   'Textile', 'Automotive', 'Chemical', 'Construction', 'Education', 'Energy'
 ];
 const industryOptions = [...sectors];
+import IndustrySelect from '@/components/IndustrySelect';
 
 const unitOptions = [
   'Factory 1', 'Factory 2', 'Head Office', 'Branch Office', 'Warehouse',
