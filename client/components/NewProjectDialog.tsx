@@ -260,13 +260,25 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [newRisk, setNewRisk] = useState('');
   const [newControl, setNewControl] = useState('');
   const [frameworkTree, setFrameworkTree] = useState<Record<string, any>>({});
-  const [addInputs, setAddInputs] = useState<Record<string, string>>({});
+const [addInputs, setAddInputs] = useState<Record<string, string>>({});
 
-  type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
-  interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
+const frameworkProcessNames = React.useMemo(() => {
+  const names = Object.keys(frameworkTree || {});
+  return names.sort((a, b) => a.localeCompare(b));
+}, [frameworkTree]);
 
-  const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
-  const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
+const effectiveChecklistProcesses = React.useMemo(() => {
+  const selected = Array.isArray(formData.checklistTemplate) ? formData.checklistTemplate.filter(Boolean) : [];
+  if (selected.length) return Array.from(new Set(selected));
+  if (processesForClient.length) return Array.from(new Set(processesForClient.filter(Boolean)));
+  return frameworkProcessNames;
+}, [formData.checklistTemplate, processesForClient, frameworkProcessNames]);
+
+type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
+interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
+
+const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
+const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
 
   const buildSoaNodes = (procs: string[]): SoaNode[] => {
     const nodes: SoaNode[] = [];
@@ -284,14 +296,14 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
           nodes.push({ id: acId, type: 'activity', name: acName, parentId: spId, isExpanded: true });
           const risks = (acNode as any).risks || {};
           for (const [rkName, rkNode] of Object.entries<any>(risks)) {
-            const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
-            nodes.push({ id: rkId, type: 'risk', name: rkName, parentId: acId });
-            const ctrls = Array.isArray((rkNode as any).controls) ? (rkNode as any).controls : [];
-            ctrls.forEach((c: string, idx: number) => {
-              const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
-              nodes.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
-            });
-          }
+          const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
+          nodes.push({ id: rkId, type: 'risk', name: rkName, parentId: acId, isExpanded: true });
+          const ctrls = Array.isArray((rkNode as any).controls) ? (rkNode as any).controls : [];
+          ctrls.forEach((c: string, idx: number) => {
+            const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
+            nodes.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
+          });
+        }
         }
       }
     }
@@ -339,16 +351,16 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   useEffect(() => {
-    const procs = formData.checklistTemplate;
-    if (!Array.isArray(procs) || procs.length === 0) { setSoaNodes([]); setSoaApplicable({}); return; }
-    const nodes = buildSoaNodes(procs);
-    setSoaNodes(nodes);
-    setSoaApplicable(prev => {
-      const next: Record<string, boolean | null> = {};
-      nodes.forEach(n => { if (prev[n.id] !== undefined) next[n.id] = prev[n.id]!; });
-      return next;
-    });
-  }, [formData.checklistTemplate, frameworkTree]);
+  const procs = effectiveChecklistProcesses;
+  if (!Array.isArray(procs) || procs.length === 0) { setSoaNodes([]); setSoaApplicable({}); return; }
+  const nodes = buildSoaNodes(procs);
+  setSoaNodes(nodes);
+  setSoaApplicable(prev => {
+    const next: Record<string, boolean | null> = {};
+    nodes.forEach(n => { if (prev[n.id] !== undefined) next[n.id] = prev[n.id]!; });
+    return next;
+  });
+}, [effectiveChecklistProcesses, frameworkTree]);
 
   // Month view state for the two calendars in Timeline & Scheduling
   const [startViewMonth, setStartViewMonth] = useState<Date>(formData.startDate || new Date());
@@ -570,11 +582,11 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
-    const procs = formData.checklistTemplate;
-    if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
+  const procs = effectiveChecklistProcesses;
+  if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
 
-    const hasSelections = Object.values(soaApplicable).some(v => v === true);
-    const filterBySelections = (tree: Record<string, any>) => {
+  const hasSelections = Object.values(soaApplicable).some(v => v === true);
+  const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
       for (const proc of procs) {
         const procNode = tree[proc];
@@ -637,7 +649,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       }
       updateFormData('selectedChecklistTree', clone);
     }
-  }, [formData.checklistTemplate, frameworkTree, soaApplicable]);
+  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable]);
 
   // Auto-expand subprocesses for the selected process so activities are visible
   useEffect(() => {
@@ -725,16 +737,21 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   const ChecklistTemplatesMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
-    const [open, setOpen] = useState(false);
-    const display = value && value.length ? (value.length <= 2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : 'Select processes';
-    const toggle = (id: string) => {
-      let next = Array.isArray(value) ? [...value] : [];
-      const has = next.includes(id);
-      if (has) next = next.filter(x => x !== id); else next.push(id);
-      onChange(next);
-      setOpen(true);
-    };
-    return (
+  const [open, setOpen] = useState(false);
+  const display = value && value.length ? (value.length <= 2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : 'Select processes';
+  const options = React.useMemo(() => {
+    const source = processesForClient.length ? processesForClient : frameworkProcessNames;
+    const unique = Array.from(new Set((source || []).filter(Boolean)));
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [processesForClient, frameworkProcessNames]);
+  const toggle = (id: string) => {
+    let next = Array.isArray(value) ? [...value] : [];
+    const has = next.includes(id);
+    if (has) next = next.filter(x => x !== id); else next.push(id);
+    onChange(next);
+    setOpen(true);
+  };
+  return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-full justify-between">
@@ -748,7 +765,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <CommandEmpty>No process found.</CommandEmpty>
             <CommandList className="max-h-72 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
               <CommandGroup heading="Processes">
-                {processesForClient.map(proc => (
+                {options.map(proc => (
                   <CommandItem
                     key={proc}
                     value={proc}
