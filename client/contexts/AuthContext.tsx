@@ -109,7 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: u.role,
         email: u.email,
         department: u.department,
-        isActive: u.isActive
+        isActive: u.isActive,
+        allowedModules: Array.isArray(u.allowedModules) ? u.allowedModules : undefined
       };
       setUser(userObj);
       localStorage.setItem('currentUser', JSON.stringify(userObj));
