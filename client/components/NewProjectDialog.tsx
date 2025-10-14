@@ -581,11 +581,11 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
-  const procs = effectiveChecklistProcesses;
-  if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
+    const procs = effectiveChecklistProcesses;
+    if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
 
-  const hasSelections = Object.values(soaApplicable).some(v => v === true);
-  const filterBySelections = (tree: Record<string, any>) => {
+    const hasSelections = Object.values(soaApplicable).some(v => v === true);
+    const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
       for (const proc of procs) {
         const procNode = tree[proc];
