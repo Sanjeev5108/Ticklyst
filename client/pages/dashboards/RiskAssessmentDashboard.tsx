@@ -13,6 +13,7 @@ import { RiskAssessmentConfig, RiskCalcMode, ResidualFormula, RiskScoringModel, 
 import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { Info } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RiskAssessmentDashboard() {
   const { user } = useAuth();
@@ -1355,7 +1356,7 @@ export default function RiskAssessmentDashboard() {
               <tbody>
                 <tr><td>1</td><td>Insignificant</td><td>&lt;0.5% of revenue</td><td>Minimal disruption (&lt;1 day)</td><td>No legal issues</td><td>No stakeholder concern</td></tr>
                 <tr><td>2</td><td>Minor</td><td>0.5–2% of revenue</td><td>Short-term disruption (&lt;1 week)</td><td>Minor breach, no fine</td><td>Localized concern</td></tr>
-                <tr><td>3</td><td>Moderate</td><td>2–5% of revenue</td><td>Medium disruption (1–4 weeks)</td><td>Regulatory warning/fine</td><td>Negative local press</td></tr>
+                <tr><td>3</td><td>Moderate</td><td>2–5% of revenue</td><td>Medium disruption (1���4 weeks)</td><td>Regulatory warning/fine</td><td>Negative local press</td></tr>
                 <tr><td>4</td><td>Major</td><td>5–10% of revenue</td><td>Long-term disruption (1–3 months)</td><td>Major fine/sanction</td><td>National media coverage</td></tr>
                 <tr><td>5</td><td>Severe / Catastrophic</td><td>&gt;10% of revenue</td><td>Shutdown (&gt;3 months)</td><td>License revoked / litigation</td><td>Global reputation damage</td></tr>
               </tbody>
