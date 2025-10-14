@@ -309,7 +309,7 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
     toggle(name);
     setNewDept('');
   };
-  const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e:any) => { e.stopPropagation(); };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
