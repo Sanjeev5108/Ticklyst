@@ -115,6 +115,18 @@ const reportingFrequencies = ['Weekly', 'Fortnightly', 'Monthly', 'Quarterly'];
 
 export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, onProjectEdit, mode = 'new', initialData = null }: NewProjectDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const apiEnabled = React.useMemo(() => {
+    try {
+      const forced = localStorage.getItem('api:enabled');
+      if (forced === 'true') return true;
+      if (forced === 'false') return false;
+    } catch {}
+    const h = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (h === 'localhost' || h === '127.0.0.1') return true;
+    if (h.endsWith('.netlify.app')) return true;
+    if (h.endsWith('.fly.dev')) return false;
+    return true;
+  }, []);
   const generateProjectCode = (date: Date | null) => {
     const d = date || new Date();
     const month = d.getMonth();
@@ -168,6 +180,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         if (mapped.length) setClientOptions(mapped);
       }
     } catch {}
+    if (!apiEnabled) return;
     (async () => {
       try {
         const res = await fetch('/api/clients');
@@ -178,7 +191,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         try { localStorage.setItem('clients', JSON.stringify(data)); } catch {}
       } catch {}
     })();
-  }, []);
+  }, [apiEnabled]);
 
   const [divisionOptions, setDivisionOptions] = useState<string[]>(divisions);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -194,6 +207,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         if (mapped.length) setEmployees(mapped);
       }
     } catch {}
+    if (!apiEnabled) return;
     // Refresh from API
     (async () => {
       try {
@@ -206,7 +220,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         try { localStorage.setItem('employees', JSON.stringify(mapped)); } catch {}
       } catch {}
     })();
-  }, []);
+  }, [apiEnabled]);
 
   // Prefill on edit
   useEffect(() => {
