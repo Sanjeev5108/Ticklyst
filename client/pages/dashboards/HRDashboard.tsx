@@ -106,10 +106,23 @@ export default function HRDashboard() {
   };
 
   const handleUpdateEmployee = async () => {
-    // Update not yet implemented server-side - fallback to reload
-    setIsEditEmployeeOpen(false);
-    setEditingId(null);
-    await loadEmployees();
+    if (!editingId) { setIsEditEmployeeOpen(false); return; }
+    try {
+      const payload: any = { name: editEmployee.name, email: editEmployee.email, role: editEmployee.role, division: editEmployee.division };
+      if (editEmployee.password && editEmployee.password.length >= 8) payload.password = editEmployee.password;
+      const res = await fetch(`/api/employees/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        let msg = 'failed to update';
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
+      setIsEditEmployeeOpen(false);
+      setEditingId(null);
+      setEditEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
+      await loadEmployees();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleRemoveEmployee = async (id: string) => {
