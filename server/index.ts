@@ -17,6 +17,7 @@ import {
   createProject,
   addComment
 } from "./routes/auditing";
+import { getEmployees, createEmployee, deleteAllEmployees } from "./routes/employees";
 
 export function createServer() {
   const app = express();
@@ -33,6 +34,11 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Employees (persisted to Postgres)
+  app.get('/api/employees', getEmployees);
+  app.post('/api/employees', createEmployee);
+  app.delete('/api/employees', deleteAllEmployees);
 
   // Auditing System API Routes
 
