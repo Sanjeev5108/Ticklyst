@@ -736,21 +736,21 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   const ChecklistTemplatesMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
-  const [open, setOpen] = useState(false);
-  const display = value && value.length ? (value.length <= 2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : 'Select processes';
-  const options = React.useMemo(() => {
-    const source = processesForClient.length ? processesForClient : frameworkProcessNames;
-    const unique = Array.from(new Set((source || []).filter(Boolean)));
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [processesForClient, frameworkProcessNames]);
-  const toggle = (id: string) => {
-    let next = Array.isArray(value) ? [...value] : [];
-    const has = next.includes(id);
-    if (has) next = next.filter(x => x !== id); else next.push(id);
-    onChange(next);
-    setOpen(true);
-  };
-  return (
+    const [open, setOpen] = useState(false);
+    const display = value && value.length ? (value.length <= 2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : 'Select processes';
+    const options = React.useMemo(() => {
+      const source = processesForClient.length ? processesForClient : frameworkProcessNames;
+      const unique = Array.from(new Set((source || []).filter(Boolean)));
+      return unique.sort((a, b) => a.localeCompare(b));
+    }, [processesForClient, frameworkProcessNames]);
+    const toggle = (id: string) => {
+      let next = Array.isArray(value) ? [...value] : [];
+      const has = next.includes(id);
+      if (has) next = next.filter(x => x !== id); else next.push(id);
+      onChange(next);
+      setOpen(true);
+    };
+    return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-full justify-between">
