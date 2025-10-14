@@ -350,16 +350,16 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   useEffect(() => {
-  const procs = effectiveChecklistProcesses;
-  if (!Array.isArray(procs) || procs.length === 0) { setSoaNodes([]); setSoaApplicable({}); return; }
-  const nodes = buildSoaNodes(procs);
-  setSoaNodes(nodes);
-  setSoaApplicable(prev => {
-    const next: Record<string, boolean | null> = {};
-    nodes.forEach(n => { if (prev[n.id] !== undefined) next[n.id] = prev[n.id]!; });
-    return next;
-  });
-}, [effectiveChecklistProcesses, frameworkTree]);
+    const procs = effectiveChecklistProcesses;
+    if (!Array.isArray(procs) || procs.length === 0) { setSoaNodes([]); setSoaApplicable({}); return; }
+    const nodes = buildSoaNodes(procs);
+    setSoaNodes(nodes);
+    setSoaApplicable(prev => {
+      const next: Record<string, boolean | null> = {};
+      nodes.forEach(n => { if (prev[n.id] !== undefined) next[n.id] = prev[n.id]!; });
+      return next;
+    });
+  }, [effectiveChecklistProcesses, frameworkTree]);
 
   // Month view state for the two calendars in Timeline & Scheduling
   const [startViewMonth, setStartViewMonth] = useState<Date>(formData.startDate || new Date());
