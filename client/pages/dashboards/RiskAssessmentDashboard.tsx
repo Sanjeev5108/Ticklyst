@@ -183,14 +183,14 @@ export default function RiskAssessmentDashboard() {
       const overall = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
       const overallNext = { ...overall, id: 'assignment', scope: { ...overall.scope, configType: 'assignment', assignmentMap: (cfg.scope as any).assignmentMap || {} } } as RiskAssessmentConfig;
       RiskConfigStore.upsert(overallNext);
-      alert('Assignment-type configuration saved');
+      toast({ title: 'Saved successfully' });
       return;
     }
 
     // otherwise persist the assignment-level mapping
     const id = scopeType === 'global' ? 'global' : 'assignment';
     RiskConfigStore.upsert({ ...cfg, id, scope: { ...cfg.scope, configType: scopeType } });
-    alert('Settings saved');
+    toast({ title: 'Saved successfully' });
   };
 
   const mode = cfg.riskScore.mode as RiskCalcMode;
