@@ -20,7 +20,7 @@ export const getSetting: RequestHandler = async (req, res) => {
   const { key } = req.params;
   try {
     const q = await pool.query('SELECT value FROM app_settings WHERE key=$1', [key]);
-    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    if (!q.rows.length) return res.json({});
     res.json(q.rows[0].value);
   } catch (e:any) {
     console.error(e);
