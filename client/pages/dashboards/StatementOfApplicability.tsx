@@ -460,15 +460,9 @@ export default function StatementOfApplicability() {
                           nodeApplicability[id] = det.applicable;
                         }
                       }
-                      await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                          clientId: selectedClientId,
-                          industry: selectedClient?.industry || '',
-                          processes: selectedProcessesClient,
-                          nodeApplicability,
-                          updatedAt: new Date().toISOString()
-                        })
-                      });
+                      const payloadClient = { clientId: selectedClientId, industry: selectedClient?.industry || '', processes: selectedProcessesClient, nodeApplicability, updatedAt: new Date().toISOString() };
+                      try { await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadClient) }); } catch {}
+                      LS.set(`soa:client:${selectedClientId}`, payloadClient);
                       toast({ title: 'Saved successfully' });
                     } catch {
                       toast({ title: 'Save failed' });
