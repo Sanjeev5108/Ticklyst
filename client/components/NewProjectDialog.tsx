@@ -252,8 +252,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     return () => unsub();
   }, []);
 
-  const [frameworkProcesses, setFrameworkProcesses] = useState<string[]>([]);
-  const [processesForClient, setProcessesForClient] = useState<string[]>([]);
+    const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
   const [processIdToName, setProcessIdToName] = useState<Record<string,string>>({});
   const [newActivity, setNewActivity] = useState('');
