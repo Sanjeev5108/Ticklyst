@@ -892,13 +892,13 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <h3 className="text-lg font-semibold">Team Assignment</h3>
             
             <div>
-              <Label>Assign Division Head (DH)</Label>
-              <EmployeesMultiSelect roleFilter="Division Head" value={formData.divisionHeads} onChange={(v) => updateFormData('divisionHeads', v)} placeholder="Select DH(s) responsible" />
+              <Label>Assign Partner(s)</Label>
+              <EmployeesMultiSelect roleFilter="Division Partner" value={formData.partners} onChange={(v) => updateFormData('partners', v)} placeholder="Select Partner(s) responsible" />
             </div>
 
             <div>
-              <Label>Assign Partner(s)</Label>
-              <EmployeesMultiSelect roleFilter="Division Partner" value={formData.partners} onChange={(v) => updateFormData('partners', v)} placeholder="Select Partner(s) responsible" />
+              <Label>Assign Division Head (DH)</Label>
+              <EmployeesMultiSelect roleFilter="Division Head" value={formData.divisionHeads} onChange={(v) => updateFormData('divisionHeads', v)} placeholder="Select DH(s) responsible" />
             </div>
 
             <div>
