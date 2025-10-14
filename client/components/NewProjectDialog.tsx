@@ -273,6 +273,14 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     return [] as string[];
   }, [formData.checklistTemplate, processesForClient]);
 
+  const findMatchingKey = React.useCallback((collection: Record<string, any>, name: string) => {
+    if (!collection || !name) return null;
+    if (collection[name]) return name;
+    const normalized = name.trim().toLowerCase();
+    const match = Object.keys(collection).find(key => key.trim().toLowerCase() === normalized);
+    return match || null;
+  }, []);
+
   type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
   interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
 
