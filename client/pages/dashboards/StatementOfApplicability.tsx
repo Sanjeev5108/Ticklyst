@@ -206,14 +206,16 @@ export default function StatementOfApplicability() {
     (async () => {
       try {
         const res = await fetch('/api/framework/tree');
-        if (!res.ok) return;
+        if (!res.ok) throw new Error('bad');
         const data = await res.json();
         const nodes = Array.isArray(data?.nodes) ? data.nodes as any[] : [];
         if (!nodes.length) return;
         const mapped: TreeNode[] = nodes.map((n: any) => ({ id: n.id, type: n.type, name: n.name, parentId: n.parentId, isExpanded: true }));
         setTree(mapped);
         setProcessOptions(mapped.filter(n => n.type === 'process').map(n => ({ id: n.id, name: n.name })));
-      } catch {}
+      } catch {
+        toast({ title: 'Could not load framework tree' });
+      }
     })();
   }, []);
 
