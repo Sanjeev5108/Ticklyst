@@ -249,7 +249,7 @@ const UnitsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: 
     toggle(name);
     setNewUnit('');
   };
-  const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e:any) => { e.stopPropagation(); };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
