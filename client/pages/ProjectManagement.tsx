@@ -233,7 +233,7 @@ const getCategoryColor = (category: string) => {
 
 export default function ProjectManagement() {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
