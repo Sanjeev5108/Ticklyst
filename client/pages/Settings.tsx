@@ -186,7 +186,7 @@ function RoleAccessEditor() {
     localStorage.setItem(USER_KEY, JSON.stringify(next));
   };
 
-  const toggleModuleTarget = (moduleId: string) => {
+  const toggleModuleTarget = async (moduleId: string) => {
     if (selectedUser && selectedUser !== 'none') {
       const uid = selectedUser;
       const next = { ...(userMapState || {}) };
