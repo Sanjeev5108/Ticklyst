@@ -140,9 +140,12 @@ export default function ModularDashboard() {
   const availableModules = modules.filter(module => {
     const role = user?.role || '';
     if (!role) return false;
+    const allowedFromUser = user?.allowedModules;
+    if (allowedFromUser && allowedFromUser.length) {
+      return allowedFromUser.includes(module.id);
+    }
     const allowed = roleModuleMap[role];
     if (!allowed) {
-      // fallback to static roles defined on module
       return module.roles.includes(role);
     }
     return allowed.includes(module.id);
