@@ -1,4 +1,27 @@
 import { RequestHandler } from "express";
+import pg from "pg";
+const { Pool } = pg;
+
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+
+async function ensure() {
+  if (!connectionString) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      industry TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  if (process.env.CLEAR_CLIENTS_ON_BOOT === 'true') {
+    try { await pool.query('TRUNCATE TABLE clients'); } catch {}
+  }
+}
+ensure().catch(e => console.error('ensure clients failed', e));
 
 // Interfaces for the auditing system
 export interface Industry {
@@ -118,18 +141,7 @@ let checklistQuestions: ChecklistQuestion[] = [
   }
 ];
 
-let clients: Client[] = [
-  {
-    id: "1",
-    name: "Bull Machines India Pvt. LTD",
-    industry: "Manufacturing",
-    contactPerson: "John Doe",
-    email: "john@bullmachines.com",
-    phone: "+91-9876543210",
-    address: "Chennai, India",
-    createdAt: "2024-01-01"
-  }
-];
+let clients: Client[] = [];
 
 let projects: Project[] = [];
 
@@ -227,24 +239,46 @@ export const createChecklistQuestion: RequestHandler = (req, res) => {
 };
 
 // Clients
-export const getClients: RequestHandler = (req, res) => {
-  res.json(clients);
+export const getClients: RequestHandler = async (_req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  try {
+    const q = await pool.query('SELECT id, name, industry, details, created_at FROM clients ORDER BY created_at DESC');
+    const rows = q.rows.map(r => ({ id: r.id, name: r.name, industry: r.industry, ...(r.details || {}), createdAt: r.created_at }));
+    res.json(rows);
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
 };
 
-export const createClient: RequestHandler = (req, res) => {
-  const { name, industry, contactPerson, email, phone, address } = req.body;
-  const newClient: Client = {
-    id: Date.now().toString(),
-    name,
-    industry,
-    contactPerson,
-    email,
-    phone,
-    address,
-    createdAt: new Date().toISOString()
-  };
-  clients.push(newClient);
-  res.status(201).json(newClient);
+export const createClient: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const { name, industry, details } = req.body || {};
+  if (!name || !industry) return res.status(400).json({ error: 'missing_fields', required: ['name','industry'] });
+  const id = `CLT-${Date.now()}`;
+  const det = typeof details === 'object' && details ? details : (() => {
+    const copy = { ...(req.body || {}) } as any;
+    delete copy.name; delete copy.industry; delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+    return copy;
+  })();
+  try {
+    await pool.query('INSERT INTO clients(id, name, industry, details, created_at, updated_at) VALUES ($1,$2,$3,$4,now(),now())', [id, name, industry, det]);
+    res.status(201).json({ id, name, industry, ...det, createdAt: new Date().toISOString() });
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+export const deleteAllClients: RequestHandler = async (_req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  try {
+    await pool.query('TRUNCATE TABLE clients');
+    res.status(204).send();
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
 };
 
 // Projects
