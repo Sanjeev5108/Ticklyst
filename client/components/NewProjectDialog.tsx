@@ -564,7 +564,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <CommandEmpty>No member found.</CommandEmpty>
             <CommandList className="max-h-60 overflow-y-auto">
               <CommandGroup heading="Team Members">
-                {employees.filter(emp => (emp.role || '').toLowerCase() === 'team member').map(emp => (
+                {employees.map(emp => (
                   <CommandItem key={emp.id} value={emp.name} onSelect={() => toggle(emp.name)}>
                     <Checkbox className="mr-2" checked={value?.includes(emp.name)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
                   </CommandItem>
@@ -624,7 +624,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       onChange(next);
     };
     const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
-    const options = employees.filter(emp => (emp.role || '').toLowerCase() === roleFilter.toLowerCase());
+    const options = employees;
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
