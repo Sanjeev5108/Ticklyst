@@ -17,13 +17,25 @@ export const login: RequestHandler = async (req, res) => {
     if (!u.is_active) return res.status(403).json({ error: 'inactive_user' });
     const ok = u.password_hash ? await bcrypt.compare(password, u.password_hash) : false;
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+    // fetch role/user module access from settings
+    let allowedModules: string[] = [];
+    try {
+      const roleMapRes = await pool.query("SELECT value FROM app_settings WHERE key='roleModuleMap'");
+      const userMapRes = await pool.query("SELECT value FROM app_settings WHERE key='userModuleMap'");
+      const roleMap = roleMapRes.rows[0]?.value || {};
+      const userMap = userMapRes.rows[0]?.value || {};
+      if (userMap && userMap[u.id] && Array.isArray(userMap[u.id])) allowedModules = userMap[u.id];
+      else if (roleMap && roleMap[u.role] && Array.isArray(roleMap[u.role])) allowedModules = roleMap[u.role];
+    } catch {}
+
     const user = {
       id: u.id,
       username: u.name,
       role: u.role,
       email: u.email,
       department: u.division,
-      isActive: u.is_active
+      isActive: u.is_active,
+      allowedModules
     };
     res.json(user);
   } catch (e:any) {
