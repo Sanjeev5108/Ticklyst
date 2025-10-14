@@ -57,7 +57,7 @@ export const getEmployees: RequestHandler = async (_req, res) => {
 export const createEmployee: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
   const { name, email, role, division, password } = req.body;
-  if (!name || !email) return res.status(400).json({ error: 'name_and_email_required' });
+  if (!name || !email || !role) return res.status(400).json({ error: 'missing_fields' });
   try {
     const id = (globalThis as any).crypto?.randomUUID?.() || Date.now().toString();
     const createdAt = new Date().toISOString();
@@ -107,6 +107,7 @@ export const updateEmployee: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
   const { id } = req.params;
   const { name, email, role, division, password } = req.body || {};
+  if (!name || !email || !role || !password) return res.status(400).json({ error: 'missing_fields' });
   const sets: string[] = [];
   const values: any[] = [];
   let idx = 1;
