@@ -266,7 +266,7 @@ const UnitsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: 
             <CommandGroup heading="Units">
               {options.map(opt => (
                 <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
-                  <Checkbox className="mr-2" checked={value?.includes(opt)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
                 </CommandItem>
               ))}
             </CommandGroup>
