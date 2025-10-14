@@ -359,24 +359,17 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const toggleExpanded = (key: string) => setExpandedItems(prev => ({ ...prev, [key]: !prev[key] }));
 
   const fetchAndBuildFramework = async () => {
-    try {
-      const res = await fetch('/api/framework/tree');
-      if (!res.ok) throw new Error('bad');
-      const data = await res.json();
-      const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
+    const buildFromNodes = (nodes: any[]) => {
       const byId: Record<string, any> = {};
       nodes.forEach((n:any) => { byId[n.id] = n; });
-
       const processes = new Set<string>();
       const tree: Record<string, any> = {};
-
       const climb = (id: string) => {
         const chain: any[] = [];
         let cur = byId[id];
         while (cur) { chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : undefined; }
-        return chain; // node -> ... -> process
+        return chain;
       };
-
       for (const n of nodes) {
         if (n.type === 'process') {
           processes.add(n.name);
@@ -404,13 +397,47 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
           }
         }
       }
-
       setFrameworkProcesses(Array.from(processes));
       setFrameworkTree(tree);
+      try { localStorage.setItem('framework:tree', JSON.stringify(tree)); localStorage.setItem('framework:processes', JSON.stringify(Array.from(processes))); } catch {}
       return tree;
-    } catch (err) {
-      console.error('Failed to fetch framework', err);
-      return {};
+    };
+
+    const buildFromCdn = async () => {
+      const URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
+      try {
+        const res = await fetch(URL);
+        const json = await res.json();
+        const rows = Array.isArray(json?.Sheet1) ? json.Sheet1 : Array.isArray(json) ? json : [];
+        const nodes: any[] = [];
+        const procSet = new Set<string>();
+        for (const row of rows) {
+          const proc = String(row['Process'] ?? row['process'] ?? '').trim();
+          if (!proc) continue; procSet.add(proc);
+        }
+        Array.from(procSet).forEach((name, idx) => nodes.push({ id: `p${idx}`, type: 'process', name }));
+        return buildFromNodes(nodes);
+      } catch {
+        try {
+          const cached = localStorage.getItem('framework:tree');
+          if (cached) setFrameworkTree(JSON.parse(cached));
+        } catch {}
+        return {};
+      }
+    };
+
+    try {
+      if (apiEnabled) {
+        const res = await fetch('/api/framework/tree');
+        if (res.ok) {
+          const data = await res.json();
+          const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
+          return buildFromNodes(nodes);
+        }
+      }
+      return await buildFromCdn();
+    } catch {
+      return await buildFromCdn();
     }
   };
 
@@ -423,22 +450,25 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/framework/tree');
-        if (!res.ok) return;
-        const data = await res.json();
-        const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
-        const map: Record<string,string> = {};
-        nodes.filter(n => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
-        setProcessIdToName(map);
-        try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
-      } catch {
-        try {
-          const cached = localStorage.getItem('framework:processIdToName');
-          if (cached) setProcessIdToName(JSON.parse(cached));
-        } catch {}
-      }
+        if (apiEnabled) {
+          const res = await fetch('/api/framework/tree');
+          if (res.ok) {
+            const data = await res.json();
+            const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
+            const map: Record<string,string> = {};
+            nodes.filter(n => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
+            setProcessIdToName(map);
+            try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
+            return;
+          }
+        }
+      } catch {}
+      try {
+        const cached = localStorage.getItem('framework:processIdToName');
+        if (cached) setProcessIdToName(JSON.parse(cached));
+      } catch {}
     })();
-  }, []);
+  }, [apiEnabled]);
 
   useEffect(() => {
     const clientName = formData.clientName;
@@ -467,7 +497,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
     (async () => {
       try {
-        if (clientId) {
+        if (apiEnabled && clientId) {
           const key = encodeURIComponent(`soa:client:${clientId}`);
           const res = await fetch(`/api/settings/${key}`);
           if (res.ok) {
@@ -482,7 +512,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       try {
         const key = 'soa-client-mapping';
         let map: Record<string, string[]> | null = null;
-        try { const res = await fetch(`/api/settings/${key}`); if (res.ok) map = await res.json(); } catch {}
+        if (apiEnabled) { try { const res = await fetch(`/api/settings/${key}`); if (res.ok) map = await res.json(); } catch {} }
         if (!map) {
           try { map = JSON.parse(localStorage.getItem(key) || 'null'); } catch { map = null; }
         }
