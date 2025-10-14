@@ -155,7 +155,8 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
     onChange(next);
   };
   const stop = (e: any) => {
-    e.preventDefault();
+    // Stop bubbling so the parent CommandItem doesn't handle the click,
+    // but allow the checkbox's default behavior to toggle.
     e.stopPropagation();
   };
   return (
@@ -173,13 +174,13 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
           <CommandList className="max-h-60 overflow-y-auto">
             <CommandGroup heading="Options">
               <CommandItem value={UNASSIGNED_DEPT} onSelect={() => toggle(UNASSIGNED_DEPT)}>
-                <Checkbox className="mr-2" checked={value?.includes(UNASSIGNED_DEPT)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(UNASSIGNED_DEPT)} /> Unassigned
+                <Checkbox className="mr-2" checked={value?.includes(UNASSIGNED_DEPT)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(UNASSIGNED_DEPT)} /> Unassigned
               </CommandItem>
             </CommandGroup>
             <CommandGroup heading="Departments">
               {options.map(dep => (
                 <CommandItem key={dep} value={dep} onSelect={() => toggle(dep)}>
-                  <Checkbox className="mr-2" checked={value?.includes(dep)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(dep)} /> {dep}
+                  <Checkbox className="mr-2" checked={value?.includes(dep)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(dep)} /> {dep}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -949,7 +950,16 @@ export default function FrameworkDashboard() {
               const inPopover = !!orig && (orig.closest('[data-popover-content]'));
               const path: any[] = (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
               const inPopoverViaPath = Array.isArray(path) && path.some((n: any) => n?.nodeType === 1 && (n as Element).hasAttribute?.('data-popover-content'));
-              if (inPopover || inPopoverViaPath) return;
+              const cx = evt.detail?.originalEvent?.clientX;
+              const cy = evt.detail?.originalEvent?.clientY;
+              let inPopoverViaRect = false;
+              if (typeof cx === 'number' && typeof cy === 'number') {
+                document.querySelectorAll('[data-popover-content]').forEach((el) => {
+                  const r = (el as Element).getBoundingClientRect();
+                  if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) inPopoverViaRect = true;
+                });
+              }
+              if (inPopover || inPopoverViaPath || inPopoverViaRect) return;
               e.preventDefault();
             }}
             onPointerDownOutside={(e) => {
@@ -958,7 +968,16 @@ export default function FrameworkDashboard() {
               const inPopover = !!orig && (orig.closest('[data-popover-content]'));
               const path: any[] = (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
               const inPopoverViaPath = Array.isArray(path) && path.some((n: any) => n?.nodeType === 1 && (n as Element).hasAttribute?.('data-popover-content'));
-              if (inPopover || inPopoverViaPath) return;
+              const cx = evt.detail?.originalEvent?.clientX;
+              const cy = evt.detail?.originalEvent?.clientY;
+              let inPopoverViaRect = false;
+              if (typeof cx === 'number' && typeof cy === 'number') {
+                document.querySelectorAll('[data-popover-content]').forEach((el) => {
+                  const r = (el as Element).getBoundingClientRect();
+                  if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) inPopoverViaRect = true;
+                });
+              }
+              if (inPopover || inPopoverViaPath || inPopoverViaRect) return;
               e.preventDefault();
             }}
             onFocusOutside={(e) => {
