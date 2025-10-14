@@ -349,7 +349,7 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
 };
 
 export default function ClientManagement() {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -425,9 +425,40 @@ export default function ClientManagement() {
     return matchesSearch && matchesSector;
   });
 
-  const handleAddClient = () => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: Client[] = (data || []).map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            industry: r.industry,
+            sector: r.sector || r.industry,
+            location: r.location || `${r.city || ''}${r.city ? ', ' : ''}${r.state || ''}`,
+            city: r.city || '',
+            state: r.state || '',
+            pincode: r.pincode || '',
+            street1: r.street1 || '',
+            street2: r.street2 || '',
+            website: r.website || '',
+            logo: r.logo || '',
+            contactPersons: r.contactPersons || [],
+            contactPerson: r.contactPerson || { name: '', designation: '', email: '', mobile: '' },
+            auditUniverse: r.auditUniverse || { units: [], departments: [], additionalDepartments: {} },
+            stats: r.stats || { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
+            createdAt: r.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
+          }));
+          setClients(mapped);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const handleAddClient = async () => {
     const firstContactName = (newClient.contactPersons && newClient.contactPersons[0] && newClient.contactPersons[0].name) || '';
-    if (!newClient.name || !firstContactName) return;
+    if (!newClient.name || !newClient.industry) return;
 
     // Build auditUniverse from auditSections
     const sections = auditSections || [];
@@ -435,32 +466,56 @@ export default function ClientManagement() {
     const departments = Array.from(new Set(sections.flatMap(s => s.departments || [])));
     const additionalDepartments: { [unit: string]: string[] } = {};
 
-    const client: Client = {
-      id: Date.now().toString(),
-      name: newClient.name || '',
-      sector: newClient.sector || '',
-      industry: newClient.industry || '',
-      location: `${newClient.city || ''}, India`,
-      city: newClient.city || '',
-      state: newClient.state || '',
-      pincode: newClient.pincode || '',
-      street1: newClient.street1,
-      street2: newClient.street2,
-      website: newClient.website,
-      logo: newClient.logo,
-      contactPersons: newClient.contactPersons || [{ name: '', designation: '', email: '', mobile: '' }],
-      contactPerson: (newClient.contactPersons && newClient.contactPersons[0]) || { name: '', designation: '', email: '', mobile: '' },
-      auditUniverse: {
-        units,
-        departments,
-        additionalDepartments,
-        sections: sections.map(s => ({ unit: s.unit, departments: s.departments }))
-      },
-      stats: { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+    const payload = {
+      name: newClient.name,
+      industry: newClient.industry,
+      details: {
+        sector: newClient.sector || newClient.industry,
+        location: `${newClient.city || ''}${newClient.city ? ', ' : ''}${newClient.state || ''}`,
+        city: newClient.city || '',
+        state: newClient.state || '',
+        pincode: newClient.pincode || '',
+        street1: newClient.street1,
+        street2: newClient.street2,
+        website: newClient.website,
+        logo: newClient.logo,
+        contactPersons: newClient.contactPersons || [{ name: '', designation: '', email: '', mobile: '' }],
+        contactPerson: (newClient.contactPersons && newClient.contactPersons[0]) || { name: '', designation: '', email: '', mobile: '' },
+        auditUniverse: {
+          units,
+          departments,
+          additionalDepartments,
+          sections: sections.map(s => ({ unit: s.unit, departments: s.departments }))
+        },
+        stats: { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
+      }
+    } as any;
 
-    setClients([...clients, client]);
+    try {
+      const res = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (res.ok) {
+        const created = await res.json();
+        setClients(prev => [...prev, {
+          id: created.id,
+          name: created.name,
+          industry: created.industry,
+          sector: created.sector || created.industry,
+          location: created.location || payload.details.location,
+          city: created.city || payload.details.city,
+          state: created.state || payload.details.state,
+          pincode: created.pincode || payload.details.pincode,
+          street1: created.street1 || payload.details.street1,
+          street2: created.street2 || payload.details.street2,
+          website: created.website || payload.details.website,
+          logo: created.logo || payload.details.logo,
+          contactPersons: created.contactPersons || payload.details.contactPersons,
+          contactPerson: created.contactPerson || payload.details.contactPerson,
+          auditUniverse: created.auditUniverse || payload.details.auditUniverse,
+          stats: created.stats || payload.details.stats,
+          createdAt: created.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
+        }]);
+      }
+    } catch {}
     setNewClient({
       name: '',
       sector: '',
