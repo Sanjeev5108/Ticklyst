@@ -31,9 +31,19 @@ export const getSetting: RequestHandler = async (req, res) => {
 export const setSetting: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   const { key } = req.params;
-  const value = req.body;
+  let value: any = req.body;
   try {
-    await pool.query('INSERT INTO app_settings(key, value, updated_at) VALUES ($1,$2,now()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()', [key, value]);
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch {
+        return res.status(400).json({ error: 'invalid_json_payload' });
+      }
+    }
+    if (value === undefined) return res.status(400).json({ error: 'missing_value' });
+
+    await pool.query(
+      'INSERT INTO app_settings(key, value, updated_at) VALUES ($1,$2,now()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()',
+      [key, value]
+    );
     res.status(204).send();
   } catch (e:any) {
     console.error(e);
