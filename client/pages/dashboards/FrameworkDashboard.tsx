@@ -944,10 +944,30 @@ export default function FrameworkDashboard() {
           <DialogContent
             className="max-w-3xl max-h-[85vh] overflow-auto"
             onInteractOutside={(e) => {
-              const target = e.target as HTMLElement | null;
-              if (target && target.closest('[data-popover-content]')) {
-                return;
-              }
+              const evt: any = e;
+              const orig = (evt.detail?.originalEvent?.target as HTMLElement) || (evt.target as HTMLElement | null);
+              const inPopover = !!orig && (orig.closest('[data-popover-content]'));
+              const path: any[] = (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+              const inPopoverViaPath = Array.isArray(path) && path.some((n: any) => n?.nodeType === 1 && (n as Element).hasAttribute?.('data-popover-content'));
+              if (inPopover || inPopoverViaPath) return;
+              e.preventDefault();
+            }}
+            onPointerDownOutside={(e) => {
+              const evt: any = e;
+              const orig = (evt.detail?.originalEvent?.target as HTMLElement) || (evt.target as HTMLElement | null);
+              const inPopover = !!orig && (orig.closest('[data-popover-content]'));
+              const path: any[] = (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+              const inPopoverViaPath = Array.isArray(path) && path.some((n: any) => n?.nodeType === 1 && (n as Element).hasAttribute?.('data-popover-content'));
+              if (inPopover || inPopoverViaPath) return;
+              e.preventDefault();
+            }}
+            onFocusOutside={(e) => {
+              const evt: any = e;
+              const orig = (evt.detail?.originalEvent?.target as HTMLElement) || (evt.target as HTMLElement | null);
+              const inPopover = !!orig && (orig.closest('[data-popover-content]'));
+              const path: any[] = (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+              const inPopoverViaPath = Array.isArray(path) && path.some((n: any) => n?.nodeType === 1 && (n as Element).hasAttribute?.('data-popover-content'));
+              if (inPopover || inPopoverViaPath) return;
               e.preventDefault();
             }}
           >
