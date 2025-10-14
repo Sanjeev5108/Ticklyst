@@ -442,7 +442,8 @@ export default function StatementOfApplicability() {
                         nodeApplicability,
                         updatedAt: new Date().toISOString(),
                       };
-                      await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + selectedIndustry)}` , { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                      try { await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + selectedIndustry)}` , { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); } catch {}
+                      LS.set(`soa:industry:${selectedIndustry}`, payload);
                       toast({ title: 'Saved successfully' });
                     } catch {
                       toast({ title: 'Save failed' });
