@@ -85,6 +85,9 @@ export const createEmployee: RequestHandler = async (req, res) => {
     });
   } catch (err: any) {
     console.error(err);
+    if (err && err.code === '23505') {
+      return res.status(409).json({ error: 'email_exists' });
+    }
     res.status(500).json({ error: err.message || 'db_error' });
   }
 };
