@@ -1134,14 +1134,18 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
               <p className="text-xs text-gray-500 mt-1">Driven by Statement of Applicability mappings for the selected client</p>
 
 
-              {Array.isArray(formData.checklistTemplate) && formData.checklistTemplate.length > 0 ? (
-                <div className="mt-4 rounded border bg-white">
-                  <div className="flex items-center justify-between p-3 border-b">
-                    <div className="font-medium">Checklist Tree</div>
-                    <div className="text-xs text-slate-500">Select applicable items (selection cascades)</div>
-                  </div>
-                  <div className="max-h-[360px] overflow-y-auto overflow-x-hidden divide-y">
-                    {soaNodes.filter(n => isParentExpandedSoa(n)).map((node) => {
+              <div className="mt-4 rounded border bg-white">
+                <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white z-[1]">
+                  <div className="font-medium">Checklist Tree</div>
+                  <div className="text-xs text-slate-500">Select applicable items (selection cascades)</div>
+                </div>
+                <div className="max-h-[360px] overflow-y-auto overflow-x-hidden divide-y">
+                  {soaNodes.length === 0 ? (
+                    <div className="p-4 text-sm text-slate-500">
+                      No mapped processes for this client. Select a client with mappings or update mappings in Settings.
+                    </div>
+                  ) : (
+                    soaNodes.filter(n => isParentExpandedSoa(n)).map((node) => {
                       const level = getSoaLevel(node);
                       const hasChildren = soaNodes.some(n => n.parentId === node.id);
                       const applicable = soaApplicable[node.id];
@@ -1179,10 +1183,10 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
+                    })
+                  )}
                 </div>
-              ) : null}
+              </div>
             </div>
 
           </div>
