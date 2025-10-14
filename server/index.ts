@@ -16,6 +16,7 @@ import {
   deleteAllClients,
   getProjects,
   createProject,
+  deleteAllProjects,
   addComment
 } from "./routes/auditing";
 import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee } from "./routes/employees";
