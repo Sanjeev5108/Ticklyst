@@ -443,7 +443,13 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         const map: Record<string,string> = {};
         nodes.filter(n => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
         setProcessIdToName(map);
-      } catch {}
+        try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
+      } catch {
+        try {
+          const cached = localStorage.getItem('framework:processIdToName');
+          if (cached) setProcessIdToName(JSON.parse(cached));
+        } catch {}
+      }
     })();
   }, []);
 
@@ -474,14 +480,28 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
     (async () => {
       try {
-        if (!clientId) return;
-        const key = encodeURIComponent(`soa:client:${clientId}`);
-        const res = await fetch(`/api/settings/${key}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        try { localStorage.setItem(`soa:client:${clientId}`, JSON.stringify(data)); } catch {}
-        const names = Array.isArray(data?.processes) ? toNames(data.processes as string[]) : [];
-        setProcessesForClient(names);
+        if (clientId) {
+          const key = encodeURIComponent(`soa:client:${clientId}`);
+          const res = await fetch(`/api/settings/${key}`);
+          if (res.ok) {
+            const data = await res.json();
+            try { localStorage.setItem(`soa:client:${clientId}`, JSON.stringify(data)); } catch {}
+            const names = Array.isArray(data?.processes) ? toNames(data.processes as string[]) : [];
+            if (names.length) { setProcessesForClient(names); return; }
+          }
+        }
+      } catch {}
+      // Fallback: name->processes map
+      try {
+        const key = 'soa-client-mapping';
+        let map: Record<string, string[]> | null = null;
+        try { const res = await fetch(`/api/settings/${key}`); if (res.ok) map = await res.json(); } catch {}
+        if (!map) {
+          try { map = JSON.parse(localStorage.getItem(key) || 'null'); } catch { map = null; }
+        }
+        if (map && formData.clientName && Array.isArray(map[formData.clientName]) && map[formData.clientName].length) {
+          setProcessesForClient(map[formData.clientName]);
+        }
       } catch {}
     })();
   }, [formData.clientName, selectedClientId, processIdToName]);
