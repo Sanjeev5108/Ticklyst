@@ -51,6 +51,12 @@ export function createServer() {
   app.get('/api/settings/:key', getSetting);
   app.post('/api/settings/:key', setSetting);
 
+  // Framework
+  app.get('/api/framework/tree', getFrameworkTree);
+  app.post('/api/framework/nodes', createFrameworkNode);
+  app.put('/api/framework/nodes/:id', updateFrameworkNode);
+  app.delete('/api/framework/nodes/:id', deleteFrameworkNode);
+
   // Auditing System API Routes
 
   // Industries
