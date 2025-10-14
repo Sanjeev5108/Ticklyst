@@ -673,12 +673,14 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     if (!Array.isArray(procs) || procs.length === 0) { setExpandedItems({}); return; }
     const map: Record<string, boolean> = {};
     for (const proc of procs) {
-      const node = frameworkTree[proc];
+      const procKey = findMatchingKey(frameworkTree, proc);
+      if (!procKey) continue;
+      const node = frameworkTree[procKey];
       if (!node || !node.subprocesses) continue;
-      Object.keys(node.subprocesses).forEach(sp => { map[`${proc}||${sp}`] = true; });
+      Object.keys(node.subprocesses).forEach(sp => { map[`${procKey}||${sp}`] = true; });
     }
     setExpandedItems(map);
-  }, [formData.checklistTemplate, frameworkTree]);
+  }, [formData.checklistTemplate, frameworkTree, findMatchingKey]);
 
   const [showRiskStep, setShowRiskStep] = useState(false);
 
