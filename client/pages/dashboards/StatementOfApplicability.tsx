@@ -132,26 +132,28 @@ export default function StatementOfApplicability() {
     (async () => {
       try {
         const res = await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + selectedIndustry)}`);
-        if (res.ok) {
-          const saved = await res.json();
-          if (saved && typeof saved === 'object') {
-            if (Array.isArray(saved.processes)) setSelectedProcessesIndustry(saved.processes);
-            if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
-              const appMap: Record<string, boolean | null> = saved.nodeApplicability;
-              // apply to details and selections
-              setDetails(prev => {
-                const copy = { ...prev } as Record<string, NodeDetails>;
-                for (const [id, val] of Object.entries(appMap)) {
-                  const existing = copy[id] || { description: '', industry: selectedIndustry, client: selectedClientId, itemId: '', applicable: null };
-                  copy[id] = { ...existing, applicable: val };
-                }
-                return copy;
-              });
-              setIndustrySelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
-            }
+        const saved = res.ok ? await res.json() : LS.get(`soa:industry:${selectedIndustry}`);
+        if (saved && typeof saved === 'object') {
+          if (Array.isArray(saved.processes)) setSelectedProcessesIndustry(saved.processes);
+          if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
+            const appMap: Record<string, boolean | null> = saved.nodeApplicability;
+            setDetails(prev => {
+              const copy = { ...prev } as Record<string, NodeDetails>;
+              for (const [id, val] of Object.entries(appMap)) {
+                const existing = copy[id] || { description: '', industry: selectedIndustry, client: selectedClientId, itemId: '', applicable: null };
+                copy[id] = { ...existing, applicable: val };
+              }
+              return copy;
+            });
+            setIndustrySelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
           }
         }
-      } catch {}
+      } catch {
+        const saved = LS.get(`soa:industry:${selectedIndustry}`);
+        if (saved && typeof saved === 'object' && Array.isArray((saved as any).processes)) {
+          setSelectedProcessesIndustry((saved as any).processes);
+        }
+      }
     })();
   }, [selectedIndustry, selectedClientId]);
 
