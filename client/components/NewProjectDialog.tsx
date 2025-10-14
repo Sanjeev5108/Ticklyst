@@ -196,6 +196,10 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [divisionOptions, setDivisionOptions] = useState<string[]>(divisions);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
+  const selectedClientId = React.useMemo(() => {
+    const found = clientOptions.find(c => c.name === formData.clientName);
+    return found?.id || '';
+  }, [clientOptions, formData.clientName]);
   useEffect(() => {
     // Seed from cache for instant UX
     try {
@@ -428,36 +432,44 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   }, []);
 
   useEffect(() => {
-    const client = formData.clientName;
-    if (!client) { setProcessesForClient([]); return; }
-    const apply = (mapping: Record<string, string[]> | null) => {
-      if (mapping && Array.isArray(mapping[client]) && mapping[client].length) {
-        setProcessesForClient(mapping[client]);
-      } else {
-        setProcessesForClient([]);
+    const clientName = formData.clientName;
+    const clientId = selectedClientId;
+    if (!clientName && !clientId) { setProcessesForClient([]); return; }
+
+    const extractForClient = (mapping: Record<string, string[]> | null) => {
+      if (!mapping) return [] as string[];
+      const tryKeys = [clientId, clientName].filter(Boolean) as string[];
+      for (const k of tryKeys) {
+        if (Array.isArray(mapping[k]) && mapping[k].length) return mapping[k];
       }
+      // try case-insensitive name match
+      const matchKey = Object.keys(mapping).find(k => k.toLowerCase() === (clientName || '').toLowerCase());
+      if (matchKey && Array.isArray(mapping[matchKey]) && mapping[matchKey].length) return mapping[matchKey];
+      return [] as string[];
     };
+
+    // 1) Try cache first
     try {
       const raw = localStorage.getItem('soa-client-mapping');
       if (raw) {
         const map = JSON.parse(raw) as Record<string, string[]>;
-        apply(map);
-        return;
+        const procs = extractForClient(map);
+        if (procs.length) { setProcessesForClient(procs); }
       }
     } catch {}
-    if (!apiEnabled) { setProcessesForClient([]); return; }
+
+    // 2) Always try server fetch to refresh mapping if available; ignore failures
     (async () => {
       try {
         const res = await fetch('/api/settings/soa-client-mapping');
-        if (!res.ok) { setProcessesForClient([]); return; }
+        if (!res.ok) return;
         const data = await res.json();
         try { localStorage.setItem('soa-client-mapping', JSON.stringify(data)); } catch {}
-        apply(data as Record<string, string[]>);
-      } catch {
-        setProcessesForClient([]);
-      }
+        const procs = extractForClient(data as Record<string, string[]>);
+        setProcessesForClient(procs);
+      } catch {}
     })();
-  }, [formData.clientName, apiEnabled]);
+  }, [formData.clientName, selectedClientId]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
