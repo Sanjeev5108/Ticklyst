@@ -163,8 +163,7 @@ export default function StatementOfApplicability() {
       const ind = selectedClient.industry;
       try {
         const res = await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + ind)}`);
-        if (!res.ok) { setClientNeedsIndustryMapping('Do industry mapping first.'); setSelectedProcessesClient([]); return; }
-        const saved = await res.json();
+        const saved = res.ok ? await res.json() : LS.get(`soa:industry:${ind}`);
         if (!saved || !Array.isArray(saved.processes) || !saved.processes.length) {
           setClientNeedsIndustryMapping('Do industry mapping first.');
           setSelectedProcessesClient([]);
@@ -189,8 +188,16 @@ export default function StatementOfApplicability() {
           setClientSelections(new Set());
         }
       } catch {
-        setClientNeedsIndustryMapping('Do industry mapping first.');
-        setSelectedProcessesClient([]);
+        const saved = LS.get(`soa:industry:${ind}`);
+        if (!saved || !Array.isArray((saved as any).processes) || !(saved as any).processes.length) {
+          setClientNeedsIndustryMapping('Do industry mapping first.');
+          setSelectedProcessesClient([]);
+        } else {
+          setClientNeedsIndustryMapping(null);
+          const procs = (saved as any).processes as string[];
+          setIndustryProcessMap(prev => ({ ...prev, [ind]: procs }));
+          setSelectedProcessesClient(procs);
+        }
       }
     })();
   }, [selectedClientId, selectedClient?.industry]);
