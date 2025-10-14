@@ -102,3 +102,46 @@ export const deleteAllEmployees: RequestHandler = async (_req, res) => {
     res.status(500).json({ error: err.message || 'db_error' });
   }
 };
+
+export const updateEmployee: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
+  const { id } = req.params;
+  const { name, email, role, division, password } = req.body || {};
+  const sets: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+  try {
+    if (typeof name === 'string' && name.trim()) { sets.push(`name=$${idx++}`); values.push(name.trim()); }
+    if (typeof email === 'string' && email.trim()) { sets.push(`email=$${idx++}`); values.push(email.trim()); }
+    if (typeof role === 'string' && role.trim()) { sets.push(`role=$${idx++}`); values.push(role.trim()); }
+    if (typeof division === 'string' && division.trim()) { sets.push(`division=$${idx++}`); values.push(division.trim()); }
+    if (typeof password === 'string' && password.length) {
+      if (password.length < 8) return res.status(400).json({ error: 'password_too_short' });
+      const hash = await bcrypt.hash(password, 10);
+      sets.push(`password_hash=$${idx++}`);
+      values.push(hash);
+    }
+    if (!sets.length) return res.status(400).json({ error: 'nothing_to_update' });
+    values.push(id);
+    const q = await pool.query(
+      `UPDATE employees SET ${sets.join(', ')} WHERE id=$${idx} RETURNING id, name, email, role, division, is_active, created_at, last_login`,
+      values
+    );
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    const r = q.rows[0];
+    res.json({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      role: r.role,
+      division: r.division,
+      isActive: r.is_active,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : null,
+      lastLogin: r.last_login ? new Date(r.last_login).toISOString().split('T')[0] : null
+    });
+  } catch (err: any) {
+    console.error(err);
+    if (err && err.code === '23505') return res.status(409).json({ error: 'email_exists' });
+    res.status(500).json({ error: err.message || 'db_error' });
+  }
+};
