@@ -111,61 +111,19 @@ export default function StatementOfApplicability() {
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
   useEffect(() => {
-    if (tree.length) return;
-    const SAMPLE_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
-    const normalizeRows = (data: any): any[] => {
-      if (!data) return [];
-      if (Array.isArray(data)) return data;
-      const keys = Object.keys(data);
-      if ((data as any).Sheet1 && Array.isArray((data as any).Sheet1)) return (data as any).Sheet1;
-      if ((data as any).sheets && typeof (data as any).sheets === 'object') {
-        const first = Object.values((data as any).sheets)[0] as any[];
-        if (Array.isArray(first)) return first;
-      }
-      if (keys.length === 1 && Array.isArray((data as any)[keys[0]])) return (data as any)[keys[0]];
-      return [];
-    };
     (async () => {
       try {
-        const res = await fetch(SAMPLE_URL);
-        const json = await res.json();
-        const rows = normalizeRows(json);
-        if (!rows.length) return;
-        const nodes: TreeNode[] = [];
-        const ensure = (n: TreeNode) => { if (!nodes.some(x => x.id === n.id)) nodes.push(n); };
-        const procIndex = new Map<string, string>();
-        const subIndex = new Map<string, string>();
-        const actIndex = new Map<string, string>();
-        const get = (row: any, keys: string[]) => { for (const k of keys) { const v = row[k]; if (v != null && String(v).trim() !== '') return String(v).trim(); } return ''; };
-        const getNext = {
-          proc: () => `P${procIndex.size + 1}`,
-          sub: (p: string) => `${p}.${nodes.filter(n => n.type==='subprocess' && n.parentId===p).length + 1}`,
-          act: (s: string) => `${s}.${nodes.filter(n => n.type==='activity' && n.parentId===s).length + 1}`,
-          risk: (a: string) => `${a}/R${nodes.filter(n => n.type==='risk' && n.parentId===a).length + 1}`,
-          ctrl: (r: string) => `${r}/C${nodes.filter(n => n.type==='control' && n.parentId===r).length + 1}`,
-        };
-        for (const row of rows) {
-          const processName = get(row, ['Process','process','PROCESS']);
-          const subName = get(row, ['Sub Process','SubProcess','subprocess']);
-          const activityName = get(row, ['Activity','activity']);
-          const riskDesc = get(row, ['Identification of Risk of Material Misstatement (What could go wrong?) Risk Description','Risk Description','Risk','risk']);
-          const controlDesc = get(row, ['Controls in Place','Control','Control Description']);
-          if (!processName) continue;
-          let procId = procIndex.get(processName);
-          if (!procId) { procId = getNext.proc(); procIndex.set(processName, procId); ensure({ id: procId, type: 'process', name: processName, isExpanded: true }); }
-          let subId = '';
-          if (subName) { const key = procId + '|' + subName; subId = subIndex.get(key) || ''; if (!subId) { subId = getNext.sub(procId); subIndex.set(key, subId); ensure({ id: subId, type: 'subprocess', name: subName, parentId: procId, isExpanded: true }); } }
-          let actId = '';
-          if (activityName) { const key = (subId || procId) + '|' + activityName; actId = actIndex.get(key) || ''; if (!actId) { const parent = subId || getNext.sub(procId); if (!subId) { subId = parent; ensure({ id: subId, type: 'subprocess', name: 'General', parentId: procId, isExpanded: true }); } actId = getNext.act(subId); actIndex.set(key, actId); ensure({ id: actId, type: 'activity', name: activityName, parentId: subId, isExpanded: true }); } }
-          let riskId = '';
-          if (riskDesc) { const parent = actId || (subId || getNext.sub(procId)); if (!actId) { if (!subId) { subId = parent as string; ensure({ id: subId, type: 'subprocess', name: 'General', parentId: procId, isExpanded: true }); } const parentAct = getNext.act(subId); ensure({ id: parentAct, type: 'activity', name: 'General', parentId: subId, isExpanded: true }); actId = parentAct; } riskId = getNext.risk(actId); ensure({ id: riskId, type: 'risk', name: riskDesc, parentId: actId }); }
-          if (riskId && controlDesc) { const ctrlId = getNext.ctrl(riskId); ensure({ id: ctrlId, type: 'control', name: controlDesc || 'Control', parentId: riskId }); }
-        }
-        setTree(nodes);
-        setProcessOptions(nodes.filter(n=>n.type==='process').map(n=>({id:n.id,name:n.name})));
+        const res = await fetch('/api/framework/tree');
+        if (!res.ok) return;
+        const data = await res.json();
+        const nodes = Array.isArray(data?.nodes) ? data.nodes as any[] : [];
+        if (!nodes.length) return;
+        const mapped: TreeNode[] = nodes.map((n: any) => ({ id: n.id, type: n.type, name: n.name, parentId: n.parentId, isExpanded: true }));
+        setTree(mapped);
+        setProcessOptions(mapped.filter(n => n.type === 'process').map(n => ({ id: n.id, name: n.name })));
       } catch {}
     })();
-  }, [tree.length]);
+  }, []);
 
   const getLevel = (node: TreeNode) => {
     let level = 0;
