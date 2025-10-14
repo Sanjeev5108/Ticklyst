@@ -252,32 +252,32 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     return () => unsub();
   }, []);
 
-    const [processesForClient, setProcessesForClient] = useState<string[]>([]);
+  const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
-  const [processIdToName, setProcessIdToName] = useState<Record<string,string>>({});
+  const [processIdToName, setProcessIdToName] = useState<Record<string, string>>({});
   const [newActivity, setNewActivity] = useState('');
   const [newRisk, setNewRisk] = useState('');
   const [newControl, setNewControl] = useState('');
   const [frameworkTree, setFrameworkTree] = useState<Record<string, any>>({});
-const [addInputs, setAddInputs] = useState<Record<string, string>>({});
+  const [addInputs, setAddInputs] = useState<Record<string, string>>({});
 
-const frameworkProcessNames = React.useMemo(() => {
-  const names = Object.keys(frameworkTree || {});
-  return names.sort((a, b) => a.localeCompare(b));
-}, [frameworkTree]);
+  const frameworkProcessNames = React.useMemo(() => {
+    const names = Object.keys(frameworkTree || {});
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [frameworkTree]);
 
-const effectiveChecklistProcesses = React.useMemo(() => {
-  const selected = Array.isArray(formData.checklistTemplate) ? formData.checklistTemplate.filter(Boolean) : [];
-  if (selected.length) return Array.from(new Set(selected));
-  if (processesForClient.length) return Array.from(new Set(processesForClient.filter(Boolean)));
-  return frameworkProcessNames;
-}, [formData.checklistTemplate, processesForClient, frameworkProcessNames]);
+  const effectiveChecklistProcesses = React.useMemo(() => {
+    const selected = Array.isArray(formData.checklistTemplate) ? formData.checklistTemplate.filter(Boolean) : [];
+    if (selected.length) return Array.from(new Set(selected));
+    if (processesForClient.length) return Array.from(new Set(processesForClient.filter(Boolean)));
+    return frameworkProcessNames;
+  }, [formData.checklistTemplate, processesForClient, frameworkProcessNames]);
 
-type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
-interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
+  type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
+  interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
 
-const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
-const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
+  const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
+  const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
 
   const buildSoaNodes = (procs: string[]): SoaNode[] => {
     const nodes: SoaNode[] = [];
