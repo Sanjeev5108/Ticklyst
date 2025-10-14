@@ -96,6 +96,18 @@ export default function RiskAssessmentDashboard() {
     } as RiskAssessmentConfig));
   }, []);
 
+  // When in Flexible + Single Value mode, restrict parameters to [riskScore, controlScore, residualRisk]
+  React.useEffect(() => {
+    const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+    if (modeIsSingle) {
+      const allowed = new Set(['riskScore','controlScore','residualRisk']);
+      const cur = cfg.residualRisk?.parameter as string | undefined;
+      if (!cur || !allowed.has(cur)) {
+        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, parameter: 'riskScore' } } as any));
+      }
+    }
+  }, [cfg.riskScoringModel, cfg.riskScore.mode]);
+
   // Initialize default residual thresholds and parameter when empty (min to max)
   React.useEffect(() => {
     setCfg(prev => {
