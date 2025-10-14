@@ -110,21 +110,34 @@ function RoleAccessEditor() {
         if (!mounted) return;
         setModulesList(list);
 
+        try {
+          const [roleMapRes, roleScopeRes, userMapRes, userScopeRes] = await Promise.all([
+            fetch('/api/settings/roleModuleMap'),
+            fetch('/api/settings/roleProjectScope'),
+            fetch('/api/settings/userModuleMap'),
+            fetch('/api/settings/userProjectScope')
+          ]);
+          if (roleMapRes.ok) setMapState(await roleMapRes.json());
+          if (roleScopeRes.ok) setScopeState(await roleScopeRes.json());
+          if (userMapRes.ok) setUserMapState(await userMapRes.json());
+          if (userScopeRes.ok) setUserScopeState(await userScopeRes.json());
+        } catch {}
+
         const stored = localStorage.getItem(ROLE_KEY);
-        if (stored) {
+        if (stored && Object.keys(mapState||{}).length===0) {
           try { setMapState(JSON.parse(stored)); } catch {}
         }
         const storedScope = localStorage.getItem(SCOPE_KEY);
-        if (storedScope) {
+        if (storedScope && Object.keys(scopeState||{}).length===0) {
           try { setScopeState(JSON.parse(storedScope)); } catch {}
         }
 
         const storedUserMap = localStorage.getItem(USER_KEY);
-        if (storedUserMap) {
+        if (storedUserMap && Object.keys(userMapState||{}).length===0) {
           try { setUserMapState(JSON.parse(storedUserMap)); } catch {}
         }
         const storedUserScope = localStorage.getItem(USER_SCOPE_KEY);
-        if (storedUserScope) {
+        if (storedUserScope && Object.keys(userScopeState||{}).length===0) {
           try { setUserScopeState(JSON.parse(storedUserScope)); } catch {}
         }
 
@@ -181,6 +194,7 @@ function RoleAccessEditor() {
       const idx = next[uid].indexOf(moduleId);
       if (idx === -1) next[uid].push(moduleId); else next[uid].splice(idx,1);
       persistUserMap(next);
+      try { await fetch('/api/settings/userModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) }); } catch {}
     } else {
       const role = selectedRole;
       setMapState(prev => {
@@ -189,6 +203,7 @@ function RoleAccessEditor() {
         const idx = copy[role].indexOf(moduleId);
         if (idx === -1) copy[role].push(moduleId); else copy[role].splice(idx,1);
         localStorage.setItem(ROLE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/roleModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     }
@@ -201,6 +216,7 @@ function RoleAccessEditor() {
         const copy = { ...(prev || {}) };
         copy[uid] = value;
         localStorage.setItem(USER_SCOPE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/userProjectScope', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     } else {
@@ -209,6 +225,7 @@ function RoleAccessEditor() {
         const copy = { ...(prev || {}) };
         copy[role] = value;
         localStorage.setItem(SCOPE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/roleProjectScope', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     }

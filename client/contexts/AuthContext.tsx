@@ -13,7 +13,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   hasPermission: (permission: string) => boolean;
@@ -93,31 +93,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (username: string, password: string): boolean => {
-    const credentials = testCredentials[username];
-
-    if (credentials && credentials.password === password) {
-      // try to find existing user in stored users
-      const users = getStoredUsers();
-      let existing = users.find(u => u.username === username);
-      if (!existing) {
-        existing = {
-          id: `${Date.now()}`,
-          username,
-          role: credentials.role,
-          email: `${username.toLowerCase().replace(' ', '.')}@company.com`,
-          isActive: true
-        };
-        users.push(existing);
-        setStoredUsers(users);
-      }
-
-      setUser(existing);
-      localStorage.setItem('currentUser', JSON.stringify(existing));
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) return false;
+      const u = await res.json();
+      const userObj: User = {
+        id: u.id,
+        username: u.username || u.email,
+        role: u.role,
+        email: u.email,
+        department: u.department,
+        isActive: u.isActive
+      };
+      setUser(userObj);
+      localStorage.setItem('currentUser', JSON.stringify(userObj));
       return true;
+    } catch {
+      return false;
     }
-
-    return false;
   };
 
   const logout = () => {

@@ -18,6 +18,8 @@ import {
   addComment
 } from "./routes/auditing";
 import { getEmployees, createEmployee, deleteAllEmployees } from "./routes/employees";
+import { login } from "./routes/auth";
+import { getSetting, setSetting } from "./routes/settings";
 
 export function createServer() {
   const app = express();
@@ -39,6 +41,13 @@ export function createServer() {
   app.get('/api/employees', getEmployees);
   app.post('/api/employees', createEmployee);
   app.delete('/api/employees', deleteAllEmployees);
+
+  // Auth
+  app.post('/api/auth/login', login);
+
+  // Settings persistence
+  app.get('/api/settings/:key', getSetting);
+  app.post('/api/settings/:key', setSetting);
 
   // Auditing System API Routes
 

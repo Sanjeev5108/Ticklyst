@@ -20,9 +20,11 @@ async function ensureTable() {
       division TEXT,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMPTZ DEFAULT now(),
-      last_login TIMESTAMPTZ
+      last_login TIMESTAMPTZ,
+      password_hash TEXT
     );
   `);
+  await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS password_hash TEXT');
 }
 
 // Create table on module load (best-effort)
@@ -53,14 +55,19 @@ export const getEmployees: RequestHandler = async (_req, res) => {
 
 export const createEmployee: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
-  const { name, email, role, division } = req.body;
+  const { name, email, role, division, password } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'name_and_email_required' });
   try {
     const id = (globalThis as any).crypto?.randomUUID?.() || Date.now().toString();
     const createdAt = new Date().toISOString();
+    let passwordHash: string | null = null;
+    if (password && typeof password === 'string' && password.length >= 8) {
+      const bcrypt = await import('bcryptjs');
+      passwordHash = await bcrypt.hash(password, 10);
+    }
     const q = await pool.query(
-      'INSERT INTO employees (id, name, email, role, division, is_active, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, email, role, division, is_active, created_at, last_login',
-      [id, name, email, role || null, division || null, true, createdAt]
+      'INSERT INTO employees (id, name, email, role, division, is_active, created_at, password_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, name, email, role, division, is_active, created_at, last_login',
+      [id, name, email, role || null, division || null, true, createdAt, passwordHash]
     );
     const r = q.rows[0];
     res.status(201).json({

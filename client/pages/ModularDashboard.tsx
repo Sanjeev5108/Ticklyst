@@ -128,19 +128,7 @@ const ROLE_MODULE_KEY = 'roleModuleMap';
 
 const getStoredRoleModuleMap = (): Record<string,string[]> => {
   const raw = localStorage.getItem(ROLE_MODULE_KEY);
-  if (!raw) {
-    // build default map from the modules.roles arrays
-    const map: Record<string,string[]> = {};
-    modules.forEach(m => {
-      (m.roles || []).forEach(r => {
-        if (!map[r]) map[r] = [];
-        if (!map[r].includes(m.id)) map[r].push(m.id);
-      });
-    });
-    localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(map));
-    return map;
-  }
-  try { return JSON.parse(raw) as Record<string,string[]>; } catch { return {}; }
+  try { return raw ? JSON.parse(raw) : {}; } catch { return {}; }
 };
 
 export default function ModularDashboard() {
@@ -148,7 +136,7 @@ export default function ModularDashboard() {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   // Filter modules based on user role and dynamic role-module mapping
-  const roleModuleMap = getStoredRoleModuleMap();
+  const [roleModuleMap, setRoleModuleMap] = useState<Record<string,string[]>>(() => getStoredRoleModuleMap());
   const availableModules = modules.filter(module => {
     const role = user?.role || '';
     if (!role) return false;
@@ -159,6 +147,33 @@ export default function ModularDashboard() {
     }
     return allowed.includes(module.id);
   });
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/roleModuleMap');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            setRoleModuleMap(data);
+            localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(data));
+          }
+        } else if (!localStorage.getItem(ROLE_MODULE_KEY)) {
+          const map: Record<string,string[]> = {};
+          modules.forEach(m => {
+            (m.roles || []).forEach(r => {
+              if (!map[r]) map[r] = [];
+              if (!map[r].includes(m.id)) map[r].push(m.id);
+            });
+          });
+          setRoleModuleMap(map);
+          localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(map));
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Mock data for status cards
   const statusCards = [
