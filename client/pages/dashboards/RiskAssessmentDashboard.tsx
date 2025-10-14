@@ -487,16 +487,23 @@ export default function RiskAssessmentDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <Label>Parameters</Label>
-                    <Select value={cfg.residualRisk.parameter || 'residualRisk'} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
-                      <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="likelihood">Likelihood</SelectItem>
-                        <SelectItem value="consequence">Consequence</SelectItem>
-                        <SelectItem value="riskScore">Risk Score</SelectItem>
-                        <SelectItem value="controlScore">Control Score</SelectItem>
-                        <SelectItem value="residualRisk">Residual Risk</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {(() => {
+                      const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+                      const allowed = modeIsSingle ? ['riskScore','controlScore','residualRisk'] : ['likelihood','consequence','riskScore','controlScore','residualRisk'];
+                      const value = (cfg.residualRisk.parameter && allowed.includes(cfg.residualRisk.parameter)) ? cfg.residualRisk.parameter : (modeIsSingle ? 'riskScore' : (cfg.residualRisk.parameter || 'residualRisk'));
+                      return (
+                        <Select value={value} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
+                          <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
+                          <SelectContent>
+                            {allowed.includes('likelihood') && <SelectItem value="likelihood">Likelihood</SelectItem>}
+                            {allowed.includes('consequence') && <SelectItem value="consequence">Consequence</SelectItem>}
+                            {allowed.includes('riskScore') && <SelectItem value="riskScore">Risk Score</SelectItem>}
+                            {allowed.includes('controlScore') && <SelectItem value="controlScore">Control Score</SelectItem>}
+                            {allowed.includes('residualRisk') && <SelectItem value="residualRisk">Residual Risk</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -934,18 +941,25 @@ export default function RiskAssessmentDashboard() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <Label>Parameters</Label>
-                      <Select value={cfg.residualRisk.parameter || 'residualRisk'} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
-                        <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="likelihood">Likelihood</SelectItem>
-                          <SelectItem value="consequence">Consequence</SelectItem>
-                          <SelectItem value="riskScore">Risk Score</SelectItem>
-                          <SelectItem value="controlScore">Control Score</SelectItem>
-                          <SelectItem value="residualRisk">Residual Risk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Label>Parameters</Label>
+                    {(() => {
+                      const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+                      const allowed = modeIsSingle ? ['riskScore','controlScore','residualRisk'] : ['likelihood','consequence','riskScore','controlScore','residualRisk'];
+                      const value = (cfg.residualRisk.parameter && allowed.includes(cfg.residualRisk.parameter)) ? cfg.residualRisk.parameter : (modeIsSingle ? 'riskScore' : (cfg.residualRisk.parameter || 'residualRisk'));
+                      return (
+                        <Select value={value} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
+                          <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
+                          <SelectContent>
+                            {allowed.includes('likelihood') && <SelectItem value="likelihood">Likelihood</SelectItem>}
+                            {allowed.includes('consequence') && <SelectItem value="consequence">Consequence</SelectItem>}
+                            {allowed.includes('riskScore') && <SelectItem value="riskScore">Risk Score</SelectItem>}
+                            {allowed.includes('controlScore') && <SelectItem value="controlScore">Control Score</SelectItem>}
+                            {allowed.includes('residualRisk') && <SelectItem value="residualRisk">Residual Risk</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
+                  </div>
                   </div>
 
                   <div className="space-y-2">
