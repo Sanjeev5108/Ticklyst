@@ -270,8 +270,8 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     const selected = Array.isArray(formData.checklistTemplate) ? formData.checklistTemplate.filter(Boolean) : [];
     if (selected.length) return Array.from(new Set(selected));
     if (processesForClient.length) return Array.from(new Set(processesForClient.filter(Boolean)));
-    return frameworkProcessNames;
-  }, [formData.checklistTemplate, processesForClient, frameworkProcessNames]);
+    return [] as string[];
+  }, [formData.checklistTemplate, processesForClient]);
 
   type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
   interface SoaNode { id: string; type: NodeType; name: string; parentId?: string; isExpanded?: boolean; }
@@ -576,12 +576,11 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       if (!Array.isArray(formData.checklistTemplate) || formData.checklistTemplate.length === 0) {
         updateFormData('checklistTemplate', processesForClient);
       }
-      return;
+    } else {
+      if (Array.isArray(formData.checklistTemplate) && formData.checklistTemplate.length) return;
+      updateFormData('checklistTemplate', []);
     }
-    if ((!Array.isArray(formData.checklistTemplate) || formData.checklistTemplate.length === 0) && frameworkProcessNames.length) {
-      updateFormData('checklistTemplate', frameworkProcessNames);
-    }
-  }, [processesForClient, frameworkProcessNames]);
+  }, [processesForClient]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
@@ -743,10 +742,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     const [open, setOpen] = useState(false);
     const display = value && value.length ? (value.length <= 2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : 'Select processes';
     const options = React.useMemo(() => {
-      const source = processesForClient.length ? processesForClient : frameworkProcessNames;
-      const unique = Array.from(new Set((source || []).filter(Boolean)));
+      const unique = Array.from(new Set((processesForClient || []).filter(Boolean)));
       return unique.sort((a, b) => a.localeCompare(b));
-    }, [processesForClient, frameworkProcessNames]);
+    }, [processesForClient]);
     const toggle = (id: string) => {
       let next = Array.isArray(value) ? [...value] : [];
       const has = next.includes(id);
