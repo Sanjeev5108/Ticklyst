@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -296,6 +297,21 @@ export default function FrameworkDashboard() {
   const [comments, setComments] = useState<Comment[]>([]);
 
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/framework/tree');
+        if (res.ok) {
+          const data = await res.json();
+          setNodes((data.nodes || []) as any[]);
+          setDetailsById((data.detailsById || {}) as any);
+          return;
+        }
+      } catch {}
+    })();
+  }, []);
+
+  /* Sample import kept commented for reference
+  useEffect(() => {
     const SAMPLE_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
     if (nodes.length) return; // import once
 
@@ -455,7 +471,7 @@ export default function FrameworkDashboard() {
     };
 
     importData();
-  }, [nodes.length]);
+  }, [nodes.length]);*/
 
 
   const getCommentTypeColor = (type: string) => {
@@ -504,7 +520,7 @@ export default function FrameworkDashboard() {
     return { type: 'control', control_id: node.id, control_description: node.name, control_type: 'Preventive', control_frequency: 'Monthly', control_owner: '', control_effectiveness_score: 0, departments_involved: [] };
   };
 
-  const addNode = (parent?: FrameworkNode) => {
+  const addNode = async (parent?: FrameworkNode) => {
     const type: NodeType = parent ? (childType[parent.type] as NodeType) : 'process';
     if (!type) return;
 
@@ -566,11 +582,22 @@ export default function FrameworkDashboard() {
 
     const name = type === 'process' ? 'New Process' : type === 'subprocess' ? 'New Subprocess' : type === 'activity' ? 'New Activity' : type === 'risk' ? 'New Risk' : 'New Control';
     const node: FrameworkNode = { id, type, name, parentId: parent?.id, isExpanded: true };
-    setNodes(prev => [...prev, node]);
-    setDetailsById(prev => ({ ...prev, [id]: createDefaultDetails(node) }));
-    if (parent && !parent.isExpanded) toggleExpanded(parent.id);
-    setSelectedNodeId(id);
-    if (type === 'process') setSelectedProcessId(id);
+    const details = createDefaultDetails(node);
+    try {
+      const res = await fetch('/api/framework/nodes', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, type, name, parentId: parent?.id || null, details })
+      });
+      if (!res.ok) throw new Error('create_failed');
+      setNodes(prev => [...prev, node]);
+      setDetailsById(prev => ({ ...prev, [id]: details }));
+      if (parent && !parent.isExpanded) toggleExpanded(parent.id);
+      setSelectedNodeId(id);
+      if (type === 'process') setSelectedProcessId(id);
+      toast({ title: `${type.charAt(0).toUpperCase()+type.slice(1)} added` });
+    } catch (e) {
+      toast({ title: 'Failed to add', description: (e as any)?.message || '' });
+    }
   };
 
   const collectDescendantIds = (id: string, acc: string[] = []) => {
@@ -582,15 +609,22 @@ export default function FrameworkDashboard() {
     return acc;
   };
 
-  const deleteNode = (id: string) => {
-    const toDelete = new Set([id, ...collectDescendantIds(id)]);
-    setNodes(prev => prev.filter(n => !toDelete.has(n.id)));
-    setDetailsById(prev => {
-      const copy = { ...prev } as Record<string, NodeDetails>;
-      for (const k of Array.from(toDelete)) delete copy[k];
-      return copy;
-    });
-    if (selectedNodeId && toDelete.has(selectedNodeId)) setSelectedNodeId(null);
+  const deleteNode = async (id: string) => {
+    try {
+      const res = await fetch(`/api/framework/nodes/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) throw new Error('delete_failed');
+      const toDelete = new Set([id, ...collectDescendantIds(id)]);
+      setNodes(prev => prev.filter(n => !toDelete.has(n.id)));
+      setDetailsById(prev => {
+        const copy = { ...prev } as Record<string, NodeDetails>;
+        for (const k of Array.from(toDelete)) delete copy[k];
+        return copy;
+      });
+      if (selectedNodeId && toDelete.has(selectedNodeId)) setSelectedNodeId(null);
+      toast({ title: 'Deleted successfully' });
+    } catch (e) {
+      toast({ title: 'Failed to delete' });
+    }
   };
 
   const getLevel = (node: FrameworkNode) => {
@@ -1083,7 +1117,29 @@ export default function FrameworkDashboard() {
               })()}
               <div className="pt-2 flex justify-end gap-2">
                 <Button variant="outline" onClick={() => selectedNodeId && setDetailsById(prev => ({ ...prev }))}>Reset</Button>
-                <Button onClick={() => setIsDetailsOpen(false)}>Save</Button>
+                <Button onClick={async () => {
+                  if (!selectedNodeId) { setIsDetailsOpen(false); return; }
+                  const node = nodes.find(n => n.id === selectedNodeId)!;
+                  const d:any = detailsById[selectedNodeId];
+                  let name = node.name;
+                  if (node.type === 'process') name = d.process_name;
+                  else if (node.type === 'subprocess') name = d.sub_process_name;
+                  else if (node.type === 'activity') name = d.activity_name;
+                  else if (node.type === 'risk') name = d.risk_name;
+                  else if (node.type === 'control') name = d.control_description;
+                  try {
+                    const res = await fetch(`/api/framework/nodes/${selectedNodeId}`, {
+                      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name, details: d })
+                    });
+                    if (!res.ok) throw new Error('update_failed');
+                    setNodes(prev => prev.map(n => n.id === selectedNodeId ? { ...n, name } : n));
+                    setIsDetailsOpen(false);
+                    toast({ title: 'Saved' });
+                  } catch (e) {
+                    toast({ title: 'Save failed' });
+                  }
+                }}>Save</Button>
               </div>
             </div>
           </DialogContent>
