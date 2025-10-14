@@ -258,6 +258,48 @@ export default function ProjectManagement() {
     return project.teamMembers.some(tm => tm.name === uname || tm.initials === initials);
   };
 
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) throw new Error('load_failed');
+        const rows = await res.json();
+        const mapped: Project[] = rows.map((r: any) => ({
+          id: r.id,
+          projectCode: r.code || r.data?.projectCode || '',
+          title: r.name || r.data?.projectName || '',
+          client: r.clientName || r.data?.clientName || '',
+          status: (r.status as any) || 'todo',
+          progress: 0,
+          totalTasks: 1,
+          completedTasks: 0,
+          startDate: r.startDate || r.data?.startDate || '',
+          endDate: r.endDate || r.data?.endDate || '',
+          teamMembers: (r.data?.divisionHeads || []).map((name: string, i: number) => ({ id: `dh-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') }))
+            .concat((r.data?.partners || []).map((name: string, i: number) => ({ id: `p-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') })))
+            .concat((r.data?.teamLeaders || []).map((name: string, i: number) => ({ id: `tl-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') })))
+            .concat((r.data?.teamMembers || []).map((name: string, i: number) => ({ id: `tm-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') }))),
+          category: r.data?.auditType || 'General',
+          priority: 'medium',
+          details: {
+            division: r.data?.division || '',
+            auditType: r.data?.auditType || '',
+            description: r.data?.projectDescription || '',
+            divisionHeads: r.data?.divisionHeads || [],
+            partners: r.data?.partners || [],
+            teamLeaders: r.data?.teamLeaders || [],
+            teamMembers: r.data?.teamMembers || [],
+            auditUniverse: r.data?.auditUniverse || [],
+            scopeNotes: r.data?.scopeNotes || '',
+            reportingFrequency: r.data?.reportingFrequency || '',
+            emailNotifications: !!r.data?.emailNotifications,
+          }
+        }));
+        setProjects(mapped);
+      } catch {}
+    })();
+  }, []);
+
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
@@ -271,7 +313,7 @@ export default function ProjectManagement() {
   const inProgressProjects = filteredProjects.filter(p => p.status === 'in-progress');
   const holdProjects = filteredProjects.filter(p => p.status === 'hold');
 
-  const handleCreateProject = (projectData: any) => {
+  const handleCreateProject = async (projectData: any) => {
     // If projectData provides a projectCode (from dialog), prefer it; otherwise generate
     let projectCode = projectData.projectCode;
     if (!projectCode) {
@@ -335,7 +377,10 @@ export default function ProjectManagement() {
       }
     };
 
-    setProjects([...projects, newProject]);
+    try {
+      await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...projectData, id: newProject.id }) });
+    } catch {}
+    setProjects(prev => [...prev, newProject]);
   };
 
   const openDetails = (p: Project) => { setSelectedProject(p); setIsDetailsOpen(true); };
