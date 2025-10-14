@@ -35,13 +35,7 @@ interface NodeDetails {
 
 // Industries are managed globally via IndustrySelect (fetched from API/localStorage)
 
-const clients = [
-  { id: 'CLT-001', name: 'Bull Machines India Pvt. LTD', industry: 'Manufacturing' },
-  { id: 'CLT-002', name: 'Supreme Mobiles', industry: 'Retail' },
-  { id: 'CLT-003', name: 'Thalapakatti Hospitality Pvt. LTD', industry: 'Hospitality' },
-  { id: 'CLT-004', name: 'KTM', industry: 'Automotive' },
-  { id: 'CLT-005', name: 'KMCH', industry: 'Healthcare' }
-];
+type SoAClient = { id: string; name: string; industry: string };
 
 const periods = ['FY 2023-24', 'FY 2024-25', 'Q1 2025', 'Q2 2025'];
 
@@ -93,7 +87,9 @@ const ProcessesMultiSelect = ({ options, value, onChange }: { options: {id:strin
 export default function StatementOfApplicability() {
   const [tab, setTab] = useState<'industry' | 'client'>('industry');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('Manufacturing');
-  const [selectedClientId, setSelectedClientId] = useState<string>('CLT-001');
+  const [clients, setClients] = useState<SoAClient[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [clientNeedsIndustryMapping, setClientNeedsIndustryMapping] = useState<string | null>(null);
 
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [processOptions, setProcessOptions] = useState<{ id: string; name: string }[]>([]);
@@ -111,6 +107,20 @@ export default function StatementOfApplicability() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: SoAClient[] = (data || []).map((r: any) => ({ id: r.id, name: r.name, industry: r.industry }));
+          setClients(mapped);
+          if (!selectedClientId && mapped.length) setSelectedClientId(mapped[0].id);
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -138,6 +148,44 @@ export default function StatementOfApplicability() {
       } catch {}
     })();
   }, [selectedIndustry, selectedClientId]);
+
+  useEffect(() => {
+    (async () => {
+      if (!selectedClient) return;
+      const ind = selectedClient.industry;
+      try {
+        const res = await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + ind)}`);
+        if (!res.ok) { setClientNeedsIndustryMapping('Do industry mapping first.'); setSelectedProcessesClient([]); return; }
+        const saved = await res.json();
+        if (!saved || !Array.isArray(saved.processes) || !saved.processes.length) {
+          setClientNeedsIndustryMapping('Do industry mapping first.');
+          setSelectedProcessesClient([]);
+          return;
+        }
+        setClientNeedsIndustryMapping(null);
+        setIndustryProcessMap(prev => ({ ...prev, [ind]: saved.processes }));
+        setSelectedProcessesClient(saved.processes);
+        // apply industry applicability to this client as initial
+        if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
+          const appMap: Record<string, boolean | null> = saved.nodeApplicability;
+          setDetails(prev => {
+            const copy = { ...prev } as Record<string, NodeDetails>;
+            for (const [id, val] of Object.entries(appMap)) {
+              const existing = copy[id] || { description: '', industry: ind, client: selectedClientId, itemId: '', applicable: null };
+              copy[id] = { ...existing, client: selectedClientId, industry: ind, applicable: val };
+            }
+            return copy;
+          });
+          setClientSelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
+        } else {
+          setClientSelections(new Set());
+        }
+      } catch {
+        setClientNeedsIndustryMapping('Do industry mapping first.');
+        setSelectedProcessesClient([]);
+      }
+    })();
+  }, [selectedClientId, selectedClient?.industry]);
 
   useEffect(() => {
     (async () => {
@@ -335,11 +383,14 @@ export default function StatementOfApplicability() {
                   </SelectContent>
                 </Select>
                 <div className="text-xs text-slate-500 mt-1">Industry: {selectedClient?.industry || '-'}</div>
+                {clientNeedsIndustryMapping && (
+                  <div className="text-xs mt-1 text-amber-700">{clientNeedsIndustryMapping}</div>
+                )}
               </div>
               <div>
                 <Label>Processes (Multiple)</Label>
                 <ProcessesMultiSelect
-                  options={processOptions.filter(p => (industryProcessMap[selectedClient?.industry||'']?.length ? industryProcessMap[selectedClient!.industry]!.includes(p.id) : true))}
+                  options={processOptions.filter(p => (industryProcessMap[selectedClient?.industry||'']?.length ? industryProcessMap[selectedClient!.industry]!.includes(p.id) : false))}
                   value={selectedProcessesClient}
                   onChange={setSelectedProcessesClient}
                 />
@@ -383,7 +434,28 @@ export default function StatementOfApplicability() {
                     }
                   }}>Save Industry Mapping</Button>
                 ) : (
-                  <Button onClick={() => { setClientNodeMap(prev => ({ ...prev, [selectedClientId]: Array.from(clientSelections) })); }}>Save Client Mapping</Button>
+                  <Button disabled={!selectedClient} onClick={async () => {
+                    try {
+                      const nodeApplicability: Record<string, boolean | null> = {};
+                      for (const [id, det] of Object.entries(details)) {
+                        if (det.client === selectedClientId && det.applicable !== undefined && det.applicable !== null) {
+                          nodeApplicability[id] = det.applicable;
+                        }
+                      }
+                      await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                          clientId: selectedClientId,
+                          industry: selectedClient?.industry || '',
+                          processes: selectedProcessesClient,
+                          nodeApplicability,
+                          updatedAt: new Date().toISOString()
+                        })
+                      });
+                      toast({ title: 'Saved successfully' });
+                    } catch {
+                      toast({ title: 'Save failed' });
+                    }
+                  }}>Save Client Mapping</Button>
                 )}
               </div>
             </div>
