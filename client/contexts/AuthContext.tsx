@@ -9,6 +9,7 @@ export interface User {
   email?: string;
   department?: string;
   isActive: boolean;
+  allowedModules?: string[];
 }
 
 interface AuthContextType {
