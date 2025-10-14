@@ -57,8 +57,10 @@ export const createFrameworkNode: RequestHandler = async (req, res) => {
 
 export const updateFrameworkNode: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
-  const { id } = req.params;
+  const rawId = (req.params as any).id ?? (req.params as any)[0];
+  const id = String(rawId || '').trim();
   const { name, details } = req.body || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
   if (!name && !details) return res.status(400).json({ error: 'nothing_to_update' });
   try {
     const q = await pool.query(
@@ -75,7 +77,9 @@ export const updateFrameworkNode: RequestHandler = async (req, res) => {
 
 export const deleteFrameworkNode: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
-  const { id } = req.params;
+  const rawId = (req.params as any).id ?? (req.params as any)[0];
+  const id = String(rawId || '').trim();
+  if (!id) return res.status(400).json({ error: 'missing_id' });
   try {
     const q = await pool.query('DELETE FROM framework_nodes WHERE id=$1 RETURNING id', [id]);
     if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
