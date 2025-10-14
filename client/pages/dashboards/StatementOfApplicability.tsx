@@ -463,6 +463,22 @@ export default function StatementOfApplicability() {
                       const payloadClient = { clientId: selectedClientId, industry: selectedClient?.industry || '', processes: selectedProcessesClient, nodeApplicability, updatedAt: new Date().toISOString() };
                       try { await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadClient) }); } catch {}
                       LS.set(`soa:client:${selectedClientId}`, payloadClient);
+
+                      // Maintain a simple name->processNames map for consumers that only know client name
+                      try {
+                        const nameKey = 'soa-client-mapping';
+                        let existing: Record<string, string[]> = {};
+                        try {
+                          const res = await fetch(`/api/settings/${nameKey}`);
+                          if (res.ok) existing = await res.json();
+                        } catch {}
+                        if (!existing || typeof existing !== 'object') existing = {} as any;
+                        const idToName: Record<string,string> = Object.fromEntries(processOptions.map(p => [p.id, p.name]));
+                        existing[selectedClient?.name || selectedClientId] = (selectedProcessesClient || []).map(id => idToName[id]).filter(Boolean);
+                        try { await fetch(`/api/settings/${nameKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(existing) }); } catch {}
+                        LS.set(nameKey, existing);
+                      } catch {}
+
                       toast({ title: 'Saved successfully' });
                     } catch {
                       toast({ title: 'Save failed' });
