@@ -194,7 +194,7 @@ function RoleAccessEditor() {
       const idx = next[uid].indexOf(moduleId);
       if (idx === -1) next[uid].push(moduleId); else next[uid].splice(idx,1);
       persistUserMap(next);
-      try { await fetch('/api/settings/userModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) }); } catch {}
+      try { fetch('/api/settings/userModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) }).catch(() => {}); } catch {}
     } else {
       const role = selectedRole;
       setMapState(prev => {
