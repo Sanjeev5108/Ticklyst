@@ -359,65 +359,52 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const toggleExpanded = (key: string) => setExpandedItems(prev => ({ ...prev, [key]: !prev[key] }));
 
   const fetchAndBuildFramework = async () => {
-    const URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
-    const normalizeRows = (data: any): any[] => {
-      if (!data) return [];
-      if (Array.isArray(data)) return data;
-      if ((data as any).Sheet1 && Array.isArray((data as any).Sheet1)) return (data as any).Sheet1;
-      if ((data as any).sheets && typeof (data as any).sheets === 'object') {
-        const first = Object.values((data as any).sheets)[0] as any[];
-        if (Array.isArray(first)) return first;
-      }
-      const keys = Object.keys(data);
-      if (keys.length === 1 && Array.isArray((data as any)[keys[0]])) return (data as any)[keys[0]];
-      return [];
-    };
-
     try {
-      const res = await fetch(URL);
-      const json = await res.json();
-      const rows = normalizeRows(json);
+      const res = await fetch('/api/framework/tree');
+      if (!res.ok) throw new Error('bad');
+      const data = await res.json();
+      const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
+      const byId: Record<string, any> = {};
+      nodes.forEach((n:any) => { byId[n.id] = n; });
+
       const processes = new Set<string>();
       const tree: Record<string, any> = {};
-      for (const row of rows) {
-        const process = String(row['Process'] ?? row['process'] ?? row['PROCESS'] ?? '').trim();
-        if (!process) continue;
-        processes.add(process);
 
-        // Allow missing intermediate levels by falling back to 'General'
-        let subprocess = String(row['Sub Process'] ?? row['SubProcess'] ?? row['subprocess'] ?? '').trim();
-        let activity = String(row['Activity'] ?? row['activity'] ?? row['ACTIVITY'] ?? '').trim();
-        const risk = String(row['Identification of Risk of Material Misstatement (What could go wrong?) Risk Description'] ?? row['Risk Description'] ?? row['Risk'] ?? row['risk'] ?? '').trim();
-        const control = String(row['Controls in Place'] ?? row['Control'] ?? row['Control Description'] ?? row['controls'] ?? '').trim();
+      const climb = (id: string) => {
+        const chain: any[] = [];
+        let cur = byId[id];
+        while (cur) { chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : undefined; }
+        return chain; // node -> ... -> process
+      };
 
-        // If subprocess missing but activity present, place activity under a 'General' subprocess
-        if (!subprocess && activity) subprocess = 'General';
-        // If activity missing but risk/control present, place them under a 'General' activity
-        if (!activity && (risk || control)) activity = 'General';
-
-        if (!tree[process]) tree[process] = { name: process, subprocesses: {} };
-        if (!subprocess) {
-          // nothing more to attach
+      for (const n of nodes) {
+        if (n.type === 'process') {
+          processes.add(n.name);
+          if (!tree[n.name]) tree[n.name] = { name: n.name, subprocesses: {} };
           continue;
         }
-        if (!tree[process].subprocesses[subprocess]) tree[process].subprocesses[subprocess] = { name: subprocess, activities: {} };
-
-        if (activity) {
-          if (!tree[process].subprocesses[subprocess].activities[activity]) tree[process].subprocesses[subprocess].activities[activity] = { name: activity, risks: {} };
-
-          const activityNode = tree[process].subprocesses[subprocess].activities[activity];
-
-          if (risk) {
-            if (!activityNode.risks[risk]) activityNode.risks[risk] = { name: risk, controls: [] };
-            if (control) activityNode.risks[risk].controls.push(control);
-          } else if (control) {
-            // no risk provided — attach control under a default 'General' risk for the activity
-            const defaultRisk = 'General';
-            if (!activityNode.risks[defaultRisk]) activityNode.risks[defaultRisk] = { name: defaultRisk, controls: [] };
-            activityNode.risks[defaultRisk].controls.push(control);
+        if (n.type === 'subprocess' || n.type === 'activity' || n.type === 'risk' || n.type === 'control') {
+          const chain = climb(n.id);
+          const p = chain.find(x => x.type === 'process');
+          if (!p) continue;
+          processes.add(p.name);
+          if (!tree[p.name]) tree[p.name] = { name: p.name, subprocesses: {} };
+          const sp = chain.find(x => x.type === 'subprocess');
+          const ac = chain.find(x => x.type === 'activity');
+          const rk = chain.find(x => x.type === 'risk');
+          if (sp) {
+            if (!tree[p.name].subprocesses[sp.name]) tree[p.name].subprocesses[sp.name] = { name: sp.name, activities: {} };
+            if (ac) {
+              if (!tree[p.name].subprocesses[sp.name].activities[ac.name]) tree[p.name].subprocesses[sp.name].activities[ac.name] = { name: ac.name, risks: {} };
+              if (rk) {
+                if (!tree[p.name].subprocesses[sp.name].activities[ac.name].risks[rk.name]) tree[p.name].subprocesses[sp.name].activities[ac.name].risks[rk.name] = { name: rk.name, controls: [] };
+                if (n.type === 'control') tree[p.name].subprocesses[sp.name].activities[ac.name].risks[rk.name].controls.push(n.name);
+              }
+            }
           }
         }
       }
+
       setFrameworkProcesses(Array.from(processes));
       setFrameworkTree(tree);
       return tree;
