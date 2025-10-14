@@ -11,6 +11,7 @@ import IndustrySelect from '@/components/IndustrySelect';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronDown, ChevronRight, Search, Check, ClipboardList, X } from 'lucide-react';
@@ -97,6 +98,7 @@ export default function StatementOfApplicability() {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [processOptions, setProcessOptions] = useState<{ id: string; name: string }[]>([]);
   const [selectedProcessesIndustry, setSelectedProcessesIndustry] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedProcessesClient, setSelectedProcessesClient] = useState<string[]>([]);
   const [industryProcessMap, setIndustryProcessMap] = useState<Record<string, string[]>>({});
   const [industryNodeMap, setIndustryNodeMap] = useState<Record<string, string[]>>({});
@@ -109,6 +111,33 @@ export default function StatementOfApplicability() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + selectedIndustry)}`);
+        if (res.ok) {
+          const saved = await res.json();
+          if (saved && typeof saved === 'object') {
+            if (Array.isArray(saved.processes)) setSelectedProcessesIndustry(saved.processes);
+            if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
+              const appMap: Record<string, boolean | null> = saved.nodeApplicability;
+              // apply to details and selections
+              setDetails(prev => {
+                const copy = { ...prev } as Record<string, NodeDetails>;
+                for (const [id, val] of Object.entries(appMap)) {
+                  const existing = copy[id] || { description: '', industry: selectedIndustry, client: selectedClientId, itemId: '', applicable: null };
+                  copy[id] = { ...existing, applicable: val };
+                }
+                return copy;
+              });
+              setIndustrySelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
+            }
+          }
+        }
+      } catch {}
+    })();
+  }, [selectedIndustry, selectedClientId]);
 
   useEffect(() => {
     (async () => {
@@ -328,7 +357,31 @@ export default function StatementOfApplicability() {
               <CardTitle>Checklist Tree</CardTitle>
               <div className="flex items-center gap-2">
                 {tab === 'industry' ? (
-                  <Button onClick={() => { setIndustryProcessMap(prev => ({ ...prev, [selectedIndustry]: selectedProcessesIndustry })); setIndustryNodeMap(prev => ({ ...prev, [selectedIndustry]: Array.from(industrySelections) })); }}>Save Industry Mapping</Button>
+                  <Button disabled={isSaving} onClick={async () => {
+                    try {
+                      setIsSaving(true);
+                      setIndustryProcessMap(prev => ({ ...prev, [selectedIndustry]: selectedProcessesIndustry }));
+                      setIndustryNodeMap(prev => ({ ...prev, [selectedIndustry]: Array.from(industrySelections) }));
+                      const nodeApplicability: Record<string, boolean | null> = {};
+                      for (const [id, det] of Object.entries(details)) {
+                        if (det.industry === selectedIndustry && det.applicable !== undefined && det.applicable !== null) {
+                          nodeApplicability[id] = det.applicable;
+                        }
+                      }
+                      const payload = {
+                        industry: selectedIndustry,
+                        processes: selectedProcessesIndustry,
+                        nodeApplicability,
+                        updatedAt: new Date().toISOString(),
+                      };
+                      await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + selectedIndustry)}` , { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                      toast({ title: 'Saved successfully' });
+                    } catch {
+                      toast({ title: 'Save failed' });
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}>Save Industry Mapping</Button>
                 ) : (
                   <Button onClick={() => { setClientNodeMap(prev => ({ ...prev, [selectedClientId]: Array.from(clientSelections) })); }}>Save Client Mapping</Button>
                 )}
