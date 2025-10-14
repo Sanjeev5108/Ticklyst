@@ -21,11 +21,11 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "dotenv": "^17.2.0",
     "express": "^4.18.2",
     "pg": "^8.11.0",
-    "zod": "^3.23.8",
-    "bcryptjs": "^2.4.3"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.9.0",
