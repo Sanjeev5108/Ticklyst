@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import IndustrySelect from '@/components/IndustrySelect';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
@@ -31,13 +32,7 @@ interface NodeDetails {
   applicable: boolean | null;
 }
 
-const industries = [
-  'Manufacturing',
-  'Retail',
-  'Hospitality',
-  'Automotive',
-  'Healthcare'
-];
+// Industries are managed globally via IndustrySelect (fetched from API/localStorage)
 
 const clients = [
   { id: 'CLT-001', name: 'Bull Machines India Pvt. LTD', industry: 'Manufacturing' },
@@ -327,14 +322,13 @@ export default function StatementOfApplicability() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Industry</Label>
-                <Select value={selectedIndustry} onValueChange={(v) => { setSelectedIndustry(v); setSelectedProcessesIndustry(industryProcessMap[v] || []); setIndustrySelections(new Set()); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industries.map(ind => (<SelectItem key={ind} value={ind}>{ind}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1">
+                  <IndustrySelect
+                    value={selectedIndustry}
+                    onChange={(v) => { setSelectedIndustry(v); setSelectedProcessesIndustry(industryProcessMap[v] || []); setIndustrySelections(new Set()); }}
+                    placeholder="Select industry"
+                  />
+                </div>
               </div>
               <div>
                 <Label>Processes (Multiple)</Label>
