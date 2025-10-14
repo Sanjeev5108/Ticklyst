@@ -85,18 +85,30 @@ export default function HRDashboard() {
 
   const handleAddEmployee = async () => {
     try {
-      const body = { name: newEmployee.name, email: newEmployee.email, role: newEmployee.role, division: newEmployee.division, password: newEmployee.password };
+      const name = newEmployee.name?.trim();
+      const email = newEmployee.email?.trim();
+      const role = newEmployee.role;
+      const pwd = newEmployee.password;
+      const emailOk = /.+@.+\..+/.test(email || '');
+      if (!name || !emailOk || !role || !pwd || pwd.length < 8) {
+        toast({ title: 'Please fill all required fields', description: 'Name, Email (valid), Role, and Password (min 8) are mandatory.' });
+        return;
+      }
+      const body = { name, email, role, division: newEmployee.division || null, password: pwd };
       const res = await fetch('/api/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) {
         let msg = 'failed to create';
         try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
-        throw new Error(msg);
+        toast({ title: 'Create failed', description: msg });
+        return;
       }
       await loadEmployees();
       setNewEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
       setIsAddEmployeeOpen(false);
+      toast({ title: 'Employee created successfully' });
     } catch (e) {
       console.error(e);
+      toast({ title: 'Create failed' });
     }
   };
 
