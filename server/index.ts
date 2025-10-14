@@ -13,6 +13,7 @@ import {
   createChecklistQuestion,
   getClients,
   createClient,
+  deleteAllClients,
   getProjects,
   createProject,
   addComment
