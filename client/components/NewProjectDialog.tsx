@@ -295,14 +295,14 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
           nodes.push({ id: acId, type: 'activity', name: acName, parentId: spId, isExpanded: true });
           const risks = (acNode as any).risks || {};
           for (const [rkName, rkNode] of Object.entries<any>(risks)) {
-          const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
-          nodes.push({ id: rkId, type: 'risk', name: rkName, parentId: acId, isExpanded: true });
-          const ctrls = Array.isArray((rkNode as any).controls) ? (rkNode as any).controls : [];
-          ctrls.forEach((c: string, idx: number) => {
-            const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
-            nodes.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
-          });
-        }
+            const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
+            nodes.push({ id: rkId, type: 'risk', name: rkName, parentId: acId, isExpanded: true });
+            const ctrls = Array.isArray((rkNode as any).controls) ? (rkNode as any).controls : [];
+            ctrls.forEach((c: string, idx: number) => {
+              const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
+              nodes.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
+            });
+          }
         }
       }
     }
