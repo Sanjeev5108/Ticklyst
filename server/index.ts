@@ -17,7 +17,7 @@ import {
   createProject,
   addComment
 } from "./routes/auditing";
-import { getEmployees, createEmployee, deleteAllEmployees } from "./routes/employees";
+import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee } from "./routes/employees";
 import { login } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
 
