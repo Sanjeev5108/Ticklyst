@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import pg from "pg";
 const { Pool } = pg;
+import bcrypt from "bcryptjs";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -61,8 +62,10 @@ export const createEmployee: RequestHandler = async (req, res) => {
     const id = (globalThis as any).crypto?.randomUUID?.() || Date.now().toString();
     const createdAt = new Date().toISOString();
     let passwordHash: string | null = null;
-    if (password && typeof password === 'string' && password.length >= 8) {
-      const bcrypt = await import('bcryptjs');
+    if (password && typeof password === 'string') {
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'password_too_short' });
+      }
       passwordHash = await bcrypt.hash(password, 10);
     }
     const q = await pool.query(

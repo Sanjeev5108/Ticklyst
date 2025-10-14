@@ -86,7 +86,11 @@ export default function HRDashboard() {
     try {
       const body = { name: newEmployee.name, email: newEmployee.email, role: newEmployee.role, division: newEmployee.division, password: newEmployee.password };
       const res = await fetch('/api/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error('failed to create');
+      if (!res.ok) {
+        let msg = 'failed to create';
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       await loadEmployees();
       setNewEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
       setIsAddEmployeeOpen(false);
