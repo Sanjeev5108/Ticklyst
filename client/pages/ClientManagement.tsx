@@ -352,6 +352,18 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
 
 export default function ClientManagement() {
   const [clients, setClients] = useState<Client[]>([]);
+  const apiEnabled = React.useMemo(() => {
+    try {
+      const forced = localStorage.getItem('api:enabled');
+      if (forced === 'true') return true;
+      if (forced === 'false') return false;
+    } catch {}
+    const h = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (h === 'localhost' || h === '127.0.0.1') return true;
+    if (h.endsWith('.netlify.app')) return true;
+    if (h.endsWith('.fly.dev')) return false;
+    return true;
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -438,6 +450,7 @@ export default function ClientManagement() {
             if (Array.isArray(parsed) && parsed.length && clients.length === 0) setClients(parsed);
           }
         } catch {}
+        if (!apiEnabled) return;
         const res = await fetch('/api/clients');
         if (res.ok) {
           const data = await res.json();
