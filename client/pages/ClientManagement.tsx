@@ -702,7 +702,7 @@ export default function ClientManagement() {
                 <div>
                   <Label className="text-sm font-medium">Industry</Label>
                   <div className="mt-1">
-                    <IndustrySelect value={newClient.industry || ''} onChange={(value) => setNewClient({ ...newClient, industry: value })} placeholder="Select industry" />
+                    <IndustrySelect value={newClient.industry || ''} onChange={(value) => setNewClient({ ...newClient, industry: value })} placeholder="Select industry" baseOptions={industryOptions} />
                   </div>
                 </div>
               </div>
@@ -1112,7 +1112,7 @@ export default function ClientManagement() {
               <div>
                 <Label className="text-sm font-medium">Industry</Label>
                 <div className="mt-1">
-                  <IndustrySelect value={editClient.industry || ''} onChange={(value) => setEditClient({ ...editClient, industry: value })} placeholder="Select industry" />
+                  <IndustrySelect value={editClient.industry || ''} onChange={(value) => setEditClient({ ...editClient, industry: value })} placeholder="Select industry" baseOptions={industryOptions} />
                 </div>
               </div>
             </div>
