@@ -548,6 +548,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       const has = next.includes(name);
       if (has) next = next.filter(n => n !== name); else next.push(name);
       onChange(next);
+      setOpen(true);
     };
     const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
     return (
@@ -566,7 +567,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
               <CommandGroup heading="Team Members">
                 {employees.map(emp => (
                   <CommandItem key={emp.id} value={emp.name} onSelect={() => toggle(emp.name)}>
-                    <Checkbox className="mr-2" checked={value?.includes(emp.name)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
+                    <Checkbox className="mr-2" checked={value?.includes(emp.name)} onPointerDown={stop} onMouseDown={stop} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -622,6 +623,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       const has = next.includes(name);
       if (has) next = next.filter(x => x !== name); else next.push(name);
       onChange(next);
+      setOpen(true);
     };
     const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
     const options = employees;
@@ -641,7 +643,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
               <CommandGroup heading={roleFilter}>
                 {options.map(opt => (
                   <CommandItem key={opt.id} value={opt.name} onSelect={() => toggle(opt.name)}>
-                    <Checkbox className="mr-2" checked={value?.includes(opt.name)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(opt.name)} /> {opt.name} - {opt.role}
+                    <Checkbox className="mr-2" checked={value?.includes(opt.name)} onPointerDown={stop} onMouseDown={stop} onCheckedChange={() => toggle(opt.name)} /> {opt.name} - {opt.role}
                   </CommandItem>
                 ))}
               </CommandGroup>
