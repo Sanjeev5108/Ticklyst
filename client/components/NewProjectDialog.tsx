@@ -369,7 +369,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       nodes.forEach(n => { if (prev[n.id] !== undefined) next[n.id] = prev[n.id]!; });
       return next;
     });
-  }, [effectiveChecklistProcesses, frameworkTree]);
+  }, [effectiveChecklistProcesses, buildSoaNodes]);
 
   // Month view state for the two calendars in Timeline & Scheduling
   const [startViewMonth, setStartViewMonth] = useState<Date>(formData.startDate || new Date());
