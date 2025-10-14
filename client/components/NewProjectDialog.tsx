@@ -429,16 +429,35 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
   useEffect(() => {
     const client = formData.clientName;
-    if (!client) { setProcessesForClient(frameworkProcesses); return; }
+    if (!client) { setProcessesForClient([]); return; }
+    const apply = (mapping: Record<string, string[]> | null) => {
+      if (mapping && Array.isArray(mapping[client]) && mapping[client].length) {
+        setProcessesForClient(mapping[client]);
+      } else {
+        setProcessesForClient([]);
+      }
+    };
     try {
       const raw = localStorage.getItem('soa-client-mapping');
-      if (!raw) { setProcessesForClient(frameworkProcesses); return; }
-      const map = JSON.parse(raw) as Record<string, string[]>;
-      const mapped = map[client];
-      if (Array.isArray(mapped) && mapped.length) setProcessesForClient(mapped);
-      else setProcessesForClient(frameworkProcesses);
-    } catch { setProcessesForClient(frameworkProcesses); }
-  }, [formData.clientName, frameworkProcesses]);
+      if (raw) {
+        const map = JSON.parse(raw) as Record<string, string[]>;
+        apply(map);
+        return;
+      }
+    } catch {}
+    if (!apiEnabled) { setProcessesForClient([]); return; }
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/soa-client-mapping');
+        if (!res.ok) { setProcessesForClient([]); return; }
+        const data = await res.json();
+        try { localStorage.setItem('soa-client-mapping', JSON.stringify(data)); } catch {}
+        apply(data as Record<string, string[]>);
+      } catch {
+        setProcessesForClient([]);
+      }
+    })();
+  }, [formData.clientName, apiEnabled]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
@@ -604,8 +623,8 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       const has = next.includes(id);
       if (has) next = next.filter(x => x !== id); else next.push(id);
       onChange(next);
+      setOpen(true);
     };
-    const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -621,8 +640,12 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <CommandList className="max-h-72 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
               <CommandGroup heading="Processes">
                 {processesForClient.map(proc => (
-                  <CommandItem key={proc} value={proc} onSelect={() => toggle(proc)}>
-                    <Checkbox className="mr-2" checked={value?.includes(proc)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(proc)} /> {proc}
+                  <CommandItem
+                    key={proc}
+                    value={proc}
+                    onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); toggle(proc); }}
+                  >
+                    <Checkbox className="mr-2" checked={value?.includes(proc)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(proc)} /> {proc}
                   </CommandItem>
                 ))}
               </CommandGroup>
