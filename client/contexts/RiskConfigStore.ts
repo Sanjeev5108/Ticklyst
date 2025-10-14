@@ -1,18 +1,21 @@
 import { DEFAULT_GLOBAL_RISK_CONFIG, RiskAssessmentConfig } from '@shared/risk';
 
 const STORAGE_KEY = 'risk-configs';
+const SETTINGS_KEY = 'riskConfigs';
 
 type Listener = () => void;
 
 class RiskStore {
   private configs: Record<string, RiskAssessmentConfig> = {};
   private listeners = new Set<Listener>();
+  private syncing = false;
 
   constructor() {
-    this.load();
+    this.loadLocal();
+    this.syncFromServer();
   }
 
-  private load() {
+  private loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) this.configs = JSON.parse(raw);
@@ -20,12 +23,54 @@ class RiskStore {
     if (!this.configs['global']) {
       const def = DEFAULT_GLOBAL_RISK_CONFIG();
       this.configs['global'] = def;
-      this.persist();
+      this.persistLocal();
     }
   }
 
-  private persist() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.configs)); } catch {}
+  private persistLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.configs)); } catch {} }
+
+  private async persistServer() {
+    try {
+      await fetch(`/api/settings/${SETTINGS_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.configs)
+      });
+    } catch {}
+  }
+
+  private normalize(obj: any): Record<string, RiskAssessmentConfig> {
+    if (!obj || typeof obj !== 'object') return {};
+    const out: Record<string, RiskAssessmentConfig> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const val = v as any;
+      if (!val || typeof val !== 'object') continue;
+      const id = String((val as any).id || k);
+      out[id] = { ...(val as any), id } as RiskAssessmentConfig;
+    }
+    return out;
+  }
+
+  private async syncFromServer() {
+    if (this.syncing) return; this.syncing = true;
+    try {
+      const res = await fetch(`/api/settings/${SETTINGS_KEY}`);
+      if (res.ok) {
+        const data = await res.json();
+        const incoming = this.normalize(data);
+        const merged: Record<string, RiskAssessmentConfig> = { ...incoming, ...this.configs };
+        if (!merged['global']) merged['global'] = DEFAULT_GLOBAL_RISK_CONFIG();
+        this.configs = merged;
+        this.persistLocal();
+        this.notify();
+        // ensure server has something
+        await this.persistServer();
+      } else {
+        // seed server if empty/missing
+        await this.persistServer();
+      }
+    } catch {}
+    this.syncing = false;
   }
 
   subscribe(fn: Listener) {
@@ -33,9 +78,7 @@ class RiskStore {
     return () => this.listeners.delete(fn);
   }
 
-  private notify() {
-    for (const fn of this.listeners) fn();
-  }
+  private notify() { for (const fn of this.listeners) fn(); }
 
   getAll(): Record<string, RiskAssessmentConfig> { return { ...this.configs }; }
 
@@ -44,11 +87,9 @@ class RiskStore {
   get(id: string): RiskAssessmentConfig | undefined { return this.configs[id]; }
 
   upsert(cfg: RiskAssessmentConfig) {
-    this.configs[cfg.id] = { ...cfg, auditTrail: { ...cfg.auditTrail, updatedAt: new Date().toISOString() } };
-
-    // No automatic propagation from Global; assignment configs maintain their own Rating Definition.
-
-    this.persist();
+    this.configs[cfg.id] = { ...cfg, auditTrail: { ...cfg.auditTrail, updatedAt: new Date().toISOString() } } as RiskAssessmentConfig;
+    this.persistLocal();
+    this.persistServer();
     this.notify();
   }
 
@@ -63,7 +104,8 @@ class RiskStore {
         auditTrail: { createdBy: 'system', createdAt: new Date().toISOString() }
       };
       this.configs[id] = created;
-      this.persist();
+      this.persistLocal();
+      this.persistServer();
       this.notify();
     }
     return this.configs[id];
