@@ -601,29 +601,31 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
       for (const proc of procs) {
-        const procNode = tree[proc];
+        const procKey = findMatchingKey(tree, proc);
+        if (!procKey) continue;
+        const procNode = tree[procKey];
         if (!procNode) continue;
-        const procId = `proc|${proc}`;
+        const procId = `proc|${procKey}`;
         const includeProcDirect = soaApplicable[procId] === true;
         const subOut: Record<string, any> = {};
         const subs = procNode.subprocesses || {};
         for (const [spName, spNode] of Object.entries<any>(subs)) {
-          const spId = `sub|${proc}|${spName}`;
+          const spId = `sub|${procKey}|${spName}`;
           const includeSubDirect = soaApplicable[spId] === true;
           const actOut: Record<string, any> = {};
           const acts = spNode.activities || {};
           for (const [acName, acNode] of Object.entries<any>(acts)) {
-            const acId = `act|${proc}|${spName}|${acName}`;
+            const acId = `act|${procKey}|${spName}|${acName}`;
             const includeActDirect = soaApplicable[acId] === true;
             const riskOut: Record<string, any> = {};
             const risks = acNode.risks || {};
             for (const [rkName, rkNode] of Object.entries<any>(risks)) {
-              const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
+              const rkId = `risk|${procKey}|${spName}|${acName}|${rkName}`;
               const includeRiskDirect = soaApplicable[rkId] === true;
               const ctrls = Array.isArray(rkNode.controls) ? rkNode.controls : [];
               const selectedCtrls: string[] = [];
               ctrls.forEach((c: string, idx: number) => {
-                const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
+                const ctrlId = `ctrl|${procKey}|${spName}|${acName}|${rkName}|${idx}`;
                 if (soaApplicable[ctrlId] === true) selectedCtrls.push(c);
               });
               const includeRisk = includeRiskDirect || selectedCtrls.length > 0;
@@ -643,7 +645,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         }
         const includeProc = includeProcDirect || Object.keys(subOut).length > 0;
         if (includeProc) {
-          result[proc] = { name: proc, subprocesses: subOut };
+          result[procKey] = { name: procNode?.name || procKey, subprocesses: subOut };
         }
       }
       return result;
@@ -655,13 +657,15 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       // default: copy full subtree for selected processes
       const clone: Record<string, any> = {};
       for (const proc of procs) {
-        const node = frameworkTree[proc];
+        const procKey = findMatchingKey(frameworkTree, proc);
+        if (!procKey) continue;
+        const node = frameworkTree[procKey];
         if (!node) continue;
-        try { clone[proc] = JSON.parse(JSON.stringify(node)); } catch { clone[proc] = node; }
+        try { clone[procKey] = JSON.parse(JSON.stringify(node)); } catch { clone[procKey] = node; }
       }
       updateFormData('selectedChecklistTree', clone);
     }
-  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable]);
+  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey]);
 
   // Auto-expand subprocesses for the selected process so activities are visible
   useEffect(() => {
