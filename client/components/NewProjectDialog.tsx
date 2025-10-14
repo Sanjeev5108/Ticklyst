@@ -40,7 +40,7 @@ interface Employee {
   division: string;
 }
 
-interface Client {
+interface ClientOption {
   id: string;
   name: string;
 }
@@ -96,13 +96,6 @@ interface NewProjectDialogProps {
   initialData?: Partial<ProjectFormData> | null;
 }
 
-const mockClients: Client[] = [
-  { id: '1', name: 'Naargo Industries Private Limited' },
-  { id: '2', name: 'Milky Mist Dairy Food Ltd' },
-  { id: '3', name: 'Freyr Software Services Pvt Ltd' },
-  { id: '4', name: 'Titan Company Limited' },
-  { id: '5', name: 'ENES TEXTILE MILLS' }
-];
 
 const mockEmployees: Employee[] = [
   { id: '1', name: 'Sanjeev V', role: 'Team Member', division: 'Audit & Assurance' },
@@ -164,8 +157,31 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     if (mode === 'new') setFormData(prev => ({ ...prev, projectCode: generateProjectCode(prev.startDate) }));
   }, [formData.startDate, mode]);
 
+  // Seed clients from cache for instant dropdown, then refresh from API
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('clients');
+      if (cached) {
+        const parsed = JSON.parse(cached) as any[];
+        const mapped = (parsed || []).map(r => ({ id: String((r as any).id), name: String((r as any).name) })) as ClientOption[];
+        if (mapped.length) setClientOptions(mapped);
+      }
+    } catch {}
+    (async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped: ClientOption[] = (data || []).map((r: any) => ({ id: String(r.id), name: String(r.name) }));
+        setClientOptions(mapped);
+        try { localStorage.setItem('clients', JSON.stringify(data)); } catch {}
+      } catch {}
+    })();
+  }, []);
+
   const [divisionOptions, setDivisionOptions] = useState<string[]>(divisions);
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
   useEffect(() => {
     try {
       const raw = localStorage.getItem('employees');
@@ -726,7 +742,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                   <SelectValue placeholder="Dropdown list of existing clients" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockClients.map(client => (
+                  {clientOptions.map(client => (
                     <SelectItem key={client.id} value={client.name}>{client.name}</SelectItem>
                   ))}
                 </SelectContent>
