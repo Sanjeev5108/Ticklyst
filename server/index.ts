@@ -82,6 +82,7 @@ export function createServer() {
   // Projects
   app.get("/api/projects", getProjects);
   app.post("/api/projects", createProject);
+  app.delete("/api/projects", deleteAllProjects);
 
   // Comments
   app.post("/api/projects/:projectId/checklist/:checklistItemId/comments", addComment);
