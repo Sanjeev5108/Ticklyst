@@ -576,8 +576,12 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       if (!Array.isArray(formData.checklistTemplate) || formData.checklistTemplate.length === 0) {
         updateFormData('checklistTemplate', processesForClient);
       }
+      return;
     }
-  }, [processesForClient]);
+    if ((!Array.isArray(formData.checklistTemplate) || formData.checklistTemplate.length === 0) && frameworkProcessNames.length) {
+      updateFormData('checklistTemplate', frameworkProcessNames);
+    }
+  }, [processesForClient, frameworkProcessNames]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
