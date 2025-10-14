@@ -64,6 +64,29 @@ export default function RiskAssessmentDashboard() {
     return () => unsub();
   }, []);
 
+  // Keep assignment map and selection in sync with current assignment types from Settings
+  React.useEffect(() => {
+    const valid = new Set((assignmentTypes || []).map(a => a.id));
+    // prune assignmentMap entries that no longer exist
+    setCfg(prev => {
+      const curMap = (prev.scope as any)?.assignmentMap || {};
+      const entries = Object.entries(curMap).filter(([k]) => valid.has(k));
+      const pruned: any = Object.fromEntries(entries);
+      const changed = Object.keys(pruned).length !== Object.keys(curMap).length;
+      let next: any = prev;
+      if (changed) {
+        next = { ...prev, scope: { ...prev.scope, assignmentMap: pruned } } as any;
+      }
+      // fix selection if removed
+      if (prev && (selectedAssignmentId && !valid.has(selectedAssignmentId))) {
+        const first = assignmentTypes[0]?.id || null;
+        setSelectedAssignmentId(first);
+        setSelectedMode('_select');
+      }
+      return next;
+    });
+  }, [assignmentTypes]);
+
   // Enforce default constraints: control ≤ risk and residual ≤ risk
   React.useEffect(() => {
     setCfg(prev => ({
