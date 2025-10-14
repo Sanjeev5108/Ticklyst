@@ -573,15 +573,19 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <span className="ml-2 text-xs text-muted-foreground">Select</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="z-[80] w-72 p-0">
+        <PopoverContent className="z-[100] p-0 w-[var(--radix-popper-anchor-width)]" style={{ width: 'var(--radix-popper-anchor-width)' }} onWheel={(e)=>e.stopPropagation()}>
           <Command>
             <CommandInput placeholder="Search members..." />
             <CommandEmpty>No member found.</CommandEmpty>
-            <CommandList className="max-h-60 overflow-y-auto">
+            <CommandList className="max-h-72 overflow-y-auto" onWheel={(e)=>e.stopPropagation()}>
               <CommandGroup heading="Team Members">
                 {employees.map(emp => (
-                  <CommandItem key={emp.id} value={emp.name} onSelect={() => toggle(emp.name)}>
-                    <Checkbox className="mr-2" checked={value?.includes(emp.name)} onPointerDown={stop} onMouseDown={stop} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
+                  <CommandItem
+                    key={emp.id}
+                    value={emp.name}
+                    onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); toggle(emp.name); }}
+                  >
+                    <Checkbox className="mr-2" checked={value?.includes(emp.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -649,15 +653,19 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <span className="ml-2 text-xs text-muted-foreground">Select</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="z-[80] w-72 p-0">
+        <PopoverContent className="z-[100] p-0 w-[var(--radix-popper-anchor-width)]" style={{ width: 'var(--radix-popper-anchor-width)' }} onWheel={(e)=>e.stopPropagation()}>
           <Command>
             <CommandInput placeholder={`Search ${roleFilter}...`} />
             <CommandEmpty>No match.</CommandEmpty>
-            <CommandList className="max-h-60 overflow-y-auto">
+            <CommandList className="max-h-72 overflow-y-auto" onWheel={(e)=>e.stopPropagation()}>
               <CommandGroup heading={roleFilter}>
                 {options.map(opt => (
-                  <CommandItem key={opt.id} value={opt.name} onSelect={() => toggle(opt.name)}>
-                    <Checkbox className="mr-2" checked={value?.includes(opt.name)} onPointerDown={stop} onMouseDown={stop} onCheckedChange={() => toggle(opt.name)} /> {opt.name} - {opt.role}
+                  <CommandItem
+                    key={opt.id}
+                    value={opt.name}
+                    onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); toggle(opt.name); }}
+                  >
+                    <Checkbox className="mr-2" checked={value?.includes(opt.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(opt.name)} /> {opt.name} - {opt.role}
                   </CommandItem>
                 ))}
               </CommandGroup>
