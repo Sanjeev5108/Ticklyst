@@ -287,27 +287,29 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
   const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
 
-  const buildSoaNodes = (procs: string[]): SoaNode[] => {
+  const buildSoaNodes = React.useCallback((procs: string[]): SoaNode[] => {
     const nodes: SoaNode[] = [];
     for (const proc of procs) {
-      if (!frameworkTree[proc]) continue;
-      const procId = `proc|${proc}`;
-      nodes.push({ id: procId, type: 'process', name: proc, isExpanded: true });
-      const subprocesses = frameworkTree[proc].subprocesses || {};
-      for (const [spName, spNode] of Object.entries<any>(subprocesses)) {
-        const spId = `sub|${proc}|${spName}`;
-        nodes.push({ id: spId, type: 'subprocess', name: spName, parentId: procId, isExpanded: true });
-        const activities = (spNode as any).activities || {};
-        for (const [acName, acNode] of Object.entries<any>(activities)) {
-          const acId = `act|${proc}|${spName}|${acName}`;
-          nodes.push({ id: acId, type: 'activity', name: acName, parentId: spId, isExpanded: true });
-          const risks = (acNode as any).risks || {};
-          for (const [rkName, rkNode] of Object.entries<any>(risks)) {
-            const rkId = `risk|${proc}|${spName}|${acName}|${rkName}`;
-            nodes.push({ id: rkId, type: 'risk', name: rkName, parentId: acId, isExpanded: true });
-            const ctrls = Array.isArray((rkNode as any).controls) ? (rkNode as any).controls : [];
+      const procKey = findMatchingKey(frameworkTree, proc);
+      if (!procKey) continue;
+      const procNode = frameworkTree[procKey];
+      const procId = `proc|${procKey}`;
+      nodes.push({ id: procId, type: 'process', name: procNode?.name || procKey, isExpanded: true });
+      const subprocesses = procNode?.subprocesses || {};
+      for (const [spKey, spNode] of Object.entries<any>(subprocesses)) {
+        const spId = `sub|${procKey}|${spKey}`;
+        nodes.push({ id: spId, type: 'subprocess', name: spNode?.name || spKey, parentId: procId, isExpanded: true });
+        const activities = (spNode as any)?.activities || {};
+        for (const [acKey, acNode] of Object.entries<any>(activities)) {
+          const acId = `act|${procKey}|${spKey}|${acKey}`;
+          nodes.push({ id: acId, type: 'activity', name: acNode?.name || acKey, parentId: spId, isExpanded: true });
+          const risks = (acNode as any)?.risks || {};
+          for (const [rkKey, rkNode] of Object.entries<any>(risks)) {
+            const rkId = `risk|${procKey}|${spKey}|${acKey}|${rkKey}`;
+            nodes.push({ id: rkId, type: 'risk', name: (rkNode as any)?.name || rkKey, parentId: acId, isExpanded: true });
+            const ctrls = Array.isArray((rkNode as any)?.controls) ? (rkNode as any).controls : [];
             ctrls.forEach((c: string, idx: number) => {
-              const ctrlId = `ctrl|${proc}|${spName}|${acName}|${rkName}|${idx}`;
+              const ctrlId = `ctrl|${procKey}|${spKey}|${acKey}|${rkKey}|${idx}`;
               nodes.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
             });
           }
@@ -315,7 +317,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       }
     }
     return nodes;
-  };
+  }, [findMatchingKey, frameworkTree]);
 
   const getSoaLevel = (node: SoaNode) => {
     let level = 0;
