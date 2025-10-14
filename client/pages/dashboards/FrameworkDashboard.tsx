@@ -941,7 +941,16 @@ export default function FrameworkDashboard() {
           )}
 
         <Dialog open={isDetailsOpen && !!selectedNodeId} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-auto" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogContent
+            className="max-w-3xl max-h-[85vh] overflow-auto"
+            onInteractOutside={(e) => {
+              const target = e.target as HTMLElement | null;
+              if (target && target.closest('[data-popover-content]')) {
+                return;
+              }
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Details</DialogTitle>
             </DialogHeader>
