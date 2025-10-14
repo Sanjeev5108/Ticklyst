@@ -408,7 +408,7 @@ const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null
           }
         }
       }
-      setFrameworkProcesses(Array.from(processes));
+
       setFrameworkTree(tree);
       try { localStorage.setItem('framework:tree', JSON.stringify(tree)); localStorage.setItem('framework:processes', JSON.stringify(Array.from(processes))); } catch {}
       return tree;
@@ -460,7 +460,7 @@ const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null
             }
           }
         }
-        setFrameworkProcesses(Array.from(processes));
+  
         setFrameworkTree(tree);
         try { localStorage.setItem('framework:tree', JSON.stringify(tree)); localStorage.setItem('framework:processes', JSON.stringify(Array.from(processes))); } catch {}
         return tree;
