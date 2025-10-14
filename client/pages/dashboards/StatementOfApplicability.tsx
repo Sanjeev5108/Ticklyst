@@ -12,6 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+
+const LS = {
+  get<T=any>(key:string): T | null { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : null; } catch { return null; } },
+  set(key:string, val:any) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+};
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronDown, ChevronRight, Search, Check, ClipboardList, X } from 'lucide-react';
