@@ -38,6 +38,7 @@ interface Employee {
   name: string;
   role: string;
   division: string;
+  isActive?: boolean;
 }
 
 interface ClientOption {
@@ -180,17 +181,31 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   }, []);
 
   const [divisionOptions, setDivisionOptions] = useState<string[]>(divisions);
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
   useEffect(() => {
+    // Seed from cache for instant UX
     try {
       const raw = localStorage.getItem('employees');
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as any[];
-      const active = parsed.filter(e => e && (e.isActive ?? true));
-      const mapped: Employee[] = active.map(e => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, isActive: e.isActive }));
-      if (mapped.length) setEmployees(mapped);
+      if (raw) {
+        const parsed = JSON.parse(raw) as any[];
+        const active = (parsed || []).filter(e => e && (e.isActive ?? true));
+        const mapped: Employee[] = active.map(e => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, isActive: e.isActive }));
+        if (mapped.length) setEmployees(mapped);
+      }
     } catch {}
+    // Refresh from API
+    (async () => {
+      try {
+        const res = await fetch('/api/employees');
+        if (!res.ok) return;
+        const data = await res.json();
+        const active = (data || []).filter((e:any) => e && (e.isActive ?? true));
+        const mapped: Employee[] = active.map((e:any) => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, isActive: e.isActive }));
+        setEmployees(mapped);
+        try { localStorage.setItem('employees', JSON.stringify(mapped)); } catch {}
+      } catch {}
+    })();
   }, []);
 
   // Prefill on edit
@@ -549,7 +564,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <CommandEmpty>No member found.</CommandEmpty>
             <CommandList className="max-h-60 overflow-y-auto">
               <CommandGroup heading="Team Members">
-                {employees.filter(emp => emp.role === 'Team Member').map(emp => (
+                {employees.filter(emp => (emp.role || '').toLowerCase() === 'team member').map(emp => (
                   <CommandItem key={emp.id} value={emp.name} onSelect={() => toggle(emp.name)}>
                     <Checkbox className="mr-2" checked={value?.includes(emp.name)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
                   </CommandItem>
@@ -609,7 +624,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       onChange(next);
     };
     const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
-    const options = employees.filter(emp => emp.role === roleFilter);
+    const options = employees.filter(emp => (emp.role || '').toLowerCase() === roleFilter.toLowerCase());
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
