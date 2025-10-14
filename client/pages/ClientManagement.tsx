@@ -430,6 +430,14 @@ export default function ClientManagement() {
   useEffect(() => {
     (async () => {
       try {
+        // Optimistic: seed from cache for instant dropdowns in other modules
+        try {
+          const cached = localStorage.getItem('clients');
+          if (cached) {
+            const parsed = JSON.parse(cached) as Client[];
+            if (Array.isArray(parsed) && parsed.length && clients.length === 0) setClients(parsed);
+          }
+        } catch {}
         const res = await fetch('/api/clients');
         if (res.ok) {
           const data = await res.json();
@@ -453,6 +461,7 @@ export default function ClientManagement() {
             createdAt: r.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
           }));
           setClients(mapped);
+          try { localStorage.setItem('clients', JSON.stringify(mapped)); } catch {}
         }
       } catch {}
     })();
@@ -497,7 +506,7 @@ export default function ClientManagement() {
       const res = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (res.ok) {
         const created = await res.json();
-        setClients(prev => [...prev, {
+        const nextClient: Client = {
           id: created.id,
           name: created.name,
           industry: created.industry,
@@ -515,7 +524,12 @@ export default function ClientManagement() {
           auditUniverse: created.auditUniverse || payload.details.auditUniverse,
           stats: created.stats || payload.details.stats,
           createdAt: created.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
-        }]);
+        };
+        setClients(prev => {
+          const updated = [...prev, nextClient];
+          try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
+          return updated;
+        });
       }
     } catch {}
     setNewClient({
