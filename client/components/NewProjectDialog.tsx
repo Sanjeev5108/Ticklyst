@@ -506,6 +506,15 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     })();
   }, [formData.clientName, selectedClientId, processIdToName]);
 
+  // Auto-select mapped processes when available so the Checklist Tree becomes visible immediately
+  useEffect(() => {
+    if (Array.isArray(processesForClient) && processesForClient.length) {
+      if (!Array.isArray(formData.checklistTemplate) || formData.checklistTemplate.length === 0) {
+        updateFormData('checklistTemplate', processesForClient);
+      }
+    }
+  }, [processesForClient]);
+
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
     const procs = formData.checklistTemplate;
