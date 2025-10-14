@@ -17,8 +17,26 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      code TEXT,
+      name TEXT NOT NULL,
+      client_name TEXT,
+      status TEXT,
+      start_date DATE,
+      end_date DATE,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
   if (process.env.CLEAR_CLIENTS_ON_BOOT === 'true') {
     try { await pool.query('TRUNCATE TABLE clients'); } catch {}
+  }
+  if (process.env.CLEAR_PROJECTS_ON_BOOT === 'true') {
+    try { await pool.query('TRUNCATE TABLE projects'); } catch {}
   }
 }
 ensure().catch(e => console.error('ensure clients failed', e));
@@ -281,36 +299,53 @@ export const deleteAllClients: RequestHandler = async (_req, res) => {
   }
 };
 
-// Projects
-export const getProjects: RequestHandler = (req, res) => {
-  res.json(projects);
+// Projects (persisted to Postgres)
+export const getProjects: RequestHandler = async (_req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  try {
+    const q = await pool.query('SELECT id, code, name, client_name, status, start_date, end_date, data, created_by, created_at FROM projects ORDER BY created_at DESC');
+    const rows = q.rows.map(r => ({ id: r.id, code: r.code, name: r.name, clientName: r.client_name, status: r.status, startDate: r.start_date, endDate: r.end_date, data: r.data || {}, createdBy: r.created_by, createdAt: r.created_at }));
+    res.json(rows);
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
 };
 
-export const createProject: RequestHandler = (req, res) => {
-  const { name, clientId, assignedTeam, startDate, dueDate, checklistQuestionIds, createdBy } = req.body;
-  
-  const checklist: ChecklistItem[] = checklistQuestionIds.map((questionId: string) => ({
-    id: Date.now().toString() + Math.random(),
-    questionId,
-    status: 'pending' as const,
-    comments: []
-  }));
-  
-  const newProject: Project = {
-    id: Date.now().toString(),
-    name,
-    clientId,
-    assignedTeam: assignedTeam || [],
-    status: 'pending',
-    startDate,
-    dueDate,
-    checklist,
-    createdBy,
-    createdAt: new Date().toISOString()
-  };
-  
-  projects.push(newProject);
-  res.status(201).json(newProject);
+export const createProject: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const body = req.body || {};
+  try {
+    const id = body.id || `PRJ-${Date.now()}`;
+    const code = body.projectCode || body.code || null;
+    const name = body.projectName || body.name || 'Untitled Project';
+    const clientName = body.clientName || body.client || null;
+    const status = body.status || 'todo';
+    const startDate = body.startDate ? new Date(body.startDate) : null;
+    const endDate = body.endDate ? new Date(body.endDate) : null;
+    const createdBy = body.createdBy || 'system';
+    const data = body; // store full form payload
+
+    await pool.query(
+      'INSERT INTO projects(id, code, name, client_name, status, start_date, end_date, data, created_by, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now()) ON CONFLICT (id) DO UPDATE SET code=EXCLUDED.code, name=EXCLUDED.name, client_name=EXCLUDED.client_name, status=EXCLUDED.status, start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date, data=EXCLUDED.data, created_by=EXCLUDED.created_by, updated_at=now()',
+      [id, code, name, clientName, status, startDate, endDate, data, createdBy]
+    );
+    res.status(201).json({ id, code, name, clientName, status, startDate, endDate, createdBy });
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+export const deleteAllProjects: RequestHandler = async (_req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  try {
+    await pool.query('TRUNCATE TABLE projects');
+    res.status(204).send();
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
 };
 
 // Comments
