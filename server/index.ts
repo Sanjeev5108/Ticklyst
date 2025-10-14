@@ -54,8 +54,8 @@ export function createServer() {
   // Framework
   app.get('/api/framework/tree', getFrameworkTree);
   app.post('/api/framework/nodes', createFrameworkNode);
-  app.put('/api/framework/nodes/:id', updateFrameworkNode);
-  app.delete('/api/framework/nodes/:id', deleteFrameworkNode);
+  app.put('/api/framework/nodes/*', updateFrameworkNode);
+  app.delete('/api/framework/nodes/*', deleteFrameworkNode);
 
   // Auditing System API Routes
 
