@@ -255,6 +255,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [frameworkProcesses, setFrameworkProcesses] = useState<string[]>([]);
   const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
+  const [processIdToName, setProcessIdToName] = useState<Record<string,string>>({});
   const [newActivity, setNewActivity] = useState('');
   const [newRisk, setNewRisk] = useState('');
   const [newControl, setNewControl] = useState('');
@@ -431,45 +432,59 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     if (!Object.keys(frameworkTree).length) fetchAndBuildFramework();
   }, []);
 
+  // Load framework process ID->name map from server SoA framework
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/framework/tree');
+        if (!res.ok) return;
+        const data = await res.json();
+        const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
+        const map: Record<string,string> = {};
+        nodes.filter(n => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
+        setProcessIdToName(map);
+      } catch {}
+    })();
+  }, []);
+
   useEffect(() => {
     const clientName = formData.clientName;
     const clientId = selectedClientId;
     if (!clientName && !clientId) { setProcessesForClient([]); return; }
 
-    const extractForClient = (mapping: Record<string, string[]> | null) => {
-      if (!mapping) return [] as string[];
-      const tryKeys = [clientId, clientName].filter(Boolean) as string[];
-      for (const k of tryKeys) {
-        if (Array.isArray(mapping[k]) && mapping[k].length) return mapping[k];
-      }
-      // try case-insensitive name match
-      const matchKey = Object.keys(mapping).find(k => k.toLowerCase() === (clientName || '').toLowerCase());
-      if (matchKey && Array.isArray(mapping[matchKey]) && mapping[matchKey].length) return mapping[matchKey];
-      return [] as string[];
+    const toNames = (ids: string[]): string[] => {
+      if (!Array.isArray(ids)) return [];
+      const names = ids.map(id => processIdToName[id]).filter(Boolean);
+      return names as string[];
     };
 
-    // 1) Try cache first
-    try {
-      const raw = localStorage.getItem('soa-client-mapping');
-      if (raw) {
-        const map = JSON.parse(raw) as Record<string, string[]>;
-        const procs = extractForClient(map);
-        if (procs.length) { setProcessesForClient(procs); }
-      }
-    } catch {}
+    const readLocal = () => {
+      try {
+        if (!clientId) return [] as string[];
+        const raw = localStorage.getItem(`soa:client:${clientId}`);
+        if (!raw) return [] as string[];
+        const json = JSON.parse(raw);
+        if (Array.isArray(json?.processes)) return toNames(json.processes as string[]);
+        return [] as string[];
+      } catch { return [] as string[]; }
+    };
 
-    // 2) Always try server fetch to refresh mapping if available; ignore failures
+    const localNames = readLocal();
+    if (localNames.length) setProcessesForClient(localNames);
+
     (async () => {
       try {
-        const res = await fetch('/api/settings/soa-client-mapping');
+        if (!clientId) return;
+        const key = encodeURIComponent(`soa:client:${clientId}`);
+        const res = await fetch(`/api/settings/${key}`);
         if (!res.ok) return;
         const data = await res.json();
-        try { localStorage.setItem('soa-client-mapping', JSON.stringify(data)); } catch {}
-        const procs = extractForClient(data as Record<string, string[]>);
-        setProcessesForClient(procs);
+        try { localStorage.setItem(`soa:client:${clientId}`, JSON.stringify(data)); } catch {}
+        const names = Array.isArray(data?.processes) ? toNames(data.processes as string[]) : [];
+        setProcessesForClient(names);
       } catch {}
     })();
-  }, [formData.clientName, selectedClientId]);
+  }, [formData.clientName, selectedClientId, processIdToName]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   useEffect(() => {
