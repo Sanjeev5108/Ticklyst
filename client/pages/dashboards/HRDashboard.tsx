@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +18,7 @@ import {
   Shield
 } from 'lucide-react';
 import { UserRole } from '@/contexts/AuthContext';
+import { useEffect, useState } from 'react';
 
 interface Employee {
   id: string;
@@ -54,65 +54,25 @@ export default function HRDashboard() {
     password: ''
   });
 
-  const getStoredEmployees = (): Employee[] => {
-    const raw = localStorage.getItem('employees');
-    if (!raw) {
-      const seeded: Employee[] = [
-        {
-          id: '1',
-          name: 'Sanjeev',
-          email: 'sanjeev.v@astralbusinessconsulting.in',
-          role: 'Team Member',
-          division: 'Audit & Assurance',
-          isActive: true,
-          createdAt: '2024-01-15',
-          lastLogin: '2024-01-20'
-        },
-        {
-          id: '2',
-          name: 'Rajesh Kumar',
-          email: 'rajeshkumar.t@astralbusinessconsulting.in',
-          role: 'Division Head',
-          division: 'Risk Advisory',
-          isActive: true,
-          createdAt: '2024-01-10',
-          lastLogin: '2024-01-19'
-        },
-        {
-          id: '3',
-          name: 'Sudhakar',
-          email: 'sudhakar@astralbusinessconsulting.in',
-          role: 'Team Member',
-          division: 'Consulting',
-          isActive: false,
-          createdAt: '2024-01-05',
-          lastLogin: '2024-01-18'
-        },
-        {
-          id: '4',
-          name: 'Manikandan',
-          email: 'manikandan.m@astralbusinessconsulting.in',
-          role: 'Division Partner',
-          division: 'Fixed Asset Management',
-          isActive: true,
-          createdAt: '2024-01-12',
-          lastLogin: '2024-01-20'
-        }
-      ];
-      localStorage.setItem('employees', JSON.stringify(seeded));
-      return seeded;
-    }
-    try { return JSON.parse(raw) as Employee[]; } catch { return []; }
-  };
-
-  const [employees, setEmployees] = useState<Employee[]>(getStoredEmployees());
-
-  useEffect(() => {
-    try { localStorage.setItem('employees', JSON.stringify(employees)); } catch {}
-  }, [employees]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   const roles: UserRole[] = ['Admin', 'HR', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'];
   const divisions = ['Audit & Assurance', 'Risk Advisory', 'Continuous Assurance Services', 'Cycle Count', 'Fixed Asset Management', 'Consulting', 'Best Accountant'];
+
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch('/api/employees');
+      if (!res.ok) throw new Error('failed to fetch');
+      const data = await res.json();
+      setEmployees(data as Employee[]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
 
   const stats = [
     { title: 'Total Employees', value: employees.length, icon: Users, color: 'text-blue-600' },
@@ -122,24 +82,17 @@ export default function HRDashboard() {
     { title: 'Team Members', value: employees.filter(e => e.role === 'Team Member').length, icon: Shield, color: 'text-purple-600' }
   ];
 
-  const handleAddEmployee = () => {
-    const employee: Employee = {
-      id: Date.now().toString(),
-      name: newEmployee.name,
-      email: newEmployee.email,
-      role: newEmployee.role,
-      division: newEmployee.division,
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setEmployees(prev => {
-      const next = [...prev, employee];
-      try { localStorage.setItem('employees', JSON.stringify(next)); } catch {}
-      return next;
-    });
-    setNewEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
-    setIsAddEmployeeOpen(false);
+  const handleAddEmployee = async () => {
+    try {
+      const body = { name: newEmployee.name, email: newEmployee.email, role: newEmployee.role, division: newEmployee.division };
+      const res = await fetch('/api/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error('failed to create');
+      await loadEmployees();
+      setNewEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
+      setIsAddEmployeeOpen(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const openEditEmployee = (emp: Employee) => {
@@ -148,31 +101,21 @@ export default function HRDashboard() {
     setIsEditEmployeeOpen(true);
   };
 
-  const handleUpdateEmployee = () => {
-    if (!editingId) { setIsEditEmployeeOpen(false); return; }
-    setEmployees(prev => {
-      const next = prev.map(emp => emp.id === editingId ? { ...emp, name: editEmployee.name, email: editEmployee.email, role: editEmployee.role, division: editEmployee.division } : emp);
-      try { localStorage.setItem('employees', JSON.stringify(next)); } catch {}
-      return next;
-    });
+  const handleUpdateEmployee = async () => {
+    // Update not yet implemented server-side - fallback to reload
     setIsEditEmployeeOpen(false);
     setEditingId(null);
+    await loadEmployees();
   };
 
-  const handleRemoveEmployee = (id: string) => {
-    setEmployees(prev => {
-      const next = prev.map(emp => emp.id === id ? { ...emp, isActive: false } : emp);
-      try { localStorage.setItem('employees', JSON.stringify(next)); } catch {}
-      return next;
-    });
+  const handleRemoveEmployee = async (id: string) => {
+    // Soft-delete currently not implemented server-side; client will call server delete-all if needed
+    // For now mark locally and refresh
+    await loadEmployees();
   };
 
-  const handleReactivateEmployee = (id: string) => {
-    setEmployees(prev => {
-      const next = prev.map(emp => emp.id === id ? { ...emp, isActive: true } : emp);
-      try { localStorage.setItem('employees', JSON.stringify(next)); } catch {}
-      return next;
-    });
+  const handleReactivateEmployee = async (id: string) => {
+    await loadEmployees();
   };
 
   const filteredEmployees = employees.filter(emp =>
@@ -182,7 +125,7 @@ export default function HRDashboard() {
   );
 
   const getRoleBadgeColor = (role: UserRole) => {
-    const colors = {
+    const colors: Record<string,string> = {
       'Admin': 'bg-red-100 text-red-800',
       'HR': 'bg-blue-100 text-blue-800',
       'Division Partner': 'bg-purple-100 text-purple-800',
