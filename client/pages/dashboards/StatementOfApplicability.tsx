@@ -117,13 +117,14 @@ export default function StatementOfApplicability() {
     (async () => {
       try {
         const res = await fetch('/api/clients');
-        if (res.ok) {
-          const data = await res.json();
-          const mapped: SoAClient[] = (data || []).map((r: any) => ({ id: r.id, name: r.name, industry: r.industry }));
-          setClients(mapped);
-          if (!selectedClientId && mapped.length) setSelectedClientId(mapped[0].id);
-        }
-      } catch {}
+        if (!res.ok) throw new Error('bad');
+        const data = await res.json();
+        const mapped: SoAClient[] = (data || []).map((r: any) => ({ id: r.id, name: r.name, industry: r.industry }));
+        setClients(mapped);
+        if (!selectedClientId && mapped.length) setSelectedClientId(mapped[0].id);
+      } catch {
+        toast({ title: 'Could not load clients' });
+      }
     })();
   }, []);
 
