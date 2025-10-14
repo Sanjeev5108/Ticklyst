@@ -121,20 +121,31 @@ export default function HRDashboard() {
   const handleUpdateEmployee = async () => {
     if (!editingId) { setIsEditEmployeeOpen(false); return; }
     try {
-      const payload: any = { name: editEmployee.name, email: editEmployee.email, role: editEmployee.role, division: editEmployee.division };
-      if (editEmployee.password && editEmployee.password.length >= 8) payload.password = editEmployee.password;
+      const name = editEmployee.name?.trim();
+      const email = editEmployee.email?.trim();
+      const role = editEmployee.role;
+      const pwd = editEmployee.password;
+      const emailOk = /.+@.+\..+/.test(email || '');
+      if (!name || !emailOk || !role || !pwd || pwd.length < 8) {
+        toast({ title: 'Please fill all required fields', description: 'Name, Email (valid), Role, and Password (min 8) are mandatory.' });
+        return;
+      }
+      const payload: any = { name, email, role, division: editEmployee.division || null, password: pwd };
       const res = await fetch(`/api/employees/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         let msg = 'failed to update';
         try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
-        throw new Error(msg);
+        toast({ title: 'Update failed', description: msg });
+        return;
       }
       setIsEditEmployeeOpen(false);
       setEditingId(null);
       setEditEmployee({ name: '', email: '', role: '' as UserRole, division: '', password: '' });
       await loadEmployees();
+      toast({ title: 'Employee updated successfully' });
     } catch (e) {
       console.error(e);
+      toast({ title: 'Update failed' });
     }
   };
 
