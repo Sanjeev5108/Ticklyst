@@ -124,7 +124,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     const h = typeof window !== 'undefined' ? window.location.hostname : '';
     if (h === 'localhost' || h === '127.0.0.1') return true;
     if (h.endsWith('.netlify.app')) return true;
-    if (h.endsWith('.fly.dev')) return false;
+    if (h.endsWith('.fly.dev')) return true;
     return true;
   }, []);
   const generateProjectCode = (date: Date | null) => {
