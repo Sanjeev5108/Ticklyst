@@ -19,7 +19,7 @@ import {
   deleteAllProjects,
   addComment
 } from "./routes/auditing";
-import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee } from "./routes/employees";
+import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEmployeeStatus } from "./routes/employees";
 import { login } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
 import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode } from "./routes/framework";
