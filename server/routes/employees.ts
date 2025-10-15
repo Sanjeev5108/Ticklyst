@@ -146,3 +146,31 @@ export const updateEmployee: RequestHandler = async (req, res) => {
     res.status(500).json({ error: err.message || 'db_error' });
   }
 };
+
+export const setEmployeeStatus: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
+  const { id } = req.params;
+  const { isActive } = req.body || {};
+  if (typeof isActive !== 'boolean') return res.status(400).json({ error: 'missing_or_invalid_isActive' });
+  try {
+    const q = await pool.query(
+      `UPDATE employees SET is_active=$1 WHERE id=$2 RETURNING id, name, email, role, division, is_active, created_at, last_login`,
+      [isActive, id]
+    );
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    const r = q.rows[0];
+    res.json({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      role: r.role,
+      division: r.division,
+      isActive: r.is_active,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : null,
+      lastLogin: r.last_login ? new Date(r.last_login).toISOString().split('T')[0] : null
+    });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'db_error' });
+  }
+};
