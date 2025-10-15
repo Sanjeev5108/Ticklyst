@@ -303,7 +303,8 @@ export default function FrameworkDashboard() {
         const res = await fetch('/api/framework/tree');
         if (res.ok) {
           const data = await res.json();
-          setNodes((data.nodes || []) as any[]);
+          const fetched = ((data.nodes || []) as any[]).slice().sort((a: any,b: any)=>compareHier(a.id,b.id));
+          setNodes(fetched as any[]);
           setDetailsById((data.detailsById || {}) as any);
           return;
         }
