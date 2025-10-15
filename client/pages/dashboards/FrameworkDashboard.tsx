@@ -616,7 +616,7 @@ export default function FrameworkDashboard() {
       const res = await fetch(`/api/framework/nodes/${id}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) throw new Error('delete_failed');
       const toDelete = new Set([id, ...collectDescendantIds(id)]);
-      setNodes(prev => prev.filter(n => !toDelete.has(n.id)));
+      setNodes(prev => prev.filter(n => !toDelete.has(n.id)).sort((a,b)=>compareHier(a.id,b.id)));
       setDetailsById(prev => {
         const copy = { ...prev } as Record<string, NodeDetails>;
         for (const k of Array.from(toDelete)) delete copy[k];
