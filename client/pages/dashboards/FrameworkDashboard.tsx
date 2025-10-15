@@ -590,7 +590,7 @@ export default function FrameworkDashboard() {
         body: JSON.stringify({ id, type, name, parentId: parent?.id || null, details })
       });
       if (!res.ok) throw new Error('create_failed');
-      setNodes(prev => [...prev, node]);
+      setNodes(prev => [...prev, node].sort((a,b)=>compareHier(a.id,b.id)));
       setDetailsById(prev => ({ ...prev, [id]: details }));
       if (parent && !parent.isExpanded) toggleExpanded(parent.id);
       setSelectedNodeId(id);
