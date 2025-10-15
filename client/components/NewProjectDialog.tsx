@@ -516,7 +516,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             const map: Record<string,string> = {};
             nodes.filter((n:any) => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
             setProcessIdToName(map);
+            setFrameworkNodesFlat(nodes);
             try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
+            try { localStorage.setItem('framework:nodesFlat', JSON.stringify(nodes)); } catch {}
 
             // Build nodeId -> localId mapping (by names) for applicability hydration
             const byId: Record<string, any> = {};
@@ -557,6 +559,10 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       try {
         const cached2 = localStorage.getItem('framework:nodeIdToLocalId');
         if (cached2) setNodeIdToLocalId(JSON.parse(cached2));
+      } catch {}
+      try {
+        const cached3 = localStorage.getItem('framework:nodesFlat');
+        if (cached3) setFrameworkNodesFlat(JSON.parse(cached3));
       } catch {}
     })();
   }, [apiEnabled]);
