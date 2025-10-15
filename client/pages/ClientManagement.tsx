@@ -631,6 +631,13 @@ export default function ClientManagement() {
     setIsEditClientOpen(false);
   };
 
+  const handleDeleteAllClients = async () => {
+    try { await fetch('/api/clients', { method: 'DELETE' }); } catch {}
+    setClients([]);
+    try { localStorage.removeItem('clients'); } catch {}
+    toast({ title: 'All clients deleted' });
+  };
+
   const ClientCard = ({ client }: { client: Client }) => (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
       <CardContent className="p-6">
