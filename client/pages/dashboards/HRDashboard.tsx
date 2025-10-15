@@ -150,13 +150,45 @@ export default function HRDashboard() {
   };
 
   const handleRemoveEmployee = async (id: string) => {
-    // Soft-delete currently not implemented server-side; client will call server delete-all if needed
-    // For now mark locally and refresh
-    await loadEmployees();
+    try {
+      const res = await fetch(`/api/employees/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: false })
+      });
+      if (!res.ok) {
+        let msg = 'failed to purge';
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
+        toast({ title: 'Purge failed', description: msg });
+        return;
+      }
+      await loadEmployees();
+      toast({ title: 'Employee purged' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Purge failed' });
+    }
   };
 
   const handleReactivateEmployee = async (id: string) => {
-    await loadEmployees();
+    try {
+      const res = await fetch(`/api/employees/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: true })
+      });
+      if (!res.ok) {
+        let msg = 'failed to reactivate';
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch {}
+        toast({ title: 'Reactivate failed', description: msg });
+        return;
+      }
+      await loadEmployees();
+      toast({ title: 'Employee reactivated' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Reactivate failed' });
+    }
   };
 
   const filteredEmployees = employees.filter(emp =>
