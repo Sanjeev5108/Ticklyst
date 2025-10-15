@@ -578,11 +578,9 @@ export default function StatementOfApplicability() {
                           <div className="text-sm font-medium truncate">{node.name}</div>
                           <div className="flex items-center gap-2">
                             <div className={`text-xs capitalize ${getTypeColorClass(node.type)} truncate`}>{node.type}</div>
-                            {nd?.applicable !== undefined && nd?.applicable !== null && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${nd.applicable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                {nd.applicable ? 'Applicable' : 'Not Applicable'}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${nd?.applicable === true ? 'bg-green-100 text-green-700' : nd?.applicable === false ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                                {nd?.applicable === true ? 'Applicable' : nd?.applicable === false ? 'Not Applicable' : 'Undecided'}
                               </span>
-                            )}
                           </div>
                         </button>
                       </div>
