@@ -438,7 +438,7 @@ export default function StatementOfApplicability() {
 
       <div className="grid grid-cols-1 gap-6">
         {/* Left: Tree */}
-        <Card className="h-[600px] overflow-hidden">
+        <Card className="max-h-[80vh] overflow-hidden flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between w-full">
               <CardTitle>Checklist Tree</CardTitle>
@@ -507,10 +507,10 @@ export default function StatementOfApplicability() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 h-full flex flex-col">
+          <CardContent className="pt-0 flex-1 flex flex-col">
 
             <ScrollArea className="flex-1 pr-2">
-              <div className="divide-y">
+              <div className="divide-y pb-6">
                 {renderNodes.map((node) => {
                   const level = getLevel(node);
                   const hasChildren = tree.some(n => n.parentId === node.id);
