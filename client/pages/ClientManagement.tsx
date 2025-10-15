@@ -982,6 +982,7 @@ export default function ClientManagement() {
         <p className="text-sm text-gray-600">
           {filteredClients.length} of {clients.length} clients
         </p>
+        <Button variant="destructive" size="sm" onClick={handleDeleteAllClients}>Delete All</Button>
       </div>
 
       {/* Client Grid */}
