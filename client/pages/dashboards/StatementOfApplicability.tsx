@@ -507,7 +507,7 @@ export default function StatementOfApplicability() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 flex-1 flex flex-col">
+          <CardContent className="pt-0 flex-1 min-h-0 flex flex-col">
 
             <ScrollArea className="flex-1 pr-2">
               <div className="divide-y pb-6">
