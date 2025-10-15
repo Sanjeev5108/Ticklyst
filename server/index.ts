@@ -44,6 +44,7 @@ export function createServer() {
   app.get('/api/employees', getEmployees);
   app.post('/api/employees', createEmployee);
   app.put('/api/employees/:id', updateEmployee);
+  app.patch('/api/employees/:id/status', setEmployeeStatus);
   app.delete('/api/employees', deleteAllEmployees);
 
   // Auth
