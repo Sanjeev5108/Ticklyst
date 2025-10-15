@@ -289,37 +289,93 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [soaNodes, setSoaNodes] = useState<SoaNode[]>([]);
   const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
 
+  const parseHierId = React.useCallback((id: string) => {
+    const parts = id.split('/');
+    const path = parts[0] || '';
+    const tail1 = parts[1] || '';
+    const tail2 = parts[2] || '';
+    const dot = path.split('.');
+    const procStr = dot[0] || 'P0';
+    const proc = parseInt(procStr.replace(/^P/i, ''), 10) || 0;
+    const sub = dot[1] ? parseInt(dot[1], 10) || 0 : 0;
+    const act = dot[2] ? parseInt(dot[2], 10) || 0 : 0;
+    const risk = tail1 ? (parseInt(tail1.replace(/^R/i, ''), 10) || 0) : 0;
+    const ctrl = tail2 ? (parseInt(tail2.replace(/^C/i, ''), 10) || 0) : 0;
+    return { proc, sub, act, risk, ctrl };
+  }, []);
+  const compareHier = React.useCallback((a: string, b: string) => {
+    const A = parseHierId(a); const B = parseHierId(b);
+    if (A.proc !== B.proc) return A.proc - B.proc;
+    if (A.sub !== B.sub) return A.sub - B.sub;
+    if (A.act !== B.act) return A.act - B.act;
+    if (A.risk !== B.risk) return A.risk - B.risk;
+    if (A.ctrl !== B.ctrl) return A.ctrl - B.ctrl;
+    return a.localeCompare(b);
+  }, [parseHierId]);
+
   const buildSoaNodes = React.useCallback((procs: string[]): SoaNode[] => {
     const out: SoaNode[] = [];
+    if (!frameworkNodesFlat.length) return out;
+    const byId: Record<string, any> = {};
+    frameworkNodesFlat.forEach((n:any)=>{ byId[n.id] = n; });
+    const climb = (id: string) => {
+      const chain: any[] = [];
+      let cur = byId[id];
+      while (cur) { chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : undefined; }
+      return chain;
+    };
+    const sorted = [...frameworkNodesFlat].sort((a:any,b:any)=>compareHier(a.id,b.id));
+
     for (const proc of procs) {
       const procKey = findMatchingKey(frameworkTree, proc);
       if (!procKey) continue;
-      const procNode = frameworkTree[procKey];
+      const procNodeFlat = sorted.find(n => n.type === 'process' && (n.name === procKey || n.name === (frameworkTree[procKey]?.name || procKey)));
       const procId = `proc|${procKey}`;
-      out.push({ id: procId, type: 'process', name: procNode?.name || procKey, isExpanded: true });
-      const subprocesses = procNode?.subprocesses || {};
-      for (const [spKey, spNode] of Object.entries<any>(subprocesses)) {
-        const spId = `sub|${procKey}|${spKey}`;
-        out.push({ id: spId, type: 'subprocess', name: (spNode as any)?.name || spKey, parentId: procId, isExpanded: true });
-        const activities = (spNode as any)?.activities || {};
-        for (const [acKey, acNode] of Object.entries<any>(activities)) {
-          const acId = `act|${procKey}|${spKey}|${acKey}`;
-          out.push({ id: acId, type: 'activity', name: (acNode as any)?.name || acKey, parentId: spId, isExpanded: true });
-          const risks = (acNode as any)?.risks || {};
-          for (const [rkKey, rkNode] of Object.entries<any>(risks)) {
-            const rkId = `risk|${procKey}|${spKey}|${acKey}|${rkKey}`;
-            out.push({ id: rkId, type: 'risk', name: (rkNode as any)?.name || rkKey, parentId: acId, isExpanded: true });
-            const ctrls = Array.isArray((rkNode as any)?.controls) ? (rkNode as any).controls : [];
-            ctrls.forEach((c: string, idx: number) => {
-              const ctrlId = `ctrl|${procKey}|${spKey}|${acKey}|${rkKey}|${idx}`;
-              out.push({ id: ctrlId, type: 'control', name: c, parentId: rkId });
-            });
-          }
+      out.push({ id: procId, type: 'process', name: frameworkTree[procKey]?.name || procKey, isExpanded: true });
+
+      for (const n of sorted) {
+        const chain = climb(n.id);
+        const rootProc = chain.find(x => x.type === 'process');
+        if (!rootProc || rootProc.name !== (frameworkTree[procKey]?.name || procKey)) continue;
+        if (n.type === 'process') continue; // already added
+        if (n.type === 'subprocess') {
+          const spId = `sub|${procKey}|${n.name}`;
+          out.push({ id: spId, type: 'subprocess', name: n.name, parentId: procId, isExpanded: true });
+          continue;
+        }
+        if (n.type === 'activity') {
+          const sp = chain.find(x=>x.type==='subprocess');
+          if (!sp) continue;
+          const acId = `act|${procKey}|${sp.name}|${n.name}`;
+          const spId = `sub|${procKey}|${sp.name}`;
+          out.push({ id: acId, type: 'activity', name: n.name, parentId: spId, isExpanded: true });
+          continue;
+        }
+        if (n.type === 'risk') {
+          const sp = chain.find(x=>x.type==='subprocess');
+          const ac = chain.find(x=>x.type==='activity');
+          if (!(sp && ac)) continue;
+          const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${n.name}`;
+          const acId = `act|${procKey}|${sp.name}|${ac.name}`;
+          out.push({ id: rkId, type: 'risk', name: n.name, parentId: acId, isExpanded: true });
+          continue;
+        }
+        if (n.type === 'control') {
+          const sp = chain.find(x=>x.type==='subprocess');
+          const ac = chain.find(x=>x.type==='activity');
+          const rk = chain.find(x=>x.type==='risk');
+          if (!(sp && ac && rk)) continue;
+          const ctrls = frameworkTree?.[procKey]?.subprocesses?.[sp.name]?.activities?.[ac.name]?.risks?.[rk.name]?.controls || [];
+          const idx = ctrls.findIndex((c:string)=>c===n.name);
+          const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${rk.name}`;
+          const ctrlId = `ctrl|${procKey}|${sp.name}|${ac.name}|${rk.name}|${Math.max(idx,0)}`;
+          out.push({ id: ctrlId, type: 'control', name: n.name, parentId: rkId });
+          continue;
         }
       }
     }
     return out;
-  }, [findMatchingKey, frameworkTree]);
+  }, [frameworkNodesFlat, frameworkTree, findMatchingKey, compareHier]);
 
   const getSoaLevel = (node: SoaNode) => {
     let level = 0;
