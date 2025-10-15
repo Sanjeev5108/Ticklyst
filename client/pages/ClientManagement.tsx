@@ -67,6 +67,40 @@ interface Client {
   createdAt: string;
 }
 
+const defaultStats = { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 };
+
+function normalizeClient(c: any): Client {
+  const contactPersons = Array.isArray(c?.contactPersons) && c.contactPersons.length
+    ? c.contactPersons
+    : (c?.contactPerson ? [c.contactPerson] : [{ name: '', designation: '', email: '', mobile: '' }]);
+  const contactPerson = c?.contactPerson || contactPersons[0] || { name: '', designation: '', email: '', mobile: '' };
+  const au = c?.auditUniverse || { units: [], departments: [], additionalDepartments: {} };
+  return {
+    id: String(c?.id ?? ''),
+    name: c?.name || '',
+    industry: c?.industry || c?.sector || '',
+    sector: c?.sector || c?.industry || '',
+    location: c?.location || `${c?.city || ''}${c?.city ? ', ' : ''}${c?.state || ''}`,
+    city: c?.city || '',
+    state: c?.state || '',
+    pincode: c?.pincode || '',
+    street1: c?.street1 || '',
+    street2: c?.street2 || '',
+    website: c?.website || '',
+    logo: c?.logo || '',
+    contactPersons,
+    contactPerson,
+    auditUniverse: {
+      units: au.units || [],
+      departments: au.departments || [],
+      additionalDepartments: au.additionalDepartments || {},
+      sections: au.sections || undefined,
+    },
+    stats: c?.stats || defaultStats,
+    createdAt: typeof c?.createdAt === 'string' && c.createdAt ? c.createdAt.slice(0,10) : new Date().toISOString().split('T')[0],
+  };
+}
+
 const mockClients: Client[] = [
   {
     id: '1',
@@ -434,8 +468,10 @@ export default function ClientManagement() {
   });
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = (searchTerm || '').toLowerCase();
+    const name = (client.name || '').toLowerCase();
+    const location = (client.location || '').toLowerCase();
+    const matchesSearch = name.includes(term) || location.includes(term);
     const matchesSector = selectedSector === 'all' || client.sector === selectedSector;
     return matchesSearch && matchesSector;
   });
@@ -447,33 +483,21 @@ export default function ClientManagement() {
         try {
           const cached = localStorage.getItem('clients');
           if (cached) {
-            const parsed = JSON.parse(cached) as Client[];
-            if (Array.isArray(parsed) && parsed.length && clients.length === 0) setClients(parsed);
+            const parsed = JSON.parse(cached) as any[];
+            if (Array.isArray(parsed) && parsed.length && clients.length === 0) setClients(parsed.map(normalizeClient));
           }
         } catch {}
         if (!apiEnabled) return;
         const res = await fetch('/api/clients');
         if (res.ok) {
           const data = await res.json();
-          const mapped: Client[] = (data || []).map((r: any) => ({
-            id: r.id,
-            name: r.name,
-            industry: r.industry,
+          const mapped: Client[] = (data || []).map((r: any) =>
+          normalizeClient({
+            ...r,
             sector: r.sector || r.industry,
             location: r.location || `${r.city || ''}${r.city ? ', ' : ''}${r.state || ''}`,
-            city: r.city || '',
-            state: r.state || '',
-            pincode: r.pincode || '',
-            street1: r.street1 || '',
-            street2: r.street2 || '',
-            website: r.website || '',
-            logo: r.logo || '',
-            contactPersons: r.contactPersons || [],
-            contactPerson: r.contactPerson || { name: '', designation: '', email: '', mobile: '' },
-            auditUniverse: r.auditUniverse || { units: [], departments: [], additionalDepartments: {} },
-            stats: r.stats || { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
-            createdAt: r.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
-          }));
+          })
+        );
           setClients(mapped);
           try { localStorage.setItem('clients', JSON.stringify(mapped)); } catch {}
         }
@@ -638,52 +662,55 @@ export default function ClientManagement() {
     toast({ title: 'All clients deleted' });
   };
 
-  const ClientCard = ({ client }: { client: Client }) => (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-gray-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
-                {client.name}
-              </h3>
-              <p className="text-xs text-gray-500 flex items-center mt-1">
-                <MapPin className="h-3 w-3 mr-1" />
-                {client.location}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-6 mb-2">
-              <div>
-                <div className="text-2xl font-bold text-blue-600">{client.stats.projects}</div>
-                <p className="text-sm text-gray-600 font-medium">Projects</p>
+  const ClientCard = ({ client }: { client: Client }) => {
+    const stats = client.stats || defaultStats;
+    return (
+      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-gray-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-blue-600">{client.stats.ongoing}</div>
-                <p className="text-sm text-gray-600 font-medium">In Progress</p>
+                <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
+                  {client.name}
+                </h3>
+                <p className="text-xs text-gray-500 flex items-center mt-1">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {client.location}
+                </p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-xs">
-            {client.sector || client.industry}
-          </Badge>
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
-            View Details
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          <div className="mb-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-6 mb-2">
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.projects}</div>
+                  <p className="text-sm text-gray-600 font-medium">Projects</p>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.ongoing}</div>
+                  <p className="text-sm text-gray-600 font-medium">In Progress</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="text-xs">
+              {client.sector || client.industry}
+            </Badge>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
+              View Details
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
