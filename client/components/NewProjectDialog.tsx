@@ -332,61 +332,33 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       const procId = `proc|${procKey}`;
       out.push({ id: procId, type: 'process', name: frameworkTree[procKey]?.name || procKey, isExpanded: true });
 
-      // Build per-risk control order from sorted nodes for this process
-      const riskControls: Record<string, string[]> = {};
-      for (const n of sorted) {
+      const isInProc = (n:any) => {
         const chain = climb(n.id);
         const rootProc = chain.find(x => x.type === 'process');
-        if (!rootProc || rootProc.name !== (frameworkTree[procKey]?.name || procKey)) continue;
-        if (n.type !== 'control') continue;
-        const sp = chain.find(x=>x.type==='subprocess');
-        const ac = chain.find(x=>x.type==='activity');
-        const rk = chain.find(x=>x.type==='risk');
-        if (!(sp && ac && rk)) continue;
-        const rKey = `${procKey}|${sp.name}|${ac.name}|${rk.name}`;
-        riskControls[rKey] = riskControls[rKey] || [];
-        riskControls[rKey].push(n.name);
-      }
+        return !!rootProc && rootProc.name === (frameworkTree[procKey]?.name || procKey);
+      };
 
-      for (const n of sorted) {
-        const chain = climb(n.id);
-        const rootProc = chain.find(x => x.type === 'process');
-        if (!rootProc || rootProc.name !== (frameworkTree[procKey]?.name || procKey)) continue;
-        if (n.type === 'process') continue;
-        if (n.type === 'subprocess') {
-          const spId = `sub|${procKey}|${n.name}`;
-          out.push({ id: spId, type: 'subprocess', name: n.name, parentId: procId, isExpanded: true });
-          continue;
-        }
-        if (n.type === 'activity') {
-          const sp = chain.find(x=>x.type==='subprocess');
-          if (!sp) continue;
-          const acId = `act|${procKey}|${sp.name}|${n.name}`;
-          const spId = `sub|${procKey}|${sp.name}`;
-          out.push({ id: acId, type: 'activity', name: n.name, parentId: spId, isExpanded: true });
-          continue;
-        }
-        if (n.type === 'risk') {
-          const sp = chain.find(x=>x.type==='subprocess');
-          const ac = chain.find(x=>x.type==='activity');
-          if (!(sp && ac)) continue;
-          const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${n.name}`;
+      const subs = sorted.filter(n => n.type === 'subprocess' && isInProc(n));
+      for (const sp of subs) {
+        const spId = `sub|${procKey}|${sp.name}`;
+        out.push({ id: spId, type: 'subprocess', name: sp.name, parentId: procId, isExpanded: true });
+
+        const acts = sorted.filter(n => n.type === 'activity' && isInProc(n) && (()=>{ const ch=climb(n.id); const p=ch.find(x=>x.type==='subprocess'); return p && p.name===sp.name; })());
+        for (const ac of acts) {
           const acId = `act|${procKey}|${sp.name}|${ac.name}`;
-          out.push({ id: rkId, type: 'risk', name: n.name, parentId: acId, isExpanded: true });
-          continue;
-        }
-        if (n.type === 'control') {
-          const sp = chain.find(x=>x.type==='subprocess');
-          const ac = chain.find(x=>x.type==='activity');
-          const rk = chain.find(x=>x.type==='risk');
-          if (!(sp && ac && rk)) continue;
-          const rKey = `${procKey}|${sp.name}|${ac.name}|${rk.name}`;
-          const order = riskControls[rKey] || [];
-          const idx = Math.max(order.indexOf(n.name), 0);
-          const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${rk.name}`;
-          const ctrlId = `ctrl|${procKey}|${sp.name}|${ac.name}|${rk.name}|${idx}`;
-          out.push({ id: ctrlId, type: 'control', name: n.name, parentId: rkId });
-          continue;
+          out.push({ id: acId, type: 'activity', name: ac.name, parentId: spId, isExpanded: true });
+
+          const risks = sorted.filter(n => n.type === 'risk' && isInProc(n) && (()=>{ const ch=climb(n.id); const s=ch.find(x=>x.type==='subprocess'); const a=ch.find(x=>x.type==='activity'); return s && a && s.name===sp.name && a.name===ac.name; })());
+          for (const rk of risks) {
+            const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${rk.name}`;
+            out.push({ id: rkId, type: 'risk', name: rk.name, parentId: acId, isExpanded: true });
+
+            const ctrls = sorted.filter(n => n.type === 'control' && isInProc(n) && (()=>{ const ch=climb(n.id); const s=ch.find(x=>x.type==='subprocess'); const a=ch.find(x=>x.type==='activity'); const r=ch.find(x=>x.type==='risk'); return s && a && r && s.name===sp.name && a.name===ac.name && r.name===rk.name; })());
+            ctrls.forEach((cNode, idx) => {
+              const ctrlId = `ctrl|${procKey}|${sp.name}|${ac.name}|${rk.name}|${idx}`;
+              out.push({ id: ctrlId, type: 'control', name: cNode.name, parentId: rkId });
+            });
+          }
         }
       }
     }
