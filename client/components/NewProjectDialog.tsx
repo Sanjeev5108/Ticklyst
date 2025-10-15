@@ -255,6 +255,8 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
   const [processIdToName, setProcessIdToName] = useState<Record<string, string>>({});
+  const [nodeIdToLocalId, setNodeIdToLocalId] = useState<Record<string, string>>({});
+  const [frameworkNodesFlat, setFrameworkNodesFlat] = useState<any[]>([]);
   const [newActivity, setNewActivity] = useState('');
   const [newRisk, setNewRisk] = useState('');
   const [newControl, setNewControl] = useState('');
@@ -288,7 +290,6 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [soaApplicable, setSoaApplicable] = useState<Record<string, boolean | null>>({});
 
   const buildSoaNodes = React.useCallback((procs: string[]): SoaNode[] => {
-    const nodes: SoaNode[] = {} as any;
     const out: SoaNode[] = [];
     for (const proc of procs) {
       const procKey = findMatchingKey(frameworkTree, proc);
@@ -516,7 +517,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             const map: Record<string,string> = {};
             nodes.filter((n:any) => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
             setProcessIdToName(map);
+            setFrameworkNodesFlat(nodes);
             try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
+            try { localStorage.setItem('framework:nodesFlat', JSON.stringify(nodes)); } catch {}
 
             // Build nodeId -> localId mapping (by names) for applicability hydration
             const byId: Record<string, any> = {};
@@ -558,8 +561,40 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         const cached2 = localStorage.getItem('framework:nodeIdToLocalId');
         if (cached2) setNodeIdToLocalId(JSON.parse(cached2));
       } catch {}
+      try {
+        const cached3 = localStorage.getItem('framework:nodesFlat');
+        if (cached3) setFrameworkNodesFlat(JSON.parse(cached3));
+      } catch {}
     })();
   }, [apiEnabled]);
+
+  // Compute control mapping to local IDs when framework is ready
+  useEffect(() => {
+    if (!frameworkNodesFlat.length || !Object.keys(frameworkTree).length) return;
+    const byId: Record<string, any> = {};
+    frameworkNodesFlat.forEach((n:any) => { byId[n.id] = n; });
+    const climb = (id: string) => {
+      const chain: any[] = [];
+      let cur = byId[id];
+      while (cur) { chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : undefined; }
+      return chain;
+    };
+    const next: Record<string,string> = { ...nodeIdToLocalId };
+    for (const n of frameworkNodesFlat) {
+      if (n.type !== 'control') continue;
+      const chain = climb(n.id);
+      const proc = chain.find((x:any) => x.type === 'process');
+      const sp = chain.find((x:any) => x.type === 'subprocess');
+      const ac = chain.find((x:any) => x.type === 'activity');
+      const rk = chain.find((x:any) => x.type === 'risk');
+      if (!(proc && sp && ac && rk)) continue;
+      const procKey = proc.name;
+      const idx = frameworkTree?.[procKey]?.subprocesses?.[sp.name]?.activities?.[ac.name]?.risks?.[rk.name]?.controls?.findIndex((c:string)=>c===n.name) ?? -1;
+      if (idx >= 0) next[n.id] = `ctrl|${procKey}|${sp.name}|${ac.name}|${rk.name}|${idx}`;
+    }
+    setNodeIdToLocalId(next);
+    try { localStorage.setItem('framework:nodeIdToLocalId', JSON.stringify(next)); } catch {}
+  }, [frameworkNodesFlat, frameworkTree]);
 
   useEffect(() => {
     const clientName = formData.clientName;
@@ -1194,7 +1229,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
               <p className="text-xs text-gray-500 mt-1">Driven by Statement of Applicability mappings for the selected client</p>
 
 
-              <div className="mt-4 rounded border bg白">
+              <div className="mt-4 rounded border bg-white">
                 <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-white z-[1]">
                   <div className="font-medium">Checklist Tree</div>
                   <div className="text-xs text-slate-500">Select applicable items (selection cascades)</div>
