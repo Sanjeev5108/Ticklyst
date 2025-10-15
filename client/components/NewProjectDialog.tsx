@@ -1233,11 +1233,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                               <div className="text-sm font-medium whitespace-normal break-words pr-2">{node.name}</div>
                               <div className="flex flex-wrap items-center gap-2">
                                 <div className={`text-xs capitalize ${typeColor}`}>{node.type}</div>
-                                {applicable !== undefined && applicable !== null && (
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${applicable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {applicable ? 'Applicable' : 'Not Applicable'}
-                                  </span>
-                                )}
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${applicable === true ? 'bg-green-100 text-green-700' : applicable === false ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                                  {applicable === true ? 'Applicable' : applicable === false ? 'Not Applicable' : 'Undecided'}
+                                </span>
                               </div>
                             </div>
                           </div>
