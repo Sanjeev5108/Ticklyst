@@ -925,7 +925,7 @@ export default function FrameworkDashboard() {
                       }
                       list = list.filter(n => include2.has(n.id));
                     }
-                    return list.map((n) => {
+                    return [...list].sort((a,b)=>compareHier(a.id,b.id)).map((n) => {
                       const level = getLevel(n);
                       const hasChildren = nodes.some(c => c.parentId === n.id);
                       return (
