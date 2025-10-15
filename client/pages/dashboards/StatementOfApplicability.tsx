@@ -116,13 +116,32 @@ export default function StatementOfApplicability() {
   useEffect(() => {
     (async () => {
       try {
+        // Seed from local cache for instant UX and to survive server resets
+        try {
+          const cached = localStorage.getItem('clients');
+          if (cached) {
+            const parsed = JSON.parse(cached) as any[];
+            const mappedCached: SoAClient[] = Array.isArray(parsed) ? parsed.map(r => ({ id: r.id, name: r.name, industry: r.industry || r.sector || '' })) : [];
+            if (mappedCached.length) {
+              setClients(mappedCached);
+              if (!selectedClientId) setSelectedClientId(mappedCached[0].id);
+            }
+          }
+        } catch {}
+
+        // Fresh data from API
         const res = await fetch('/api/clients');
-        if (!res.ok) throw new Error('bad');
-        const data = await res.json();
-        const mapped: SoAClient[] = (data || []).map((r: any) => ({ id: r.id, name: r.name, industry: r.industry }));
-        setClients(mapped);
-        if (!selectedClientId && mapped.length) setSelectedClientId(mapped[0].id);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: SoAClient[] = (data || []).map((r: any) => ({ id: r.id, name: r.name, industry: r.industry }));
+          if (mapped.length) {
+            setClients(mapped);
+            try { localStorage.setItem('clients', JSON.stringify(mapped)); } catch {}
+            if (!selectedClientId) setSelectedClientId(mapped[0].id);
+          }
+        }
       } catch {
+        // Silent: cache seeding already attempted above
         toast({ title: 'Could not load clients' });
       }
     })();
