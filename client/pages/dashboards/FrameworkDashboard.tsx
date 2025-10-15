@@ -649,6 +649,32 @@ export default function FrameworkDashboard() {
 
   const visibleNodes = nodes.filter(n => isParentExpanded(n));
 
+  const parseHierId = (id: string) => {
+    // Expected forms: P1, P1.2, P1.2.3, P1.2.3/R1, P1.2.3/R1/C3
+    const parts = id.split('/');
+    const path = parts[0] || '';
+    const tail1 = parts[1] || '';
+    const tail2 = parts[2] || '';
+    const dot = path.split('.');
+    const procStr = dot[0] || 'P0';
+    const proc = parseInt(procStr.replace(/^P/i, ''), 10) || 0;
+    const sub = dot[1] ? parseInt(dot[1], 10) || 0 : 0;
+    const act = dot[2] ? parseInt(dot[2], 10) || 0 : 0;
+    const risk = tail1 ? (parseInt(tail1.replace(/^R/i, ''), 10) || 0) : 0;
+    const ctrl = tail2 ? (parseInt(tail2.replace(/^C/i, ''), 10) || 0) : 0;
+    return { proc, sub, act, risk, ctrl };
+  };
+
+  const compareHier = (a: string, b: string) => {
+    const A = parseHierId(a); const B = parseHierId(b);
+    if (A.proc !== B.proc) return A.proc - B.proc;
+    if (A.sub !== B.sub) return A.sub - B.sub;
+    if (A.act !== B.act) return A.act - B.act;
+    if (A.risk !== B.risk) return A.risk - B.risk;
+    if (A.ctrl !== B.ctrl) return A.ctrl - B.ctrl;
+    return a.localeCompare(b);
+  };
+
   const getAncestorIds = (id: string) => {
     const out: string[] = [];
     let current = nodes.find(n => n.id === id);
