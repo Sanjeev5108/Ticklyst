@@ -255,6 +255,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
   const [processIdToName, setProcessIdToName] = useState<Record<string, string>>({});
+  const [nodeIdToLocalId, setNodeIdToLocalId] = useState<Record<string, string>>({});
   const [newActivity, setNewActivity] = useState('');
   const [newRisk, setNewRisk] = useState('');
   const [newControl, setNewControl] = useState('');
@@ -513,9 +514,38 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             const data = await res.json();
             const nodes = Array.isArray(data?.nodes) ? (data.nodes as any[]) : [];
             const map: Record<string,string> = {};
-            nodes.filter(n => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
+            nodes.filter((n:any) => n.type === 'process').forEach((n:any) => { map[n.id] = n.name; });
             setProcessIdToName(map);
             try { localStorage.setItem('framework:processIdToName', JSON.stringify(map)); } catch {}
+
+            // Build nodeId -> localId mapping (by names) for applicability hydration
+            const byId: Record<string, any> = {};
+            nodes.forEach((n:any) => { byId[n.id] = n; });
+            const localMap: Record<string,string> = {};
+            const climb = (id: string) => {
+              const chain: any[] = [];
+              let cur = byId[id];
+              while (cur) { chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : undefined; }
+              return chain;
+            };
+            for (const n of nodes) {
+              const chain = climb(n.id);
+              const proc = chain.find((x:any) => x.type === 'process');
+              if (!proc) continue;
+              const sp = chain.find((x:any) => x.type === 'subprocess');
+              const ac = chain.find((x:any) => x.type === 'activity');
+              const rk = chain.find((x:any) => x.type === 'risk');
+              const procKey = proc.name;
+              let localId: string | null = null;
+              if (n.type === 'process') localId = `proc|${procKey}`;
+              else if (n.type === 'subprocess' && sp) localId = `sub|${procKey}|${sp.name}`;
+              else if (n.type === 'activity' && sp && ac) localId = `act|${procKey}|${sp.name}|${ac.name}`;
+              else if (n.type === 'risk' && sp && ac && rk) localId = `risk|${procKey}|${sp.name}|${ac.name}|${rk.name}`;
+              // controls omitted: local control IDs are index-based
+              if (localId) localMap[n.id] = localId;
+            }
+            setNodeIdToLocalId(localMap);
+            try { localStorage.setItem('framework:nodeIdToLocalId', JSON.stringify(localMap)); } catch {}
             return;
           }
         }
@@ -523,6 +553,10 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       try {
         const cached = localStorage.getItem('framework:processIdToName');
         if (cached) setProcessIdToName(JSON.parse(cached));
+      } catch {}
+      try {
+        const cached2 = localStorage.getItem('framework:nodeIdToLocalId');
+        if (cached2) setNodeIdToLocalId(JSON.parse(cached2));
       } catch {}
     })();
   }, [apiEnabled]);
@@ -561,7 +595,17 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             const data = await res.json();
             try { localStorage.setItem(`soa:client:${clientId}`, JSON.stringify(data)); } catch {}
             const names = Array.isArray(data?.processes) ? toNames(data.processes as string[]) : [];
-            if (names.length) { setProcessesForClient(names); return; }
+            if (names.length) setProcessesForClient(names);
+            // Hydrate applicability from saved client mapping
+            if (data && data.nodeApplicability && typeof data.nodeApplicability === 'object') {
+              const updates: Record<string, boolean | null> = {};
+              for (const [nodeId, val] of Object.entries<any>(data.nodeApplicability)) {
+                const localId = nodeIdToLocalId[nodeId];
+                if (localId) updates[localId] = (val as any) as boolean | null;
+              }
+              if (Object.keys(updates).length) setSoaApplicable(prev => ({ ...prev, ...updates }));
+            }
+            return;
           }
         }
       } catch {}
