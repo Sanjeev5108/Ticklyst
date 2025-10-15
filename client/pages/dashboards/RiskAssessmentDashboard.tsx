@@ -53,9 +53,14 @@ export default function RiskAssessmentDashboard() {
     if (scopeType === 'global') {
       setCfg(prev => ({ ...RiskConfigStore.getGlobal(), enabled: prev?.enabled } as RiskAssessmentConfig));
     } else {
-      // assignment-specific: derive from global and keep existing assignmentMap and enabled flag if any
-      const base = RiskConfigStore.getGlobal();
-      setCfg(prev => ({ ...base, enabled: prev?.enabled, id: 'assignment', scope: { ...base.scope, configType: 'assignment', assignmentMap: prev?.scope?.assignmentMap || {} } } as RiskAssessmentConfig));
+      // assignment-specific: prefer persisted central 'assignment' config; fallback to global with empty map
+      const saved = RiskConfigStore.get('assignment');
+      if (saved) {
+        setCfg(prev => ({ ...saved, enabled: prev?.enabled, id: 'assignment', scope: { ...saved.scope, configType: 'assignment' } } as RiskAssessmentConfig));
+      } else {
+        const base = RiskConfigStore.getGlobal();
+        setCfg(prev => ({ ...base, enabled: prev?.enabled, id: 'assignment', scope: { ...base.scope, configType: 'assignment', assignmentMap: prev?.scope?.assignmentMap || {} } } as RiskAssessmentConfig));
+      }
     }
   }, [scopeType]);
 
