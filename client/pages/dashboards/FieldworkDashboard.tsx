@@ -96,7 +96,6 @@ const SelectOrInput = ({ options, value, onChange, placeholder }: { options: str
 export default function FieldworkDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
   const [matrixRows, setMatrixRows] = useState<{ id: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
   const [search, setSearch] = useState('');
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
@@ -211,16 +210,18 @@ export default function FieldworkDashboard() {
   }, [controls]);
 
   useEffect(() => {
-    if (!selectedProcess) { setMatrixRows([]); return; }
+    if (!selectedProject) { setMatrixRows([]); return; }
+    const allowed = new Set(processesForSelectedProject);
+    if (allowed.size === 0) { setMatrixRows([]); return; }
     const rcfg = RiskConfigStore.getGlobal();
     const rows = controls
-      .filter(c => c.process === selectedProcess)
+      .filter(c => allowed.has(c.process || ''))
       .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
     setMatrixRows(rows);
-  }, [selectedProcess, controls, riskConfigVersion]);
+  }, [selectedProject, processesForSelectedProject, controls, riskConfigVersion]);
 
   // Projects (loaded from API)
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
@@ -413,7 +414,7 @@ export default function FieldworkDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
           <Label>Project</Label>
-          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); setSelectedProcess(null); }}>
+          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); }}>
             <SelectTrigger>
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
@@ -425,10 +426,6 @@ export default function FieldworkDashboard() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
-          <Label>Process</Label>
-          <Typeahead items={processesForSelectedProject} value={selectedProcess} onSelect={(v)=>{ setSelectedProcess(v); }} placeholder="Select or search process..." disabled={!selectedProject} />
         </div>
       </div>
 
@@ -459,7 +456,7 @@ export default function FieldworkDashboard() {
         </Popover>
       </div>
 
-      {(selectedProcess) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
+      {(selectedProject) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Activities → Risks → Controls</CardTitle>
