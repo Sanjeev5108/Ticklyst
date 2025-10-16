@@ -413,7 +413,7 @@ export default function FieldworkDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
           <Label>Project</Label>
-          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); setSelectedProcess(null); setSelectedSubprocess(null); }}>
+          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); setSelectedProcess(null); }}>
             <SelectTrigger>
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
