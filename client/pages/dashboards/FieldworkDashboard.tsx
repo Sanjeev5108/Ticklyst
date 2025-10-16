@@ -97,7 +97,6 @@ export default function FieldworkDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
-  const [selectedSubprocess, setSelectedSubprocess] = useState<string | null>(null);
   const [matrixRows, setMatrixRows] = useState<{ id: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
   const [search, setSearch] = useState('');
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
