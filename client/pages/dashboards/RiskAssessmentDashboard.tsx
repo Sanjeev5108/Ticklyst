@@ -76,6 +76,10 @@ export default function RiskAssessmentDashboard() {
     return () => unsub();
   }, []);
 
+  React.useEffect(() => {
+    try { if (selectedAssignmentId) localStorage.setItem(LS_SELECTED_ASSIGNMENT, selectedAssignmentId); } catch {}
+  }, [selectedAssignmentId]);
+
   // Keep assignment map and selection in sync with current assignment types from Settings
   React.useEffect(() => {
     const valid = new Set((assignmentTypes || []).map(a => a.id));
