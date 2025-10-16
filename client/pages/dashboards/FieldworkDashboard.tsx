@@ -439,7 +439,7 @@ export default function FieldworkDashboard() {
         </div>
         <div>
           <Label>Process</Label>
-          <Typeahead items={processes} value={selectedProcess} onSelect={(v)=>{ setSelectedProcess(v); }} placeholder="Select or search process..." disabled={!selectedProject} />
+          <Typeahead items={processesForSelectedProject} value={selectedProcess} onSelect={(v)=>{ setSelectedProcess(v); }} placeholder="Select or search process..." disabled={!selectedProject} />
         </div>
         <div>
           <Label>Subprocess</Label>
