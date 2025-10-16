@@ -209,19 +209,6 @@ export default function FieldworkDashboard() {
     return Array.from(new Set(controls.filter(c => c.process === proc && (c.activity || 'General') === act && (c.risk || '') === risk).map(c => c.name))).sort();
   }, [controls]);
 
-  useEffect(() => {
-    if (!selectedProject) { setMatrixRows([]); return; }
-    const allowed = new Set(processesForSelectedProject);
-    if (allowed.size === 0) { setMatrixRows([]); return; }
-    const rcfg = RiskConfigStore.getGlobal();
-    const rows = controls
-      .filter(c => allowed.has(c.process || ''))
-      .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
-      .sort((a,b)=>{
-        return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
-      });
-    setMatrixRows(rows);
-  }, [selectedProject, processesForSelectedProject, controls, riskConfigVersion]);
 
   // Projects (loaded from API)
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
@@ -263,6 +250,20 @@ export default function FieldworkDashboard() {
     }
     return Array.from(new Set(procs.filter(Boolean))).sort();
   }, [selectedProject, projects, processes]);
+
+  useEffect(() => {
+    if (!selectedProject) { setMatrixRows([]); return; }
+    const allowed = new Set(processesForSelectedProject);
+    if (allowed.size === 0) { setMatrixRows([]); return; }
+    const rcfg = RiskConfigStore.getGlobal();
+    const rows = controls
+      .filter(c => allowed.has(c.process || ''))
+      .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
+      .sort((a,b)=>{
+        return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
+      });
+    setMatrixRows(rows);
+  }, [selectedProject, processesForSelectedProject, controls, riskConfigVersion]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
