@@ -234,7 +234,7 @@ export default function FieldworkDashboard() {
   }, [selectedProcess, selectedSubprocess, controls, riskConfigVersion]);
 
   // Projects (loaded from API)
-  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
   useEffect(() => {
     (async () => {
       try {
@@ -243,7 +243,8 @@ export default function FieldworkDashboard() {
         const rows = await res.json();
         const mapped = (rows || []).map((r: any) => ({
           id: r.id,
-          title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project'
+          title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project',
+          raw: r
         }));
         setProjects(mapped);
       } catch (e) {
@@ -251,6 +252,27 @@ export default function FieldworkDashboard() {
       }
     })();
   }, []);
+
+  const processesForSelectedProject = useMemo(() => {
+    if (!selectedProject) return [] as string[];
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj) return [] as string[];
+    const data = proj.raw?.data || {};
+    let procs: string[] = [];
+    if (data && typeof data.selectedChecklistTree === 'object' && Object.keys(data.selectedChecklistTree || {}).length) {
+      procs = Object.keys(data.selectedChecklistTree || {});
+    } else if (Array.isArray(data.checklistTemplate) && data.checklistTemplate.length) {
+      procs = data.checklistTemplate.slice();
+    } else if (Array.isArray(data.processes) && data.processes.length) {
+      procs = data.processes.slice();
+    } else if (Array.isArray(proj.raw?.data?.processes) && proj.raw.data.processes.length) {
+      procs = proj.raw.data.processes.slice();
+    }
+    if (!procs.length) {
+      procs = processes;
+    }
+    return Array.from(new Set(procs.filter(Boolean))).sort();
+  }, [selectedProject, projects, processes]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
