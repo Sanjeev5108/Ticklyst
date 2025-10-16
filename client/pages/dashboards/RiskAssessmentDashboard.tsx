@@ -93,12 +93,12 @@ export default function RiskAssessmentDashboard() {
       if (changed) {
         next = { ...prev, scope: { ...prev.scope, assignmentMap: pruned } } as any;
       }
-      // fix selection if removed
-      if (prev && (selectedAssignmentId && !valid.has(selectedAssignmentId))) {
-        const first = assignmentTypes[0]?.id || null;
-        setSelectedAssignmentId(first);
-        setSelectedMode('_select');
-      }
+      // fix selection if removed and restore last used
+      const fromLs = (()=>{ try { return localStorage.getItem(LS_SELECTED_ASSIGNMENT); } catch { return null; } })();
+      const pick = (fromLs && valid.has(fromLs)) ? fromLs : (selectedAssignmentId && valid.has(selectedAssignmentId) ? selectedAssignmentId : (assignmentTypes[0]?.id || null));
+      setSelectedAssignmentId(pick);
+      const savedMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return '_select'; } })();
+      setSelectedMode(savedMode || (pick ? ((prev.scope as any)?.assignmentMap?.[pick]?.mode || '_select') : '_select'));
       return next;
     });
   }, [assignmentTypes]);
