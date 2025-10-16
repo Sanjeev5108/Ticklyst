@@ -155,6 +155,12 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     const ranges = cfg.residualRisk.thresholds.ranges || [];
     if (!ranges.length) return;
 
+    // In Standard model we fully control ranges; avoid mutating to prevent duplicates like "2–2"
+    if (cfg.riskScoringModel === 'standard') {
+      setBreakpointErrors([]);
+      return;
+    }
+
     // Calculate parameter-specific min/max without using getParameterMin/Max to avoid circular dependency
     let min: number, max: number;
     if (param === 'likelihood') {
@@ -197,7 +203,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
       const newRanges = getRangesFromBreakpoints(next, ranges);
       return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
     });
-  }, [cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max]);
+  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max]);
 
   return (
     <Tabs defaultValue="risk" className="space-y-4">
