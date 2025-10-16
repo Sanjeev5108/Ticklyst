@@ -838,7 +838,9 @@ export default function RiskAssessmentDashboard() {
                         const raw = v as string;
                         const mode = raw === '_select' ? '' : (raw as 'assignment'|'project');
                         setSelectedMode(raw === '_select' ? '_select' : (raw as any));
+                        try { localStorage.setItem(LS_SELECTED_MODE, raw); } catch {}
                         if (!selectedAssignmentId) return;
+                        try { localStorage.setItem(LS_SELECTED_ASSIGNMENT, selectedAssignmentId); } catch {}
                         const cur = (cfg.scope && (cfg.scope as any).assignmentMap) || {};
                         const next = { ...cur, [selectedAssignmentId]: { enabled: mode !== '', projectId: cur[selectedAssignmentId]?.projectId, mode: mode === '' ? undefined : mode } };
                         setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: next } });
