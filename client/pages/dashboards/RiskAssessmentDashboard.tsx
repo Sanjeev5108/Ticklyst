@@ -168,8 +168,9 @@ export default function RiskAssessmentDashboard() {
     if (keys.length > 0) {
       const k = keys[0];
       setSelectedAssignmentId(k);
-      setSelectedMode(map[k]?.mode || '_select');
-      if (map[k]?.mode === 'assignment') setEditingAssignmentId(k);
+      const savedMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return null; } })() || map[k]?.mode || '_select';
+      setSelectedMode(savedMode);
+      if (savedMode === 'assignment' || map[k]?.mode === 'assignment') setEditingAssignmentId(k);
     } else if (assignmentTypes.length > 0) {
       setSelectedAssignmentId(assignmentTypes[0].id);
       setSelectedMode('_select');
