@@ -118,6 +118,24 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     });
   }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale]);
 
+  // Initialize defaults for Standard model and enforce parameter-specific default breakpoints
+  React.useEffect(() => {
+    if (cfg.riskScoringModel !== 'standard') return;
+    const p = cfg.residualRisk?.parameter || 'residualRisk';
+    const mkRanges = (bps: number[], labels: string[], colors: string[]) => bps.slice(0, -1).map((from, i) => ({ from, to: bps[i + 1], label: labels[i] || `Level ${i + 1}`, color: colors[i] || 'Grey' }));
+    const desiredBps = (p === 'likelihood' || p === 'consequence' || p === 'controlScore') ? [1,2,3,4,5] : [1,5,10,15,20,25];
+    const ranges = cfg.residualRisk.thresholds.ranges || [];
+    const currentBps = getBreakpointsFromRanges(ranges);
+    const same = currentBps.length === desiredBps.length && currentBps.every((v,i)=>v===desiredBps[i]);
+    if (!same) {
+      const labels = (desiredBps.length === 5) ? ['Low','Moderate','High','Very High'] : ['Very Low','Low','Moderate','High','Very High'];
+      const colors = (desiredBps.length === 5) ? ['#10B981','#F59E0B','#F97316','#EF4444'] : ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444'];
+      const newRanges = mkRanges(desiredBps, labels as any, colors as any);
+      setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig));
+      setBreakpointErrors([]);
+    }
+  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter]);
+
   // Clamp breakpoints when parameter changes or relevant scales change
   React.useEffect(() => {
     const param = cfg.residualRisk?.parameter || 'residualRisk';
