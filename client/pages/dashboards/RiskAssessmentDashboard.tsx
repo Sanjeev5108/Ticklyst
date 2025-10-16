@@ -326,6 +326,14 @@ export default function RiskAssessmentDashboard() {
   React.useEffect(() => {
     const ranges = cfg.residualRisk.thresholds.ranges || [];
     if (!ranges || ranges.length === 0) return;
+
+    // In Standard model we fully control ranges; skip mutation and only validate to avoid duplicates like "2–2"
+    if (cfg.riskScoringModel === 'standard') {
+      const errors = validateBreakpoints(getBreakpointsFromRanges(ranges), getParameterMin(), getParameterMax());
+      setBreakpointErrors(errors);
+      return;
+    }
+
     const paramMin = getParameterMin();
     const paramMax = getParameterMax();
     const breakpoints = getBreakpointsFromRanges(ranges);
@@ -365,7 +373,7 @@ export default function RiskAssessmentDashboard() {
     // re-validate and display errors if any
     const errors = validateBreakpoints(newBps, paramMin, paramMax);
     setBreakpointErrors(errors);
-  }, [cfg.residualRisk.parameter, cfg.riskScore?.scale?.min, cfg.riskScore?.scale?.max, cfg.riskScore?.likelihood?.scale?.max, cfg.riskScore?.consequence?.scale?.max, cfg.controlScore?.scale?.max, JSON.stringify(cfg.residualRisk.thresholds.ranges)]);
+  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore?.scale?.min, cfg.riskScore?.scale?.max, cfg.riskScore?.likelihood?.scale?.max, cfg.riskScore?.consequence?.scale?.max, cfg.controlScore?.scale?.max, JSON.stringify(cfg.residualRisk.thresholds.ranges)]);
 
   return (
     <div className="space-y-6">
