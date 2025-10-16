@@ -126,10 +126,10 @@ export const DEFAULT_GLOBAL_RISK_CONFIG = (): RiskAssessmentConfig => ({
     thresholds: {
       ranges: [
         { from: 1, to: 5, label: 'Very Low', color: '#10B981' },
-        { from: 5, to: 10, label: 'Low', color: '#A3E635' },
-        { from: 10, to: 15, label: 'Moderate', color: '#F59E0B' },
-        { from: 15, to: 20, label: 'High', color: '#F97316' },
-        { from: 20, to: 25, label: 'Very High', color: '#EF4444' }
+        { from: 6, to: 10, label: 'Low', color: '#A3E635' },
+        { from: 11, to: 15, label: 'Moderate', color: '#F59E0B' },
+        { from: 16, to: 20, label: 'High', color: '#F97316' },
+        { from: 21, to: 25, label: 'Very High', color: '#EF4444' }
       ],
       heatmapColors: { 'Very Low': '#10B981', Low: '#A3E635', Moderate: '#F59E0B', High: '#F97316', 'Very High': '#EF4444' }
     },
