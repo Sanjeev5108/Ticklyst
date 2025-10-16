@@ -333,7 +333,7 @@ export default function ProjectManagement() {
       projectCode,
       title: projectData.projectName,
       client: projectData.clientName,
-      status: 'todo',
+      status: 'in-progress',
       progress: 0,
       totalTasks: 1,
       completedTasks: 0,
@@ -379,7 +379,7 @@ export default function ProjectManagement() {
     };
 
     try {
-      await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...projectData, id: newProject.id }) });
+      await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...projectData, id: newProject.id, status: 'in-progress' }) });
     } catch {}
     setProjects(prev => [...prev, newProject]);
   };
