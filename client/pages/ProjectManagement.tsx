@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import NewProjectDialog from '@/components/NewProjectDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -440,6 +441,26 @@ export default function ProjectManagement() {
     setIsEditOpen(false);
   };
 
+  const updateProjectStatus = async (proj: Project, next: 'todo'|'in-progress'|'hold') => {
+    setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, status: next } : p));
+    try {
+      await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: proj.id,
+          projectCode: proj.projectCode,
+          projectName: proj.title,
+          clientName: proj.client,
+          status: next,
+          startDate: proj.startDate,
+          endDate: proj.endDate,
+          data: proj.details
+        })
+      });
+    } catch {}
+  };
+
   const ProjectCard = ({ project }: { project: Project }) => (
     <Card className="mb-4 hover:shadow-md transition-shadow cursor-pointer">
       <CardContent className="p-4">
@@ -455,9 +476,19 @@ export default function ProjectManagement() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => openDetails(project)}>View details</Button>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label="More">
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Set status</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'todo')}>Completed</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'in-progress')}>In Progress</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'hold')}>Hold</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
