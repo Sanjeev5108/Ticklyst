@@ -294,6 +294,9 @@ export default function ProjectManagement() {
             scopeNotes: r.data?.scopeNotes || '',
             reportingFrequency: r.data?.reportingFrequency || '',
             emailNotifications: !!r.data?.emailNotifications,
+            checklistTemplate: r.data?.checklistTemplate || [],
+            customChecklistItems: r.data?.customChecklistItems || '',
+            selectedChecklistTree: r.data?.selectedChecklistTree || null,
           }
         }));
         setProjects(mapped);
@@ -400,9 +403,9 @@ export default function ProjectManagement() {
     partners: p.details?.partners || [],
     teamLeaders: p.details?.teamLeaders || [],
     teamMembers: p.details?.teamMembers || [],
-    checklistTemplate: [],
-    customChecklistItems: '',
-    selectedChecklistTree: null,
+    checklistTemplate: (p as any).details?.checklistTemplate || [],
+    customChecklistItems: (p as any).details?.customChecklistItems || '',
+    selectedChecklistTree: (p as any).details?.selectedChecklistTree || null,
     auditUniverse: p.details?.auditUniverse || [],
     scopeNotes: p.details?.scopeNotes || '',
     documents: [],
@@ -414,7 +417,7 @@ export default function ProjectManagement() {
     changeLogsEnabled: true,
   });
 
-  const handleEditSubmit = (data: any) => {
+  const handleEditSubmit = async (data: any) => {
     if (!selectedProject) return;
     setProjects(prev => prev.map(p => p.id === selectedProject.id ? {
       ...p,
@@ -436,8 +439,22 @@ export default function ProjectManagement() {
         scopeNotes: data.scopeNotes || p.details?.scopeNotes || '',
         reportingFrequency: data.reportingFrequency || p.details?.reportingFrequency || '',
         emailNotifications: !!data.emailNotifications,
+        checklistTemplate: data.checklistTemplate || [],
+        customChecklistItems: data.customChecklistItems || '',
+        selectedChecklistTree: data.selectedChecklistTree || null,
       }
     } : p));
+    try {
+      await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          id: selectedProject.id,
+          status: selectedProject.status,
+        })
+      });
+    } catch {}
     setIsEditOpen(false);
   };
 
