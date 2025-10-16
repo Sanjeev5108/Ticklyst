@@ -124,42 +124,43 @@ export default function RiskAssessmentDashboard() {
     }
   }, [cfg.riskScoringModel, cfg.riskScore.mode]);
 
-  // Initialize default residual thresholds and parameter when empty (min to max)
+  // Initialize default residual thresholds and parameter with standard breakpoints
   React.useEffect(() => {
     setCfg(prev => {
       const existing = prev.residualRisk?.thresholds?.ranges || [];
       if (existing.length > 0) return prev;
-
       const p = prev.residualRisk?.parameter || 'residualRisk';
-      let min = 1, max = 5;
 
-      if (p === 'likelihood') {
-        min = prev.riskScore?.likelihood?.scale?.min ?? prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.likelihood?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-      } else if (p === 'consequence') {
-        min = prev.riskScore?.consequence?.scale?.min ?? prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.consequence?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-      } else if (p === 'controlScore') {
-        min = prev.controlScore?.scale?.min ?? 1;
-        max = prev.controlScore?.scale?.max ?? 5;
+      const mkRanges = (bps: number[], labels: string[], colors: string[]) => bps.slice(0, -1).map((from, i) => ({ from, to: bps[i + 1], label: labels[i] || `Level ${i + 1}`, color: colors[i] || 'Grey' }));
+
+      let ranges;
+      if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
+        ranges = mkRanges([1,2,3,4,5], ['Low','Moderate','High','Very High'], ['#10B981','#F59E0B','#F97316','#EF4444']);
       } else {
-        // riskScore or residualRisk - use riskScore range
-        min = prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.scale?.max ?? 25;
-        if (p === 'riskScore' || p === 'residualRisk') {
-          const lmax = prev.riskScore?.likelihood?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-          const cmax = prev.riskScore?.consequence?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-          max = lmax * cmax;
-        }
+        ranges = mkRanges([1,5,10,15,20,25], ['Very Low','Low','Moderate','High','Very High'], ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444']);
       }
 
-      // Start with just min and max breakpoints (creates one range)
-      const breakpoints = [min, max];
-      const ranges = [{ from: min, to: max, label: 'Default', color: '#10B981' }];
-
-      return { ...prev, residualRisk: { ...prev.residualRisk, parameter: prev.residualRisk?.parameter || 'residualRisk', thresholds: { ...prev.residualRisk.thresholds, ranges } } } as RiskAssessmentConfig;
+      return { ...prev, residualRisk: { ...prev.residualRisk, parameter: p, thresholds: { ...prev.residualRisk.thresholds, ranges } } } as RiskAssessmentConfig;
     });
   }, []);
+
+  // For Standard model, enforce default breakpoints on parameter change
+  React.useEffect(() => {
+    if (cfg.riskScoringModel !== 'standard') return;
+    const p = cfg.residualRisk?.parameter || 'residualRisk';
+    const mkRanges = (bps: number[], labels: string[], colors: string[]) => bps.slice(0, -1).map((from, i) => ({ from, to: bps[i + 1], label: labels[i] || `Level ${i + 1}`, color: colors[i] || 'Grey' }));
+    const desiredBps = (p === 'likelihood' || p === 'consequence' || p === 'controlScore') ? [1,2,3,4,5] : [1,5,10,15,20,25];
+    const ranges = cfg.residualRisk.thresholds.ranges || [];
+    const currentBps = getBreakpointsFromRanges(ranges);
+    const same = currentBps.length === desiredBps.length && currentBps.every((v,i)=>v===desiredBps[i]);
+    if (!same) {
+      const labels = (desiredBps.length === 5) ? ['Low','Moderate','High','Very High'] : ['Very Low','Low','Moderate','High','Very High'];
+      const colors = (desiredBps.length === 5) ? ['#10B981','#F59E0B','#F97316','#EF4444'] : ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444'];
+      const newRanges = mkRanges(desiredBps, labels as any, colors as any);
+      setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig));
+      setBreakpointErrors([]);
+    }
+  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter]);
 
   // initialize single-row selection from existing cfg if present
   React.useEffect(() => {
@@ -1361,7 +1362,7 @@ export default function RiskAssessmentDashboard() {
             <h3 className="font-semibold">📊 Risk Scoring in Risk Assessment</h3>
             <p>This guide explains how risk scores are derived using Likelihood, Consequence (Impact), and Control Effectiveness, helping you apply risk assessment consistently.</p>
 
-            <h4 className="font-semibold">1��⃣ Likelihood (Probability of Occurrence)</h4>
+            <h4 className="font-semibold">1����⃣ Likelihood (Probability of Occurrence)</h4>
             <p><strong>Definition:</strong> How often a risk event is expected to occur.<br/>Scale can be 1–5, 1–10, or % ranges.</p>
             <table className="w-full text-sm border-collapse">
               <thead>
