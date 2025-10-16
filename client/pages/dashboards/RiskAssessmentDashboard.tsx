@@ -800,16 +800,17 @@ export default function RiskAssessmentDashboard() {
                         setSelectedAssignmentId(v);
                         const curMap = (cfg.scope as any).assignmentMap || {};
                         const existing = curMap[v];
-                        // ensure entry exists
-                        curMap[v] = existing || { enabled: true, projectId: undefined, mode: 'assignment' };
+                        // prefer saved per-assignment config to infer mode
+                        const id = `assignment|${v}`;
+                        const perCfg = RiskConfigStore.get(id);
+                        const inferredMode: 'assignment'|'project'|undefined = existing?.mode || (perCfg ? 'assignment' : undefined);
+                        curMap[v] = existing || { enabled: true, projectId: undefined, mode: inferredMode };
                         setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: curMap } });
                         // reflect saved mode and load config if needed
                         const savedMode = (curMap[v] && curMap[v].mode) as 'assignment' | 'project' | undefined;
                         if (savedMode === 'assignment') {
                           setSelectedMode('assignment');
                           setEditingAssignmentId(v);
-                          const id = `assignment|${v}`;
-                          const perCfg = RiskConfigStore.get(id);
                           if (perCfg) {
                             setCfg(prev => ({ ...perCfg, enabled: prev?.enabled } as RiskAssessmentConfig));
                           } else {
@@ -823,6 +824,8 @@ export default function RiskAssessmentDashboard() {
                           setSelectedMode('_select');
                           setEditingAssignmentId(null);
                         }
+                        try { localStorage.setItem(LS_SELECTED_ASSIGNMENT, v); } catch {}
+                        try { localStorage.setItem(LS_SELECTED_MODE, savedMode || '_select'); } catch {}
                       }}>
                         <SelectTrigger><SelectValue placeholder="Select assignment" /></SelectTrigger>
                         <SelectContent>
