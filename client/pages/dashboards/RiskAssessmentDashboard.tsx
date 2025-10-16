@@ -137,7 +137,7 @@ export default function RiskAssessmentDashboard() {
       if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
         ranges = mkRanges([1,2,3,4,5], ['Low','Moderate','High','Very High'], ['#10B981','#F59E0B','#F97316','#EF4444']);
       } else {
-        ranges = mkRanges([1,5,10,15,20,25], ['Very Low','Low','Moderate','High','Very High'], ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444']);
+        ranges = mkRanges([1,6,11,16,21,25], ['Very Low','Low','Moderate','High','Very High'], ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444']);
       }
 
       return { ...prev, residualRisk: { ...prev.residualRisk, parameter: p, thresholds: { ...prev.residualRisk.thresholds, ranges } } } as RiskAssessmentConfig;
@@ -149,7 +149,7 @@ export default function RiskAssessmentDashboard() {
     if (cfg.riskScoringModel !== 'standard') return;
     const p = cfg.residualRisk?.parameter || 'residualRisk';
     const mkRanges = (bps: number[], labels: string[], colors: string[]) => bps.slice(0, -1).map((from, i) => ({ from, to: bps[i + 1], label: labels[i] || `Level ${i + 1}`, color: colors[i] || 'Grey' }));
-    const desiredBps = (p === 'likelihood' || p === 'consequence' || p === 'controlScore') ? [1,2,3,4,5] : [1,5,10,15,20,25];
+    const desiredBps = (p === 'likelihood' || p === 'consequence' || p === 'controlScore') ? [1,2,3,4,5] : [1,6,11,16,21,25];
     const ranges = cfg.residualRisk.thresholds.ranges || [];
     const currentBps = getBreakpointsFromRanges(ranges);
     const same = currentBps.length === desiredBps.length && currentBps.every((v,i)=>v===desiredBps[i]);
