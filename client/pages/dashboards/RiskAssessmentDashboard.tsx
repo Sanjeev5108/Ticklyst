@@ -22,7 +22,7 @@ const LS_SELECTED_MODE = 'risk_selected_mode';
 export default function RiskAssessmentDashboard() {
   const { user } = useAuth();
   const [configs, setConfigs] = React.useState(RiskConfigStore.getAll());
-  const [scopeType, setScopeType] = React.useState<'global'|'assignment'>('global');
+  const [scopeType, setScopeType] = React.useState<'global'|'assignment'>(()=>{ try { return (localStorage.getItem(LS_SCOPE_TYPE) as any) || 'assignment'; } catch { return 'assignment'; } });
   const [assignmentTypes, setAssignmentTypes] = React.useState<{id:string;name:string}[]>([]);
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(() => RiskConfigStore.getGlobal());
   const [editingAssignmentId, setEditingAssignmentId] = React.useState<string | null>(null);
@@ -231,7 +231,7 @@ export default function RiskAssessmentDashboard() {
   };
 
   const calculateDisplayRange = (from: number, to: number): string => {
-    return `${from}��${to}`;
+    return `${from}–${to}`;
   };
 
   const getParameterMin = (): number => {
