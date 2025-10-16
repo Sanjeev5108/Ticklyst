@@ -233,18 +233,24 @@ export default function FieldworkDashboard() {
     setMatrixRows(rows);
   }, [selectedProcess, selectedSubprocess, controls, riskConfigVersion]);
 
-  // Projects (sourced from ProjectManagement mock list)
-  const projects = [
-    { id: '1', title: 'SQ/25-26/0135 - Customisation T...' },
-    { id: '2', title: 'SQ/25-26/0150 - Customisation T...' },
-    { id: '3', title: 'CA Articles Training' },
-    { id: '4', title: 'Reshmi - Customisation' },
-    { id: '5', title: 'Artika VII - Customisation' },
-    { id: '6', title: 'SQ/25-26/0086 - Prashanthi Cust...' },
-    { id: '7', title: 'SQ/25-26/0168 - RMCL CCA June...' },
-    { id: '8', title: 'KSS Event ABC' },
-    { id: '9', title: 'SQ/25-26/0059 - MMD IA April 2...' }
-  ];
+  // Projects (loaded from API)
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) throw new Error('load_failed');
+        const rows = await res.json();
+        const mapped = (rows || []).map((r: any) => ({
+          id: r.id,
+          title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project'
+        }));
+        setProjects(mapped);
+      } catch (e) {
+        console.error('Failed to load projects', e);
+      }
+    })();
+  }, []);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
