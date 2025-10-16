@@ -459,7 +459,7 @@ export default function FieldworkDashboard() {
         </Popover>
       </div>
 
-      {(selectedProcess && selectedSubprocess) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
+      {(selectedProcess) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Activities → Risks → Controls</CardTitle>
