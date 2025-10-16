@@ -15,6 +15,10 @@ import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+const LS_SCOPE_TYPE = 'risk_scope_type';
+const LS_SELECTED_ASSIGNMENT = 'risk_selected_assignment';
+const LS_SELECTED_MODE = 'risk_selected_mode';
+
 export default function RiskAssessmentDashboard() {
   const { user } = useAuth();
   const [configs, setConfigs] = React.useState(RiskConfigStore.getAll());
@@ -227,7 +231,7 @@ export default function RiskAssessmentDashboard() {
   };
 
   const calculateDisplayRange = (from: number, to: number): string => {
-    return `${from}–${to}`;
+    return `${from}��${to}`;
   };
 
   const getParameterMin = (): number => {
