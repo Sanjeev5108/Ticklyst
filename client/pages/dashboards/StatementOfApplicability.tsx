@@ -221,6 +221,30 @@ export default function StatementOfApplicability() {
     })();
   }, [selectedClientId, selectedClient?.industry]);
 
+  const parseHierId = React.useCallback((id: string) => {
+    const parts = id.split('/');
+    const path = parts[0] || '';
+    const tail1 = parts[1] || '';
+    const tail2 = parts[2] || '';
+    const dot = path.split('.');
+    const procStr = dot[0] || 'P0';
+    const proc = parseInt(procStr.replace(/^P/i, ''), 10) || 0;
+    const sub = dot[1] ? parseInt(dot[1], 10) || 0 : 0;
+    const act = dot[2] ? parseInt(dot[2], 10) || 0 : 0;
+    const risk = tail1 ? (parseInt(tail1.replace(/^R/i, ''), 10) || 0) : 0;
+    const ctrl = tail2 ? (parseInt(tail2.replace(/^C/i, ''), 10) || 0) : 0;
+    return { proc, sub, act, risk, ctrl };
+  }, []);
+  const compareHier = React.useCallback((a: string, b: string) => {
+    const A = parseHierId(a); const B = parseHierId(b);
+    if (A.proc !== B.proc) return A.proc - B.proc;
+    if (A.sub !== B.sub) return A.sub - B.sub;
+    if (A.act !== B.act) return A.act - B.act;
+    if (A.risk !== B.risk) return A.risk - B.risk;
+    if (A.ctrl !== B.ctrl) return A.ctrl - B.ctrl;
+    return a.localeCompare(b);
+  }, [parseHierId]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -230,13 +254,14 @@ export default function StatementOfApplicability() {
         const nodes = Array.isArray(data?.nodes) ? data.nodes as any[] : [];
         if (!nodes.length) return;
         const mapped: TreeNode[] = nodes.map((n: any) => ({ id: n.id, type: n.type, name: n.name, parentId: n.parentId, isExpanded: true }));
-        setTree(mapped);
-        setProcessOptions(mapped.filter(n => n.type === 'process').map(n => ({ id: n.id, name: n.name })));
+        const sorted = mapped.slice().sort((a,b)=>compareHier(a.id,b.id));
+        setTree(sorted);
+        setProcessOptions(sorted.filter(n => n.type === 'process').map(n => ({ id: n.id, name: n.name })));
       } catch {
         toast({ title: 'Could not load framework tree' });
       }
     })();
-  }, []);
+  }, [compareHier]);
 
   const getLevel = (node: TreeNode) => {
     let level = 0;
@@ -264,7 +289,7 @@ export default function StatementOfApplicability() {
     return !!parent.isExpanded && isParentExpanded(parent);
   };
 
-  const visibleNodes = tree.filter(n => isParentExpanded(n));
+  const visibleNodes = React.useMemo(() => tree.filter(n => isParentExpanded(n)).sort((a,b)=>compareHier(a.id,b.id)), [tree, compareHier]);
   const collectDescendantIds = (id: string, acc: string[] = []) => {
     const children = tree.filter(n => n.parentId === id);
     for (const c of children) { acc.push(c.id); collectDescendantIds(c.id, acc); }
