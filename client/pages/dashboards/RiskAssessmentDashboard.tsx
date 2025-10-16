@@ -66,6 +66,7 @@ export default function RiskAssessmentDashboard() {
         setCfg(prev => ({ ...base, enabled: prev?.enabled, id: 'assignment', scope: { ...base.scope, configType: 'assignment', assignmentMap: prev?.scope?.assignmentMap || {} } } as RiskAssessmentConfig));
       }
     }
+    try { localStorage.setItem(LS_SCOPE_TYPE, scopeType); } catch {}
   }, [scopeType]);
 
   React.useEffect(() => {
@@ -974,7 +975,7 @@ export default function RiskAssessmentDashboard() {
                 </div>
                 <div>
                   <Label>Constraint</Label>
-                  <p>Control Score �� Risk Score </p>
+                  <p>Control Score ≤ Risk Score </p>
                 </div>
               </CardContent>
             </Card>
