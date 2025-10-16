@@ -430,10 +430,6 @@ export default function FieldworkDashboard() {
           <Label>Process</Label>
           <Typeahead items={processesForSelectedProject} value={selectedProcess} onSelect={(v)=>{ setSelectedProcess(v); }} placeholder="Select or search process..." disabled={!selectedProject} />
         </div>
-        <div>
-          <Label>Subprocess</Label>
-          <Typeahead items={getSubprocesses(selectedProcess)} value={selectedSubprocess} onSelect={(v)=> setSelectedSubprocess(v)} placeholder="Select or search subprocess..." disabled={!selectedProcess} />
-        </div>
       </div>
 
       <div className="flex justify-end">
