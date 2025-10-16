@@ -38,6 +38,7 @@ interface Employee {
   name: string;
   role: string;
   division: string;
+  email?: string;
   isActive?: boolean;
 }
 
@@ -207,7 +208,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       if (raw) {
         const parsed = JSON.parse(raw) as any[];
         const active = (parsed || []).filter(e => e && (e.isActive ?? true));
-        const mapped: Employee[] = active.map(e => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, isActive: e.isActive }));
+        const mapped: Employee[] = active.map(e => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, email: e.email, isActive: e.isActive }));
         if (mapped.length) setEmployees(mapped);
       }
     } catch {}
@@ -219,7 +220,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         if (!res.ok) return;
         const data = await res.json();
         const active = (data || []).filter((e:any) => e && (e.isActive ?? true));
-        const mapped: Employee[] = active.map((e:any) => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, isActive: e.isActive }));
+        const mapped: Employee[] = active.map((e:any) => ({ id: String(e.id), name: e.name, role: e.role, division: e.division, email: e.email, isActive: e.isActive }));
         setEmployees(mapped);
         try { localStorage.setItem('employees', JSON.stringify(mapped)); } catch {}
       } catch {}
@@ -866,7 +867,13 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                     value={emp.name}
                     onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); toggle(emp.name); }}
                   >
-                    <Checkbox className="mr-2" checked={value?.includes(emp.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(emp.name)} /> {emp.name} - {emp.role}
+                    <div className="flex items-start gap-2">
+                      <Checkbox className="mt-0.5" checked={value?.includes(emp.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(emp.name)} />
+                      <div className="min-w-0">
+                        <div>{emp.name} - {emp.role}</div>
+                        {emp.email && <div className="text-[11px] text-slate-500 italic truncate">{emp.email}</div>}
+                      </div>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -954,7 +961,13 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                     value={opt.name}
                     onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); toggle(opt.name); }}
                   >
-                    <Checkbox className="mr-2" checked={value?.includes(opt.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(opt.name)} /> {opt.name} - {opt.role}
+                    <div className="flex items-start gap-2">
+                      <Checkbox className="mt-0.5" checked={value?.includes(opt.name)} onPointerDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onMouseDown={(e)=>{e.preventDefault(); e.stopPropagation();}} onCheckedChange={() => toggle(opt.name)} />
+                      <div className="min-w-0">
+                        <div>{opt.name} - {opt.role}</div>
+                        {opt.email && <div className="text-[11px] text-slate-500 italic truncate">{opt.email}</div>}
+                      </div>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
