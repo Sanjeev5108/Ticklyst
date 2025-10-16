@@ -845,7 +845,7 @@ export default function FieldworkDashboard() {
                   ))}
                   {displayedRows.length === 0 && (
                     <tr>
-                      <td colSpan={25} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected process/subprocess'}</td>
+                      <td colSpan={25} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected project'}</td>
                     </tr>
                   )}
                 </tbody>
