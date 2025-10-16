@@ -253,9 +253,34 @@ export default function FieldworkDashboard() {
 
   useEffect(() => {
     if (!selectedProject) { setMatrixRows([]); return; }
+    const proj = projects.find(p => p.id === selectedProject);
+    const tree = proj?.raw?.data?.selectedChecklistTree;
+    const rcfg = RiskConfigStore.getGlobal();
+    const mkId = (parts: string[]) => 'fw|' + parts.map(s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g,'').slice(0,64)).join('|');
+    if (tree && typeof tree === 'object' && Object.keys(tree).length) {
+      const rows: any[] = [];
+      for (const [procName, procNode] of Object.entries<any>(tree)) {
+        const subs = procNode?.subprocesses || {};
+        for (const [subName, subNode] of Object.entries<any>(subs)) {
+          const acts = subNode?.activities || {};
+          for (const [actName, actNode] of Object.entries<any>(acts)) {
+            const risks = actNode?.risks || {};
+            for (const [riskName, riskNode] of Object.entries<any>(risks)) {
+              const ctrls: string[] = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
+              ctrls.forEach((ctrl, idx) => {
+                const id = mkId([procName, subName, actName, riskName, String(idx+1)]);
+                rows.push({ id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' });
+              });
+            }
+          }
+        }
+      }
+      rows.sort((a,b)=> (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
+      setMatrixRows(rows);
+      return;
+    }
     const allowed = new Set(processesForSelectedProject);
     if (allowed.size === 0) { setMatrixRows([]); return; }
-    const rcfg = RiskConfigStore.getGlobal();
     const rows = controls
       .filter(c => allowed.has(c.process || ''))
       .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
@@ -263,7 +288,7 @@ export default function FieldworkDashboard() {
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
     setMatrixRows(rows);
-  }, [selectedProject, processesForSelectedProject, controls, riskConfigVersion]);
+  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
