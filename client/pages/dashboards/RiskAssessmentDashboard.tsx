@@ -26,7 +26,7 @@ export default function RiskAssessmentDashboard() {
   const [assignmentTypes, setAssignmentTypes] = React.useState<{id:string;name:string}[]>([]);
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(() => RiskConfigStore.getGlobal());
   const [editingAssignmentId, setEditingAssignmentId] = React.useState<string | null>(null);
-  const [selectedAssignmentId, setSelectedAssignmentId] = React.useState<string | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = React.useState<string | null>(()=>{ try { return localStorage.getItem(LS_SELECTED_ASSIGNMENT) || null; } catch { return null; } });
   const [selectedMode, setSelectedMode] = React.useState<'_select'|'assignment'|'project'>('_select');
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [previewText, setPreviewText] = React.useState('');
