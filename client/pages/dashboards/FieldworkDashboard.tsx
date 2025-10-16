@@ -197,40 +197,30 @@ export default function FieldworkDashboard() {
   }, [controls.length]);
 
   const processes = useMemo(() => Array.from(new Set(controls.map(c => c.process).filter(Boolean) as string[])).sort(), [controls]);
-  const getSubprocesses = useCallback((proc: string | null) => {
+  const getActivities = useCallback((proc: string | null) => {
     if (!proc) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc).map(c => c.subprocess || 'General'))).sort();
+    return Array.from(new Set(controls.filter(c => c.process === proc).map(c => c.activity || 'General'))).sort();
   }, [controls]);
-  const getActivities = useCallback((proc: string | null, sub: string | null) => {
-    if (!proc || !sub) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub).map(c => c.activity || 'General'))).sort();
+  const getRisks = useCallback((proc: string | null, act: string) => {
+    if (!proc || !act) return [] as string[];
+    return Array.from(new Set(controls.filter(c => c.process === proc && (c.activity || 'General') === act).map(c => c.risk || ''))).filter(Boolean).sort();
   }, [controls]);
-  const getRisks = useCallback((proc: string | null, sub: string | null, act: string) => {
-    if (!proc || !sub || !act) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub && (c.activity || 'General') === act).map(c => c.risk || ''))).filter(Boolean).sort();
-  }, [controls]);
-  const getControls = useCallback((proc: string | null, sub: string | null, act: string, risk: string) => {
-    if (!proc || !sub || !act || !risk) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub && (c.activity || 'General') === act && (c.risk || '') === risk).map(c => c.name))).sort();
+  const getControls = useCallback((proc: string | null, act: string, risk: string) => {
+    if (!proc || !act || !risk) return [] as string[];
+    return Array.from(new Set(controls.filter(c => c.process === proc && (c.activity || 'General') === act && (c.risk || '') === risk).map(c => c.name))).sort();
   }, [controls]);
 
   useEffect(() => {
-    if (!selectedProcess) { setSelectedSubprocess(null); setMatrixRows([]); return; }
-    const subs = getSubprocesses(selectedProcess);
-    if (subs.length && !selectedSubprocess) setSelectedSubprocess(subs[0]);
-  }, [selectedProcess, selectedSubprocess, getSubprocesses]);
-
-  useEffect(() => {
-    if (!selectedProcess || !selectedSubprocess) { setMatrixRows([]); return; }
+    if (!selectedProcess) { setMatrixRows([]); return; }
     const rcfg = RiskConfigStore.getGlobal();
     const rows = controls
-      .filter(c => c.process === selectedProcess && (c.subprocess || 'General') === selectedSubprocess)
+      .filter(c => c.process === selectedProcess)
       .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
     setMatrixRows(rows);
-  }, [selectedProcess, selectedSubprocess, controls, riskConfigVersion]);
+  }, [selectedProcess, controls, riskConfigVersion]);
 
   // Projects (loaded from API)
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
