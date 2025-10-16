@@ -484,7 +484,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                     const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
                     return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
                   });
-                }} disabled={((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
+                }} disabled={isStandard || ((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
               </div>
             </div>
           </CardContent>
