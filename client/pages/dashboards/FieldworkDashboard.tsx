@@ -598,15 +598,24 @@ export default function FieldworkDashboard() {
                       {/* Control Score */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
+                          const cfg = activeCfg;
                           const status = records[row.id]?.status || 'draft';
                           if (status === 'draft' || status === 'submitted') {
+                            const min = cfg.controlScore.scale.min; const max = cfg.controlScore.scale.max;
                             return (
-                              <Input type="number" value={row.controlScore}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: Number(e.target.value) } : r))}
+                              <Input type="number" step={1} min={min} max={max} value={row.controlScore}
+                                onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: nv } : r)); }}
                               />
                             );
                           }
-                          return <span>{records[row.id]?.risk?.controlScore ?? '-'}</span>;
+                          const v = records[row.id]?.risk?.controlScore ?? '-';
+                          const bins = [cfg.controlScore.scale.min, cfg.controlScore.scale.min+1, cfg.controlScore.scale.min+2, cfg.controlScore.scale.min+3, cfg.controlScore.scale.max];
+                          const colors = ['#10B981','#F59E0B','#F97316','#EF4444'];
+                          let cc: string | undefined;
+                          if (typeof v === 'number') {
+                            for (let i=0;i<bins.length-1;i++){ if (v>=bins[i] && v<=bins[i+1]) { cc = colors[i]; break; } }
+                          }
+                          return <span className="inline-flex items-center gap-2"><span>{v}</span>{cc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: cc }} /> : null}</span>;
                         })()}
                       </td>
                       {/* Residual Risk */}
