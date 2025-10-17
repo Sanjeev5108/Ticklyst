@@ -97,8 +97,9 @@ export default function RiskAssessmentDashboard() {
       const fromLs = (()=>{ try { return localStorage.getItem(LS_SELECTED_ASSIGNMENT); } catch { return null; } })();
       const pick = (fromLs && valid.has(fromLs)) ? fromLs : (selectedAssignmentId && valid.has(selectedAssignmentId) ? selectedAssignmentId : (assignmentTypes[0]?.id || null));
       setSelectedAssignmentId(pick);
-      const savedMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return '_select'; } })();
-      setSelectedMode(savedMode || (pick ? ((prev.scope as any)?.assignmentMap?.[pick]?.mode || '_select') : '_select'));
+      const lsMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return '_select'; } })();
+      const modeFromMap = pick ? ((prev.scope as any)?.assignmentMap?.[pick]?.mode || '_select') : '_select';
+      setSelectedMode(modeFromMap || lsMode || '_select');
       return next;
     });
   }, [assignmentTypes]);
@@ -188,7 +189,8 @@ export default function RiskAssessmentDashboard() {
     if (keys.length > 0) {
       const k = keys[0];
       setSelectedAssignmentId(k);
-      const savedMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return null; } })() || map[k]?.mode || '_select';
+      const lsMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return null; } })();
+      const savedMode = map[k]?.mode || lsMode || '_select';
       setSelectedMode(savedMode);
       if (savedMode === 'assignment' || map[k]?.mode === 'assignment') setEditingAssignmentId(k);
     } else if (assignmentTypes.length > 0) {
@@ -840,10 +842,19 @@ export default function RiskAssessmentDashboard() {
                           setSelectedMode('assignment');
                           setEditingAssignmentId(v);
                           if (perCfg) {
-                            setCfg(prev => ({ ...perCfg, enabled: prev?.enabled } as RiskAssessmentConfig));
+                            setCfg(prev => ({
+                              ...perCfg,
+                              enabled: prev?.enabled,
+                              scope: { ...perCfg.scope, assignmentMap: (prev.scope as any)?.assignmentMap || (perCfg.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: v }
+                            } as RiskAssessmentConfig));
                           } else {
                             const base = RiskConfigStore.getGlobal();
-                            setCfg(prev => ({ ...base, enabled: prev?.enabled, id, scope: { ...base.scope, configType: 'assignment', assignmentType: v } } as RiskAssessmentConfig));
+                            setCfg(prev => ({
+                              ...base,
+                              enabled: prev?.enabled,
+                              id,
+                              scope: { ...base.scope, assignmentMap: (prev.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: v }
+                            } as RiskAssessmentConfig));
                           }
                         } else if (savedMode === 'project') {
                           setSelectedMode('project');
@@ -875,10 +886,19 @@ export default function RiskAssessmentDashboard() {
                         if (mode === 'assignment') {
                           const id = `assignment|${selectedAssignmentId}`;
                           const existing = RiskConfigStore.get(id);
-                          if (existing) setCfg(prev => ({ ...existing, enabled: prev?.enabled } as RiskAssessmentConfig));
+                          if (existing) setCfg(prev => ({
+                            ...existing,
+                            enabled: prev?.enabled,
+                            scope: { ...existing.scope, assignmentMap: (prev.scope as any)?.assignmentMap || (existing.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: selectedAssignmentId }
+                          } as RiskAssessmentConfig));
                           else {
                             const base = RiskConfigStore.getGlobal();
-                            setCfg(prev => ({ ...base, enabled: prev?.enabled, id, scope: { ...base.scope, configType: 'assignment', assignmentType: selectedAssignmentId } } as RiskAssessmentConfig));
+                            setCfg(prev => ({
+                              ...base,
+                              enabled: prev?.enabled,
+                              id,
+                              scope: { ...base.scope, assignmentMap: (prev.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: selectedAssignmentId }
+                            } as RiskAssessmentConfig));
                           }
                           setEditingAssignmentId(selectedAssignmentId);
                         } else {
@@ -1390,7 +1410,7 @@ export default function RiskAssessmentDashboard() {
             <p>This guide explains how risk scores are derived using Likelihood, Consequence (Impact), and Control Effectiveness, helping you apply risk assessment consistently.</p>
 
             <h4 className="font-semibold">1����⃣ Likelihood (Probability of Occurrence)</h4>
-            <p><strong>Definition:</strong> How often a risk event is expected to occur.<br/>Scale can be 1–5, 1–10, or % ranges.</p>
+            <p><strong>Definition:</strong> How often a risk event is expected to occur.<br/>Scale can be 1���5, 1–10, or % ranges.</p>
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr>
