@@ -717,11 +717,22 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   }, [processesForClient]);
 
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
+  // When editing an existing project, do NOT override previously saved selections unless the user changes applicability or templates.
   useEffect(() => {
     const procs = effectiveChecklistProcesses;
     if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
 
     const hasSelections = Object.values(soaApplicable).some(v => v === true);
+
+    // Guard: if editing and an existing tree is present that already matches the selected processes,
+    // and user hasn't explicitly selected applicability yet, keep it as-is
+    const existingTree = formData.selectedChecklistTree;
+    const existingProcKeys = existingTree && typeof existingTree === 'object' ? Object.keys(existingTree) : [];
+    const sameProcSet = existingProcKeys.length === procs.length && existingProcKeys.every(k => procs.includes(k)) && procs.every(k => existingProcKeys.includes(k));
+    if (mode === 'edit' && existingProcKeys.length > 0 && sameProcSet && !hasSelections) {
+      return; // preserve saved applicability and selections
+    }
+
     const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
       for (const proc of procs) {
@@ -789,7 +800,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       }
       updateFormData('selectedChecklistTree', clone);
     }
-  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey]);
+  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey, mode, formData.selectedChecklistTree]);
 
   // Auto-expand subprocesses for the selected process so activities are visible
   useEffect(() => {
