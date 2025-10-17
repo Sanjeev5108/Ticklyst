@@ -621,19 +621,11 @@ export default function FieldworkDashboard() {
                       {/* Residual Risk */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
-                          const status = records[row.id]?.status || 'draft';
-                          // Allow editing residual risk for draft/submitted rows
-                          if (status === 'draft' || status === 'submitted') {
-                            return (
-                              <Input type="number" value={row.residualRisk}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, residualRisk: Number(e.target.value) } : r))}
-                              />
-                            );
-                          }
+                          const cfg = activeCfg;
                           const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
                           const res = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
-                          return <span>{Math.round((res + Number.EPSILON) * 100) / 100}</span>;
+                          const rc = resolveLevel(res, cfg.residualRisk.thresholds)?.color;
+                          return <span className="inline-flex items-center gap-2"><span>{Math.round((res + Number.EPSILON) * 100) / 100}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
                       {/* Risk Level */}
