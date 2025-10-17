@@ -108,6 +108,7 @@ export default function FieldworkDashboard() {
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
 
   const [riskConfigVersion, setRiskConfigVersion] = useState(0);
+  const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
     const unsubRisk = RiskConfigStore.subscribe(() => setRiskConfigVersion(v=>v+1));
