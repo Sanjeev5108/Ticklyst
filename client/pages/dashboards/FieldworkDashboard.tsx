@@ -520,6 +520,7 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-40">Control Score</th>
                     <th className="text-left p-3 w-40">Residual Risk</th>
                     <th className="text-left p-3 w-40">Risk Level</th>
+                    <th className="text-left p-3 w-24">Color</th>
                     <th className="text-left p-3 w-64">Test of Control</th>
                     <th className="text-left p-3 w-64">Substantive Procedure</th>
                     <th className="text-left p-3 w-64">Sampling Applicable?</th>
