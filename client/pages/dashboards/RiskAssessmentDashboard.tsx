@@ -829,15 +829,19 @@ export default function RiskAssessmentDashboard() {
                       <Select value={selectedAssignmentId || ''} onValueChange={(v:any) => {
                         setSelectedAssignmentId(v);
                         const curMap = (cfg.scope as any).assignmentMap || {};
-                        const existing = curMap[v];
+                        // also consult centrally persisted map to avoid race conditions wiping saved mode
+                        const central = RiskConfigStore.get('assignment');
+                        const centralMap = (central?.scope as any)?.assignmentMap || {};
+                        const existing = curMap[v] || centralMap[v];
                         // prefer saved per-assignment config to infer mode
                         const id = `assignment|${v}`;
                         const perCfg = RiskConfigStore.get(id);
                         const inferredMode: 'assignment'|'project'|undefined = existing?.mode || (perCfg ? 'assignment' : undefined);
-                        curMap[v] = existing || { enabled: true, projectId: undefined, mode: inferredMode };
-                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: curMap } });
+                        const nextMap: any = { ...curMap };
+                        if (existing) nextMap[v] = existing; else nextMap[v] = { enabled: true, projectId: undefined, mode: inferredMode };
+                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: nextMap } });
                         // reflect saved mode and load config if needed
-                        const savedMode = (curMap[v] && curMap[v].mode) as 'assignment' | 'project' | undefined;
+                        const savedMode = (nextMap[v] && nextMap[v].mode) as 'assignment' | 'project' | undefined;
                         if (savedMode === 'assignment') {
                           setSelectedMode('assignment');
                           setEditingAssignmentId(v);
