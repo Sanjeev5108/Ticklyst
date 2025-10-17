@@ -255,11 +255,25 @@ export default function FieldworkDashboard() {
     return Array.from(new Set(procs.filter(Boolean))).sort();
   }, [selectedProject, projects, processes]);
 
+  const activeCfg = React.useMemo(() => {
+    if (!selectedProject) return RiskConfigStore.getGlobal();
+    const proj = projects.find(p => p.id === selectedProject);
+    const data = proj?.raw?.data || {};
+    const auditTypeName = data.auditType;
+    const assn = assignmentTypes.find(a => a.name === auditTypeName);
+    const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+    const map = (central.scope as any)?.assignmentMap || {};
+    const mode = assn ? map[assn.id]?.mode : undefined;
+    if (mode === 'project' && data.riskConfig) return data.riskConfig;
+    if (mode === 'assignment' && assn) return RiskConfigStore.get(`assignment|${assn.id}`) || RiskConfigStore.getGlobal();
+    return RiskConfigStore.getGlobal();
+  }, [selectedProject, projects, assignmentTypes, riskConfigVersion]);
+
   useEffect(() => {
     if (!selectedProject) { setMatrixRows([]); return; }
     const proj = projects.find(p => p.id === selectedProject);
     const tree = proj?.raw?.data?.selectedChecklistTree;
-    const rcfg = RiskConfigStore.getGlobal();
+    const rcfg = activeCfg;
     const mkId = (parts: string[]) => 'fw|' + parts.map(s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g,'').slice(0,64)).join('|');
     if (tree && typeof tree === 'object' && Object.keys(tree).length) {
       const rows: any[] = [];
