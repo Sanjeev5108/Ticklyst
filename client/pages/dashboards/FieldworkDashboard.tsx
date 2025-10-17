@@ -306,7 +306,7 @@ export default function FieldworkDashboard() {
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
     setMatrixRows(rows);
-  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion]);
+  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion, activeCfg]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
