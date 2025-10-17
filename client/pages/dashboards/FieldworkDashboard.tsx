@@ -548,7 +548,7 @@ export default function FieldworkDashboard() {
                       </td>
                       {/* Likelihood */}
                       <td className="p-3 align-top w-40 break-words">
-                        {RiskConfigStore.getGlobal().riskScore.mode === 'likelihood_consequence' ? (
+                        {activeCfg.riskScore.mode === 'likelihood_consequence' ? (
                           records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
                             <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
                           ) : (
@@ -562,7 +562,7 @@ export default function FieldworkDashboard() {
                       </td>
                       {/* Consequence */}
                       <td className="p-3 align-top w-40 break-words">
-                        {RiskConfigStore.getGlobal().riskScore.mode === 'likelihood_consequence' ? (
+                        {activeCfg.riskScore.mode === 'likelihood_consequence' ? (
                           records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
                             <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
                           ) : (
