@@ -783,7 +783,7 @@ export default function FieldworkDashboard() {
                             size="sm"
                             variant="default"
                             className="bg-gradient-to-b from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 active:scale-[0.98] shadow-md hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 transition"
-                            disabled={(() => { const cfg = RiskConfigStore.getGlobal(); const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); return cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; })()}
+                            disabled={(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); return cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; })()}
                             onClick={() => {
                               const cfg = RiskConfigStore.getGlobal();
                               FieldworkStore.ensure(row.id, () => ({
