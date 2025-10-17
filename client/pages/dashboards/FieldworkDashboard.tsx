@@ -112,8 +112,10 @@ export default function FieldworkDashboard() {
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
     const unsubRisk = RiskConfigStore.subscribe(() => setRiskConfigVersion(v=>v+1));
+    const unsubAssn = AssignmentTypeStore.subscribe(() => setAssignmentTypes(AssignmentTypeStore.getAll()));
     setRecords(FieldworkStore.getAll());
-    return () => { unsub(); unsubRisk(); };
+    setAssignmentTypes(AssignmentTypeStore.getAll());
+    return () => { unsub(); unsubRisk(); unsubAssn(); };
   }, []);
 
   useEffect(() => {
