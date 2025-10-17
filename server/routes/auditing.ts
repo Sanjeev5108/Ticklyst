@@ -315,21 +315,55 @@ export const getProjects: RequestHandler = async (_req, res) => {
 export const createProject: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   const body = req.body || {};
+
+  // shallow-merge for primitives, deep-merge for objects (arrays are replaced)
+  const deepMerge = (target: any, source: any): any => {
+    if (source === null || source === undefined) return target;
+    if (typeof target !== 'object' || target === null) return source;
+    if (typeof source !== 'object' || Array.isArray(source)) return Array.isArray(source) ? (source.slice()) : source;
+    const out: any = { ...target };
+    for (const [k, v] of Object.entries(source)) {
+      const tv = (out as any)[k];
+      (out as any)[k] = deepMerge(tv, v as any);
+    }
+    return out;
+  };
+
   try {
     const id = body.id || `PRJ-${Date.now()}`;
-    const code = body.projectCode || body.code || null;
-    const name = body.projectName || body.name || 'Untitled Project';
-    const clientName = body.clientName || body.client || null;
-    const status = body.status || 'todo';
-    const startDate = body.startDate ? new Date(body.startDate) : null;
-    const endDate = body.endDate ? new Date(body.endDate) : null;
-    const createdBy = body.createdBy || 'system';
-    const data = body; // store full form payload
+
+    // Load existing row to support merge semantics
+    let existing: any = null;
+    try {
+      const q = await pool.query('SELECT code, name, client_name, status, start_date, end_date, data, created_by FROM projects WHERE id=$1 LIMIT 1', [id]);
+      existing = q.rows[0] || null;
+    } catch {}
+
+    const incomingCode = body.projectCode || body.code || null;
+    const incomingName = body.projectName || body.name || (existing?.name ?? 'Untitled Project');
+    const incomingClientName = body.clientName || body.client || (existing?.client_name ?? null);
+    const incomingStatus = body.status || existing?.status || 'todo';
+    const incomingStart = body.startDate ? new Date(body.startDate) : (existing?.start_date ?? null);
+    const incomingEnd = body.endDate ? new Date(body.endDate) : (existing?.end_date ?? null);
+    const createdBy = body.createdBy || existing?.created_by || 'system';
+
+    // If body.data is provided, treat it as the data payload; otherwise use full body
+    const incomingDataPatch = (body && typeof body.data === 'object' && body.data) ? body.data : body;
+    const existingData = (existing && typeof existing.data === 'object' && existing.data) ? existing.data : {};
+    const data = deepMerge(existingData, incomingDataPatch);
+
+    const code = incomingCode ?? existing?.code ?? null;
+    const name = incomingName;
+    const clientName = incomingClientName;
+    const status = incomingStatus;
+    const startDate = incomingStart;
+    const endDate = incomingEnd;
 
     await pool.query(
       'INSERT INTO projects(id, code, name, client_name, status, start_date, end_date, data, created_by, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now()) ON CONFLICT (id) DO UPDATE SET code=EXCLUDED.code, name=EXCLUDED.name, client_name=EXCLUDED.client_name, status=EXCLUDED.status, start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date, data=EXCLUDED.data, created_by=EXCLUDED.created_by, updated_at=now()',
       [id, code, name, clientName, status, startDate, endDate, data, createdBy]
     );
+
     res.status(201).json({ id, code, name, clientName, status, startDate, endDate, createdBy });
   } catch (e:any) {
     console.error(e);
