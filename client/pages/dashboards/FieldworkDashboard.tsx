@@ -552,8 +552,8 @@ export default function FieldworkDashboard() {
                           records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
                             <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
                           ) : (
-                            <Input type="number" value={row.likelihood}
-                              onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: Number(e.target.value) } : r))}
+                            <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={row.likelihood}
+                              onChange={(e)=> { const min = activeCfg.riskScore.likelihood?.scale.min ?? 1; const max = activeCfg.riskScore.likelihood?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: nv } : r)); }}
                             />
                           )
                         ) : (
