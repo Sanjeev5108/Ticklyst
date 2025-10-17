@@ -577,22 +577,22 @@ export default function FieldworkDashboard() {
                       {/* Risk Score */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
+                          const cfg = activeCfg;
                           const status = records[row.id]?.status || 'draft';
-                          // Allow editing risk score for draft/submitted rows
-                          if (status === 'draft' || status === 'submitted') {
-                            return (
-                              <Input type="number" value={row.riskScore}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: Number(e.target.value) } : r))}
-                              />
-                            );
-                          }
-                          // Read-only display for finalized rows
                           if (cfg.riskScore.mode === 'single') {
+                            if (status === 'draft' || status === 'submitted') {
+                              const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
+                              return (
+                                <Input type="number" step={1} min={min} max={max} value={row.riskScore}
+                                  onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: nv } : r)); }}
+                                />
+                              );
+                            }
                             return <span>{records[row.id]?.risk?.riskScore ?? '-'}</span>;
                           }
-                          const v = records[row.id]?.risk?.riskScore ?? computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
-                          return <span>{v || 0}</span>;
+                          const v = computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                          const rc = resolveLevel(v, cfg.residualRisk.thresholds)?.color;
+                          return <span className="inline-flex items-center gap-2"><span>{v || 0}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
                       {/* Control Score */}
