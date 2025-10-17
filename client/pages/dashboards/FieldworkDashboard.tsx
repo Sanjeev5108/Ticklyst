@@ -631,16 +631,11 @@ export default function FieldworkDashboard() {
                       {/* Risk Level */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
-                          const status = records[row.id]?.status || 'draft';
-                          if (status !== 'draft' && status !== 'submitted') {
-                            return <span>{records[row.id]?.risk?.residualLevel || records[row.id]?.risk?.riskLevel || '-'}</span>;
-                          }
-                          const risk = (status === 'draft' || status === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
-                          const rl = resolveLevel(risk, cfg.residualRisk.thresholds);
-                          const rr = (status === 'draft' || status === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
+                          const cfg = activeCfg;
+                          const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                          const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
                           const rrl = resolveLevel(rr, cfg.residualRisk.thresholds);
-                          return <span>{rrl?.level || rl?.level || '-'}</span>;
+                          return <span>{rrl?.level || '-'}</span>;
                         })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
