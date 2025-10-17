@@ -882,14 +882,19 @@ export default function RiskAssessmentDashboard() {
                         try { localStorage.setItem(LS_SELECTED_ASSIGNMENT, selectedAssignmentId); } catch {}
                         const cur = (cfg.scope && (cfg.scope as any).assignmentMap) || {};
                         const next = { ...cur, [selectedAssignmentId]: { enabled: mode !== '', projectId: cur[selectedAssignmentId]?.projectId, mode: mode === '' ? undefined : mode } };
-                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: next } });
+                        const updated = { ...cfg, scope: { ...cfg.scope, assignmentMap: next } } as RiskAssessmentConfig;
+                        setCfg(updated);
+                        // Persist central mapping immediately so it survives reload without needing Save
+                        const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+                        const centralNext = { ...central, id: 'assignment', scope: { ...central.scope, configType: 'assignment', assignmentMap: next } } as RiskAssessmentConfig;
+                        RiskConfigStore.upsert(centralNext);
                         if (mode === 'assignment') {
                           const id = `assignment|${selectedAssignmentId}`;
                           const existing = RiskConfigStore.get(id);
                           if (existing) setCfg(prev => ({
                             ...existing,
                             enabled: prev?.enabled,
-                            scope: { ...existing.scope, assignmentMap: (prev.scope as any)?.assignmentMap || (existing.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: selectedAssignmentId }
+                            scope: { ...existing.scope, assignmentMap: next, configType: 'assignment', assignmentType: selectedAssignmentId }
                           } as RiskAssessmentConfig));
                           else {
                             const base = RiskConfigStore.getGlobal();
@@ -897,7 +902,7 @@ export default function RiskAssessmentDashboard() {
                               ...base,
                               enabled: prev?.enabled,
                               id,
-                              scope: { ...base.scope, assignmentMap: (prev.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: selectedAssignmentId }
+                              scope: { ...base.scope, assignmentMap: next, configType: 'assignment', assignmentType: selectedAssignmentId }
                             } as RiskAssessmentConfig));
                           }
                           setEditingAssignmentId(selectedAssignmentId);
