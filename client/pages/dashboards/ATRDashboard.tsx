@@ -104,6 +104,12 @@ export default function ATRDashboard() {
   const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
 
   useEffect(() => {
+    const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll()));
+    setFwRecords(FieldworkStore.getAll());
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     if (controls.length) return;
     const normalizeRows = (data: any): any[] => {
       if (!data) return [];
