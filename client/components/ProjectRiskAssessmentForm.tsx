@@ -37,6 +37,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     }
   }, [isStandard, mode]);
 
+  const eqRanges = (a: any[] = [], b: any[] = []) => a.length === b.length && a.every((r,i)=>r.from===b[i]?.from && r.to===b[i]?.to && r.label===b[i]?.label && r.color===b[i]?.color);
+
   const getBreakpointsFromRanges = (ranges: any[]): number[] => {
     if (ranges.length === 0) return [];
     const breakpoints = [ranges[0].from];
@@ -55,6 +57,46 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     }
     return ranges;
   };
+
+  const labels4 = ['Low','Moderate','High','Very High'];
+  const colors4 = ['#10B981','#F59E0B','#F97316','#EF4444'];
+  const labels5 = ['Very Low','Low','Moderate','High','Very High'];
+  const colors5 = ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444'];
+
+  const getParamScale = (p?: string) => {
+    const param = p || cfg.residualRisk?.parameter || 'residualRisk';
+    if (param === 'likelihood') return cfg.riskScore?.likelihood?.scale || { min: 1, max: 5 };
+    if (param === 'consequence') return cfg.riskScore?.consequence?.scale || { min: 1, max: 5 };
+    if (param === 'controlScore') return cfg.controlScore?.scale || { min: 1, max: 5 };
+    return cfg.riskScore?.scale || { min: 1, max: 25 };
+  };
+
+  const buildDefaultForParam = (p: string) => {
+    const scl = getParamScale(p);
+    const min = Math.round(scl.min); const max = Math.round(scl.max);
+    if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
+      const bps = [min, min+1, min+2, min+3, max];
+      return bps.slice(0,-1).map((from,i)=>({ from, to: bps[i+1], label: labels4[i], color: colors4[i] }));
+    }
+    const step = Math.max(1, Math.floor((max - min + 1) / 5));
+    return Array.from({length:5}).map((_,i)=>{
+      const from = min + (i*step);
+      const to = i===4 ? max : (min + ((i+1)*step) - 1);
+      return { from, to, label: labels5[i], color: colors5[i] };
+    });
+  };
+
+  // Seed per-parameter ranges once and keep cfg in sync with selected parameter
+  React.useEffect(() => {
+    setParamRanges(prev => {
+      const next = { ...prev };
+      const curParam = cfg.residualRisk?.parameter || 'residualRisk';
+      if (!next[curParam]) next[curParam] = (cfg.residualRisk?.thresholds?.ranges || []).slice();
+      return next;
+    });
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const calculateDisplayRange = (from: number, to: number): string => `${from} - ${to}`;
 
