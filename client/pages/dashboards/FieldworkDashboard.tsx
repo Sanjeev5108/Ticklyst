@@ -609,7 +609,7 @@ export default function FieldworkDashboard() {
                               for (const l of labels) { if (val >= l.value) chosen = l; }
                               return chosen?.color;
                             };
-                            if (status === 'draft' || status === 'submitted') {
+                            if (status === 'draft') {
                               const c = pickColor(row.riskScore);
                               return (
                                 <span className="inline-flex items-center gap-2">
@@ -657,7 +657,7 @@ export default function FieldworkDashboard() {
                             for (const l of labels) { if (val >= l.value) chosen = l; }
                             return chosen?.color;
                           };
-                          if (status === 'draft' || status === 'submitted') {
+                          if (status === 'draft') {
                             const min = cfg.controlScore.scale.min; const max = cfg.controlScore.scale.max;
                             const c = pickControlColor(row.controlScore);
                             return (
@@ -700,10 +700,14 @@ export default function FieldworkDashboard() {
                         {(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale); const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds); return rrl?.color ? <span className="inline-block w-5 h-5 rounded" title={rrl?.level} style={{ backgroundColor: rrl.color }} /> : <span className="inline-block w-5 h-5 rounded bg-emerald-500" title="Low" />; })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.controlOwner || '-'}</span>
+                        ) : (
+                          <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -717,7 +721,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -731,7 +735,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))}>
+                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -744,7 +748,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes'}>
+                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes' || (records[row.id]?.status && records[row.id]?.status !== 'draft')}>
                           <SelectTrigger>
                             <SelectValue placeholder={row.samplingApplicable === 'Yes' ? 'Select' : 'Not applicable'} />
                           </SelectTrigger>
@@ -758,7 +762,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -772,14 +776,22 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.attachments ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, attachments: e.target.value } : r))} placeholder="Paste link or text" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.attachments || '-'}</span>
+                        ) : (
+                          <Input value={row.attachments ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, attachments: e.target.value } : r))} placeholder="Paste link or text" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.auditRemarks ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditRemarks: e.target.value } : r))} placeholder="Type remarks" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.auditRemarks || '-'}</span>
+                        ) : (
+                          <Input value={row.auditRemarks ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditRemarks: e.target.value } : r))} placeholder="Type remarks" />
+                        )}
                         {(() => { const cfg = RiskConfigStore.getGlobal(); const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const invalid = cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; return invalid ? <div className="text-xs text-red-600 mt-1">Control Score cannot exceed Risk Score</div> : null; })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -793,7 +805,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -807,7 +819,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))} disabled={records[row.id]?.status && records[row.id]?.status !== 'draft'}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -821,16 +833,32 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.auditObservation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditObservation: e.target.value } : r))} placeholder="Type observation" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.auditObservation || '-'}</span>
+                        ) : (
+                          <Input value={row.auditObservation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditObservation: e.target.value } : r))} placeholder="Type observation" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.effect ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, effect: e.target.value } : r))} placeholder="Describe effect" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.effect || '-'}</span>
+                        ) : (
+                          <Input value={row.effect ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, effect: e.target.value } : r))} placeholder="Describe effect" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.recommendation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, recommendation: e.target.value } : r))} placeholder="Recommendation" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.recommendation || '-'}</span>
+                        ) : (
+                          <Input value={row.recommendation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, recommendation: e.target.value } : r))} placeholder="Recommendation" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.annexure ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, annexure: e.target.value } : r))} placeholder="Annexure ref/link" />
+                        {records[row.id]?.status && records[row.id]?.status !== 'draft' ? (
+                          <span>{row.annexure || '-'}</span>
+                        ) : (
+                          <Input value={row.annexure ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, annexure: e.target.value } : r))} placeholder="Annexure ref/link" />
+                        )}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
                         {((records[row.id]?.status === 'submitted') || submittedIds.has(row.id)) ? (
@@ -864,7 +892,7 @@ export default function FieldworkDashboard() {
                               }
                               const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
                               const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
-                              FieldworkStore.patch(row.id, {
+                              FieldworkStore.patch(row.id, { projectId: selectedProject || undefined,
                                 arc: {
                                   activity: row.activity,
                                   risk: row.risk,
