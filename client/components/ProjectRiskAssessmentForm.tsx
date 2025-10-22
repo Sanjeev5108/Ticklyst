@@ -118,36 +118,46 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     });
   }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale]);
 
-  // Initialize defaults for Standard model and enforce parameter-specific default ranges
+  // Initialize and lock ranges for Standard model based on selected parameter to avoid flicker between 1–5 and 1–25
   React.useEffect(() => {
     if (cfg.riskScoringModel !== 'standard') return;
-    const p = cfg.residualRisk?.parameter || 'residualRisk';
-    const ranges = cfg.residualRisk.thresholds.ranges || [];
+    const param = cfg.residualRisk?.parameter || 'residualRisk';
 
-    if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
-      const desiredBps = [1,2,3,4,5];
-      const currentBps = getBreakpointsFromRanges(ranges);
-      const same = currentBps.length === desiredBps.length && currentBps.every((v,i)=>v===desiredBps[i]);
-      if (!same) {
-        const newRanges = desiredBps.slice(0, -1).map((from, i) => ({ from, to: desiredBps[i + 1], label: ['Low','Moderate','High','Very High'][i], color: ['#10B981','#F59E0B','#F97316','#EF4444'][i] }));
-        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig));
-        setBreakpointErrors([]);
-      }
+    // helpers
+    const eqRanges = (a: any[], b: any[]) => a.length === b.length && a.every((r,i)=>r.from===b[i].from && r.to===b[i].to && r.label===b[i].label && r.color===b[i].color);
+
+    let desired: any[] = [];
+    if (param === 'likelihood' || param === 'consequence' || param === 'controlScore') {
+      // 4 levels over integer scale (typically 1..5)
+      const scl = param === 'likelihood' ? (cfg.riskScore.likelihood?.scale || {min:1,max:5})
+                : param === 'consequence' ? (cfg.riskScore.consequence?.scale || {min:1,max:5})
+                : (cfg.controlScore.scale || {min:1,max:5});
+      const min = Math.round(scl.min); const max = Math.round(scl.max);
+      const bps = [min, min+1, min+2, min+3, max];
+      desired = bps.slice(0,-1).map((from, i) => ({ from, to: bps[i+1], label: ['Low','Moderate','High','Very High'][i], color: ['#10B981','#F59E0B','#F97316','#EF4444'][i] }));
     } else {
-      const desiredRanges = [
-        { from: 1, to: 5, label: 'Very Low', color: '#10B981' },
-        { from: 6, to: 10, label: 'Low', color: '#A3E635' },
-        { from: 11, to: 15, label: 'Moderate', color: '#F59E0B' },
-        { from: 16, to: 20, label: 'High', color: '#F97316' },
-        { from: 21, to: 25, label: 'Very High', color: '#EF4444' }
-      ];
-      const same = ranges.length === desiredRanges.length && ranges.every((r, i) => r.from === desiredRanges[i].from && r.to === desiredRanges[i].to);
-      if (!same) {
-        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: desiredRanges } } } as RiskAssessmentConfig));
-        setBreakpointErrors([]);
-      }
+      // 5 levels across risk/residual total range (typically 1..25)
+      const scl = cfg.riskScore.scale || {min:1,max:25};
+      const min = Math.round(scl.min); const max = Math.round(scl.max);
+      const step = Math.max(1, Math.floor((max - min + 1) / 5));
+      desired = Array.from({length:5}).map((_,i)=>{
+        const from = min + (i*step);
+        const to = i===4 ? max : (min + ((i+1)*step) - 1);
+        const labels = ['Very Low','Low','Moderate','High','Very High'];
+        const colors = ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444'];
+        return { from, to, label: labels[i], color: colors[i] };
+      });
     }
-  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter]);
+
+    const current = cfg.residualRisk.thresholds.ranges || [];
+    if (!eqRanges(current, desired)) {
+      setCfg(prev => ({
+        ...prev,
+        residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: desired } }
+      } as RiskAssessmentConfig));
+      setBreakpointErrors([]);
+    }
+  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter, cfg.riskScore.scale.min, cfg.riskScore.scale.max, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max]);
 
   // Clamp breakpoints when parameter changes or relevant scales change
   React.useEffect(() => {
