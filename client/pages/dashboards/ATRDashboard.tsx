@@ -443,6 +443,7 @@ export default function ATRDashboard() {
       const a: any = (r as any).arc || {};
       return {
         id: r.controlId,
+        projectId: r.projectId,
         control: a.control || match?.name || '',
         process: match?.process || '',
         subprocess: match?.subprocess || '',
