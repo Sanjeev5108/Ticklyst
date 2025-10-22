@@ -655,7 +655,7 @@ export default function FieldworkDashboard() {
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
                           const cfg = activeCfg;
-                          const status = records[row.id]?.status || 'draft';
+                          const status = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
                           if (cfg.riskScore.mode === 'single') {
                             const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
                             const pickColor = (val: number) => {
