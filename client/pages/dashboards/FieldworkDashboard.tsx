@@ -714,7 +714,7 @@ export default function FieldworkDashboard() {
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
                           const cfg = activeCfg;
-                          const status = records[row.id]?.status || 'draft';
+                          const status = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
                           const pickControlColor = (val: number) => {
                             const labels = Array.isArray(cfg.controlScore.labels) ? [...cfg.controlScore.labels] : [];
                             labels.sort((a,b)=>a.value-b.value);
