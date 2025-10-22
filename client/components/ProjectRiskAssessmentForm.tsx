@@ -54,7 +54,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     return ranges;
   };
 
-  const calculateDisplayRange = (from: number, to: number): string => `${from}��${to}`;
+  const calculateDisplayRange = (from: number, to: number): string => `${from} - ${to}`;
 
   const getParameterMin = (): number => {
     const p = cfg.residualRisk?.parameter || 'residualRisk';
