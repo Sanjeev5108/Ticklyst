@@ -87,6 +87,7 @@ interface ProjectFormData {
   auditCommentsModule: boolean;
   workflowStatus: string;
   changeLogsEnabled: boolean;
+  riskConfig: RiskAssessmentConfig | null;
 }
 
 interface NewProjectDialogProps {
@@ -1438,38 +1439,6 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             </div>
           </div>
         );
-
-      case 6:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Notifications & Reporting</h3>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="emailNotifications"
-                checked={formData.emailNotifications}
-                onCheckedChange={(checked) => updateFormData('emailNotifications', checked)}
-              />
-              <Label htmlFor="emailNotifications">Email Notifications</Label>
-            </div>
-            <p className="text-sm text-gray-600 ml-6">Notify assigned users when project is created</p>
-
-            <div>
-              <Label>Reporting Frequency</Label>
-              <Select value={formData.reportingFrequency} onValueChange={(value) => updateFormData('reportingFrequency', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Weekly, Fortnightly, Monthly" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reportingFrequencies.map(freq => (
-                    <SelectItem key={freq} value={freq}>{freq}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        );
-
 
       default:
         return null;
