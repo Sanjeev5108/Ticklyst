@@ -641,8 +641,8 @@ export default function FieldworkDashboard() {
                           </td>
                           {/* Consequence */}
                           <td className="p-3 align-top w-40 break-words">
-                            {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
-                              <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
+                            {(() => { const key = selectedProject ? `${selectedProject}|${row.id}` : row.id; const st = records[key]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                              <span>{records[key]?.risk?.consequence ?? '-'}</span>
                             ); } return (
                               <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={Number.isFinite(Number(row.consequence)) ? row.consequence : (activeCfg.riskScore.consequence?.scale.min ?? 1)}
                                 onChange={(e)=> { const min = activeCfg.riskScore.consequence?.scale.min ?? 1; const max = activeCfg.riskScore.consequence?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: nv } : r)); }}
