@@ -76,6 +76,8 @@ class FWStore {
       const cur = this.records[id];
       if (!cur.risk) {
         this.records[id] = { ...cur, risk: { mode: 'likelihood_consequence', likelihood: 0, consequence: 0, riskScore: 0, controlScore: 0, residualRisk: 0, overridden: false } } as any;
+        this.persist();
+        this.notify();
       }
     }
     return this.records[id];
