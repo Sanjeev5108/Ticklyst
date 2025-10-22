@@ -43,8 +43,9 @@ export default function ReviewDashboard() {
   const [riskConfigVersion, setRiskConfigVersion] = useState(0);
   const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   const [ackMsg, setAckMsg] = useState('');
-  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [projDetailsOpen, setProjDetailsOpen] = useState(false);
 
   const submittedCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -113,7 +114,7 @@ export default function ReviewDashboard() {
         const res = await fetch('/api/projects');
         if (!res.ok) return;
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project' }));
+        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
         setProjects(mapped);
       } catch {}
     })();
@@ -281,6 +282,9 @@ export default function ReviewDashboard() {
             </SelectContent>
           </Select>
         </div>
+        <div className="md:col-span-2 flex justify-end">
+          <Button variant="outline" onClick={() => setProjDetailsOpen(true)} disabled={!selectedProject}>View details</Button>
+        </div>
       </div>
 
       <Card className="h-[560px] overflow-hidden">
@@ -431,6 +435,94 @@ export default function ReviewDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={projDetailsOpen} onOpenChange={setProjDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Details</DialogTitle>
+          </DialogHeader>
+          {(() => { const proj = projects.find(p => p.id === (selectedProject||''))?.raw; if (!proj) return null; const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } }; return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Project Code</div>
+                  <div className="font-medium">{proj.code || proj.data?.projectCode || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Client</div>
+                  <div className="font-medium">{proj.clientName || proj.data?.clientName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Project Name</div>
+                  <div className="font-medium">{proj.name || proj.data?.projectName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Division</div>
+                  <div className="font-medium">{proj.data?.division || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Nature of Assignment</div>
+                  <div className="font-medium">{proj.data?.auditType || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Reporting Frequency</div>
+                  <div className="font-medium">{proj.data?.reportingFrequency || '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Project Description</div>
+                <div className="font-medium whitespace-pre-wrap">{proj.data?.description || '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Start Date</div>
+                  <div className="font-medium">{formatDate(proj.startDate || proj.data?.startDate)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">End Date</div>
+                  <div className="font-medium">{formatDate(proj.endDate || proj.data?.endDate)}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Progress</div>
+                <div className="text-sm">{proj.data?.progress != null ? `${proj.data?.progress}%` : '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Division Heads</div>
+                  <div className="text-sm">{Array.isArray(proj.data?.divisionHeads) && proj.data?.divisionHeads.length ? proj.data?.divisionHeads.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Partners</div>
+                  <div className="text-sm">{Array.isArray(proj.data?.partners) && proj.data?.partners.length ? proj.data?.partners.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Leaders</div>
+                  <div className="text-sm">{Array.isArray(proj.data?.teamLeaders) && proj.data?.teamLeaders.length ? proj.data?.teamLeaders.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Members</div>
+                  <div className="text-sm">{Array.isArray(proj.data?.teamMembers) && proj.data?.teamMembers.length ? proj.data?.teamMembers.join(', ') : '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Audit Universe</div>
+                <div className="text-sm">{Array.isArray(proj.data?.auditUniverse) && proj.data?.auditUniverse.length ? proj.data?.auditUniverse.join(', ') : '-'}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Scope Notes</div>
+                <div className="text-sm whitespace-pre-wrap">{proj.data?.scopeNotes || '-'}</div>
+              </div>
+            </div>
+          ); })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
