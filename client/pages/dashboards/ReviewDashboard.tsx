@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { FileText, CheckCircle2, XCircle, Search, Save } from 'lucide-react';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
@@ -253,6 +254,40 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">{row.annexure || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">
                       <Input value={reviewDraft[row.id] || ''} onChange={(e)=> setReviewDraft(prev => ({ ...prev, [row.id]: e.target.value }))} placeholder="Add review comments" />
+                      {(() => {
+                        const hist = records[row.id]?.reviewHistory || [];
+                        if (hist.length === 0) return null;
+                        const last = hist[hist.length - 1];
+                        const rejCount = hist.filter(h => (h.content || '').startsWith('Rejected')).length;
+                        return (
+                          <div className="mt-2">
+                            <div className="inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm bg-slate-50 border border-slate-200 text-slate-800">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="break-words">{last.content}</div>
+                                {rejCount > 0 ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 border border-red-300 text-red-700" title="Times rejected">×{rejCount}</button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-2">
+                                      <div className="text-xs font-medium mb-1">Past rejection comments</div>
+                                      <div className="space-y-2 max-h-64 overflow-auto">
+                                        {hist.filter(h => (h.content || '').startsWith('Rejected')).map((h, i) => (
+                                          <div key={i} className="p-2 border rounded bg-red-50 text-red-800">
+                                            <div className="break-words">{h.content}</div>
+                                            <div className="mt-1 text-[10px] text-red-700">— {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : null}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-600 opacity-80">— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-3 align-top w-64 break-words">
                       <Button variant="outline" size="sm" onClick={()=>{ if (!user) return; FieldworkStore.addReview(row.id, user.username, reviewDraft[row.id] || '', 'Approved'); setAckMsg('Approved successfully'); setAckOpen(true); }}>
