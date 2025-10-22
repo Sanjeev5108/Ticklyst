@@ -16,6 +16,19 @@ class FWStore {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) this.records = JSON.parse(raw);
+      // migrate: re-key records to project-specific keys if needed
+      const migrated: Record<string, FieldworkRecord> = {} as any;
+      let changed = false;
+      for (const [key, rec] of Object.entries(this.records)) {
+        const hasComposite = key.includes('|');
+        const nextKey = rec && rec.projectId ? `${rec.projectId}|${rec.controlId}` : key;
+        if (!hasComposite && rec && rec.projectId) changed = true;
+        migrated[nextKey] = rec as any;
+      }
+      if (changed) {
+        this.records = migrated;
+        this.persist();
+      }
     } catch {}
   }
 
@@ -43,7 +56,8 @@ class FWStore {
   }
 
   upsert(rec: FieldworkRecord) {
-    this.records[rec.controlId] = { ...rec };
+    const key = rec.projectId ? `${rec.projectId}|${rec.controlId}` : rec.controlId;
+    this.records[key] = { ...rec };
     this.persist();
     this.notify();
   }
