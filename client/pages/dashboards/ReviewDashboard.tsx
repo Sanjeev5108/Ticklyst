@@ -41,6 +41,26 @@ export default function ReviewDashboard() {
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
+  const submittedCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of Object.values(records)) {
+      if (r.status === 'submitted' && r.projectId) {
+        counts[r.projectId] = (counts[r.projectId] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [records]);
+
+  const projectsForReview = useMemo(() => {
+    return projects.filter(p => (submittedCounts[p.id] || 0) > 0);
+  }, [projects, submittedCounts]);
+
+  useEffect(() => {
+    if (selectedProject && !projectsForReview.some(p => p.id === selectedProject)) {
+      setSelectedProject(null);
+    }
+  }, [projectsForReview, selectedProject]);
+
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
     setRecords(FieldworkStore.getAll());
@@ -211,10 +231,13 @@ export default function ReviewDashboard() {
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__CLEAR__">Clear</SelectItem>
-              {projects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              {projectsForReview.length === 0 && (
+                <SelectItem value="__NONE__" disabled>No projects with submissions</SelectItem>
+              )}
+              {projectsForReview.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.title} ({submittedCounts[p.id] || 0})</SelectItem>
               ))}
+              <SelectItem value="__CLEAR__">Clear</SelectItem>
             </SelectContent>
           </Select>
         </div>
