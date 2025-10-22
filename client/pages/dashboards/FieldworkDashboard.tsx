@@ -691,8 +691,8 @@ export default function FieldworkDashboard() {
                           const cfg = activeCfg;
                           const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
                           const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
-                          const rrl = resolveLevel(rr, cfg.residualRisk.thresholds);
-                          return <span>{rrl?.level || '-'}</span>;
+                          const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds);
+                          return <span>{rrl?.level || 'Low'}</span>;
                         })()}
                       </td>
                       {/* Color */}
