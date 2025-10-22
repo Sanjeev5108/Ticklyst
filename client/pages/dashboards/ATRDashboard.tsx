@@ -497,13 +497,13 @@ export default function ATRDashboard() {
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
-                        <tr key={c.id} className="border-t hover:bg-slate-50">
-                          <td className="p-3 text-xs text-slate-600">{c.id}</td>
-                          <td className="p-3">{c.name}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.risk || '-'}</td>
+                        <tr key={r.id} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
+                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
+                          <td className="p-3">{r.control || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
 
                         </tr>
                       ))}
@@ -584,13 +584,13 @@ export default function ATRDashboard() {
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
-                        <tr key={c.id} className="border-t hover:bg-slate-50">
-                          <td className="p-3 text-xs text-slate-600">{c.id}</td>
-                          <td className="p-3">{c.name}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{c.risk || '-'}</td>
+                        <tr key={r.id} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
+                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
+                          <td className="p-3">{r.control || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
 
                         </tr>
                       ))}
