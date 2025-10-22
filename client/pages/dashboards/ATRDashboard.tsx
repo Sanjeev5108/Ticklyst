@@ -537,7 +537,6 @@ export default function ATRDashboard() {
           <TabsTrigger value="access">ATR Access</TabsTrigger>
         </TabsList>
         <TabsContent value="reportable">
-          {/* Controls List (like Fieldwork) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
             <div>
               <Label>Search Controls</Label>
@@ -545,24 +544,16 @@ export default function ATRDashboard() {
                 <Input className="pl-9" placeholder="Search controls, process, risk..." value={controlsSearch} onChange={e=>setControlsSearch(e.target.value)} />
               </div>
             </div>
-            <div>
-              <Label>Filter</Label>
-              <Select value="all" onValueChange={()=>{}}>
-                <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div />
             <div className="flex items-center justify-end">
-              <Badge className="bg-blue-50 text-blue-800">Controls</Badge>
+              <Badge className="bg-blue-50 text-blue-800">Approved & Reportable</Badge>
             </div>
           </div>
 
           <div className="mt-4">
             <Card className="h-[420px] overflow-hidden">
               <CardHeader>
-                <CardTitle>Controls</CardTitle>
+                <CardTitle>Reportable Controls</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 h-full">
                 <div style={{maxHeight:420, overflow:'auto'}}>
