@@ -37,11 +37,25 @@ export default function ReviewDashboard() {
   const [reviewDraft, setReviewDraft] = useState<Record<string, string>>({});
   const [ackOpen, setAckOpen] = useState(false);
   const [ackMsg, setAckMsg] = useState('');
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
     setRecords(FieldworkStore.getAll());
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) return;
+        const rows = await res.json();
+        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project' }));
+        setProjects(mapped);
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -124,7 +138,7 @@ export default function ReviewDashboard() {
   const record = selectedControlId ? records[selectedControlId] : undefined;
 
   const arcRows = useMemo(() => {
-    const all = Object.values(records).filter(r => r.status === 'submitted');
+    const all = Object.values(records).filter(r => r.status === 'submitted' && (!selectedProject || r.projectId === selectedProject));
     return all.map(r => {
       const ctrl = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
@@ -186,7 +200,22 @@ export default function ReviewDashboard() {
         <Badge className="bg-blue-100 text-blue-800">Review</Badge>
       </div>
 
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div>
+          <Label>Project</Label>
+          <Select value={selectedProject || ''} onValueChange={(v)=> setSelectedProject(v === '__CLEAR__' ? null : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__CLEAR__">Clear</SelectItem>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Card className="h-[560px] overflow-hidden">
         <CardHeader>
