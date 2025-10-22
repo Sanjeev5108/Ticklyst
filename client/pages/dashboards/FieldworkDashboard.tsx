@@ -577,7 +577,15 @@ export default function FieldworkDashboard() {
                             const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
                             const pickColor = (val: number) => {
                               if (cfg.residualRisk?.parameter === 'Risk Score' || cfg.residualRisk?.parameter === 'riskScore') {
-                                return resolveLevel(val, cfg.residualRisk.thresholds)?.color;
+                                const ranges = cfg.residualRisk.thresholds?.ranges || [];
+                                for (let i=0;i<ranges.length;i++) {
+                                  const r = ranges[i];
+                                  const isLast = i === ranges.length - 1;
+                                  if (val >= r.from && (isLast ? val <= r.to : val < r.to)) {
+                                    return r.color || cfg.residualRisk.thresholds.heatmapColors?.[r.label];
+                                  }
+                                }
+                                return undefined;
                               }
                               const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
                               labels.sort((a,b)=>a.value-b.value);
@@ -603,7 +611,15 @@ export default function FieldworkDashboard() {
                           const v = computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
                           const pickRiskColor = (val: number) => {
                             if (activeCfg.residualRisk?.parameter === 'Risk Score' || activeCfg.residualRisk?.parameter === 'riskScore') {
-                              return resolveLevel(val, activeCfg.residualRisk.thresholds)?.color;
+                              const ranges = activeCfg.residualRisk.thresholds?.ranges || [];
+                              for (let i=0;i<ranges.length;i++) {
+                                const r = ranges[i];
+                                const isLast = i === ranges.length - 1;
+                                if (val >= r.from && (isLast ? val <= r.to : val < r.to)) {
+                                  return r.color || activeCfg.residualRisk.thresholds.heatmapColors?.[r.label];
+                                }
+                              }
+                              return undefined;
                             }
                             const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
                             labels.sort((a,b)=>a.value-b.value);
