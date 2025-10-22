@@ -720,18 +720,22 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   // When editing an existing project, do NOT override previously saved selections unless the user changes applicability or templates.
   useEffect(() => {
     const procs = effectiveChecklistProcesses;
-    if (!Array.isArray(procs) || procs.length === 0) { updateFormData('selectedChecklistTree', null); return; }
+    if (!Array.isArray(procs) || procs.length === 0) {
+      if (formData.selectedChecklistTree !== null) updateFormData('selectedChecklistTree', null);
+      return;
+    }
 
     const hasSelections = Object.values(soaApplicable).some(v => v === true);
 
-    // Guard: if editing and an existing tree is present that already matches the selected processes,
-    // and user hasn't explicitly selected applicability yet, keep it as-is
-    const existingTree = formData.selectedChecklistTree;
+    const existingTree = formData.selectedChecklistTree as any;
     const existingProcKeys = existingTree && typeof existingTree === 'object' ? Object.keys(existingTree) : [];
     const sameProcSet = existingProcKeys.length === procs.length && existingProcKeys.every(k => procs.includes(k)) && procs.every(k => existingProcKeys.includes(k));
-    if (mode === 'edit' && existingProcKeys.length > 0 && sameProcSet && !hasSelections) {
-      return; // preserve saved applicability and selections
-    }
+
+    // Preserve on edit when user hasn't changed applicability/templates
+    if (mode === 'edit' && existingProcKeys.length > 0 && sameProcSet && !hasSelections) return;
+
+    // Also avoid rebuilding repeatedly for new projects if already built for the same processes and no selections were made
+    if (!hasSelections && existingTree && sameProcSet) return;
 
     const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
@@ -786,10 +790,10 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       return result;
     };
 
+    let nextTree: any = null;
     if (hasSelections) {
-      updateFormData('selectedChecklistTree', filterBySelections(frameworkTree));
+      nextTree = filterBySelections(frameworkTree);
     } else {
-      // default: copy full subtree for selected processes
       const clone: Record<string, any> = {};
       for (const proc of procs) {
         const procKey = findMatchingKey(frameworkTree, proc);
@@ -798,9 +802,16 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         if (!node) continue;
         try { clone[procKey] = JSON.parse(JSON.stringify(node)); } catch { clone[procKey] = node; }
       }
-      updateFormData('selectedChecklistTree', clone);
+      nextTree = clone;
     }
-  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey, mode, formData.selectedChecklistTree]);
+
+    const changed = (() => {
+      if (!existingTree) return true;
+      try { return JSON.stringify(existingTree) !== JSON.stringify(nextTree); } catch { return true; }
+    })();
+
+    if (changed) updateFormData('selectedChecklistTree', nextTree);
+  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey, mode]);
 
   // Auto-expand subprocesses for the selected process so activities are visible
   useEffect(() => {
