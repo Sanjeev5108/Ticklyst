@@ -37,6 +37,15 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     }
   }, [isStandard, mode]);
 
+  // Keep cfg.residualRisk.thresholds.ranges synced to current parameter-specific cache
+  React.useEffect(() => {
+    const p = cfg.residualRisk?.parameter || 'residualRisk';
+    const wanted = paramRanges[p] && paramRanges[p].length ? paramRanges[p] : buildDefaultForParam(p);
+    if (!eqRanges(cfg.residualRisk.thresholds.ranges || [], wanted)) {
+      setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: wanted } } } as RiskAssessmentConfig));
+    }
+  }, [cfg.residualRisk?.parameter, paramRanges, cfg.riskScore.scale.min, cfg.riskScore.scale.max, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max]);
+
   const eqRanges = (a: any[] = [], b: any[] = []) => a.length === b.length && a.every((r,i)=>r.from===b[i]?.from && r.to===b[i]?.to && r.label===b[i]?.label && r.color===b[i]?.color);
 
   const getBreakpointsFromRanges = (ranges: any[]): number[] => {
