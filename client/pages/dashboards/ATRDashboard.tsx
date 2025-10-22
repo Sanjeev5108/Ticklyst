@@ -492,11 +492,11 @@ export default function ATRDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {controls.filter(c=>{
+                      {reportableRows.filter(r=>{
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
-                        return [c.id,c.name,c.process,c.subprocess,c.activity,c.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
-                      }).map(c=> (
+                        return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
+                      }).map(r=> (
                         <tr key={c.id} className="border-t hover:bg-slate-50">
                           <td className="p-3 text-xs text-slate-600">{c.id}</td>
                           <td className="p-3">{c.name}</td>
@@ -579,11 +579,11 @@ export default function ATRDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {controls.filter(c=>{
+                      {reportableRows.filter(r=>{
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
-                        return [c.id,c.name,c.process,c.subprocess,c.activity,c.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
-                      }).map(c=> (
+                        return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
+                      }).map(r=> (
                         <tr key={c.id} className="border-t hover:bg-slate-50">
                           <td className="p-3 text-xs text-slate-600">{c.id}</td>
                           <td className="p-3">{c.name}</td>
