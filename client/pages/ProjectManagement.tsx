@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import NewProjectDialog from '@/components/NewProjectDialog';
+import { FieldworkStore } from '@/contexts/FieldworkStore';
+import { FieldworkRecord } from '@shared/fieldwork';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -241,6 +243,7 @@ export default function ProjectManagement() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
 
   const ROLE_PROJECT_SCOPE_KEY = 'roleProjectScope';
   const getRoleProjectScope = (role?: string) => {
@@ -258,6 +261,8 @@ export default function ProjectManagement() {
     const initials = uname.split(' ').map(s=>s[0]).join('');
     return project.teamMembers.some(tm => tm.name === uname || tm.initials === initials);
   };
+
+  React.useEffect(() => { const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll())); setFwRecords(FieldworkStore.getAll()); return () => unsub(); }, []);
 
   React.useEffect(() => {
     (async () => {
@@ -481,6 +486,54 @@ export default function ProjectManagement() {
       });
     } catch {}
   };
+
+  // Count total controls from project's selected checklist tree
+  const countTotalControlsFromTree = (tree: any): number => {
+    if (!tree || typeof tree !== 'object') return 0;
+    let total = 0;
+    try {
+      for (const procNode of Object.values<any>(tree)) {
+        const subs = (procNode && typeof procNode === 'object' && (procNode as any).subprocesses) || {};
+        for (const subNode of Object.values<any>(subs)) {
+          const acts = (subNode && typeof subNode === 'object' && (subNode as any).activities) || {};
+          for (const actNode of Object.values<any>(acts)) {
+            const risks = (actNode && typeof actNode === 'object' && (actNode as any).risks) || {};
+            for (const riskNode of Object.values<any>(risks)) {
+              const ctrls = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
+              total += ctrls.length;
+            }
+          }
+        }
+      }
+    } catch {}
+    return total;
+  };
+
+  // Derive progress from approved controls / total controls
+  React.useEffect(() => {
+    if (!projects.length) return;
+    const approvedMap: Record<string, Set<string>> = {};
+    for (const rec of Object.values(fwRecords || {})) {
+      if (!rec || !rec.projectId) continue;
+      if (rec.status === 'approved') {
+        const set = approvedMap[rec.projectId] || (approvedMap[rec.projectId] = new Set<string>());
+        set.add(rec.controlId);
+      }
+    }
+    const next = projects.map(p => {
+      const total = countTotalControlsFromTree((p as any).details?.selectedChecklistTree);
+      const approved = approvedMap[p.id]?.size || 0;
+      const progress = total > 0 ? Math.round((approved / total) * 100) : 0;
+      const totalTasks = total;
+      const completedTasks = approved;
+      return progress === p.progress && totalTasks === p.totalTasks && completedTasks === p.completedTasks ? p : { ...p, progress, totalTasks, completedTasks };
+    });
+    let changed = false;
+    for (let i=0;i<projects.length;i++) {
+      if (projects[i] !== next[i]) { changed = true; break; }
+    }
+    if (changed) setProjects(next);
+  }, [fwRecords, projects.map(p=>p.id).join('|')]);
 
   const ProjectCard = ({ project }: { project: Project }) => (
     <Card className="mb-4 hover:shadow-md transition-shadow cursor-pointer">
