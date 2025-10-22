@@ -431,7 +431,7 @@ export default function ATRDashboard() {
     );
   };
 
-  const reportableRows = useMemo(() => {
+  const reportableRows = React.useMemo(() => {
     const all = Object.values(fwRecords || {});
     const approved = all.filter(r => r.status === 'approved');
     const yesReportable = approved.filter(r => {
