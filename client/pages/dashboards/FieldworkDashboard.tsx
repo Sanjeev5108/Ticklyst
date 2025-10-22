@@ -630,8 +630,8 @@ export default function FieldworkDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedRows.map((row) => (
-                    <tr key={row.id} className={`border-t ${(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'bg-red-50' : ''}`}>
+                  {displayedRows.map((row, idx) => (
+                    <tr key={`${selectedProject || 'GLOBAL'}|${row.id}|${idx}`} className={`border-t ${(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'bg-red-50' : ''}`}>
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
