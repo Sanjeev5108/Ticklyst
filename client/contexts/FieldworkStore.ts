@@ -7,9 +7,11 @@ type Listener = () => void;
 class FWStore {
   private records: Record<string, FieldworkRecord> = {};
   private listeners = new Set<Listener>();
+  private syncing = false;
 
   constructor() {
     this.load();
+    this.syncFromServer();
   }
 
   private load() {
@@ -38,6 +40,41 @@ class FWStore {
     } catch {}
   }
 
+  private async persistServerKey(id: string) {
+    try {
+      const rec = this.records[id];
+      if (!rec) return;
+      await fetch(`/api/fieldwork/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rec)
+      });
+    } catch {}
+  }
+
+  private async syncFromServer() {
+    if (this.syncing) return;
+    this.syncing = true;
+    try {
+      const res = await fetch('/api/fieldwork');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data === 'object') {
+          // Server is source of truth if present
+          const serverRecords: Record<string, FieldworkRecord> = data;
+          const merged: Record<string, FieldworkRecord> = { ...this.records };
+          for (const [id, rec] of Object.entries(serverRecords)) {
+            merged[id] = rec as FieldworkRecord;
+          }
+          this.records = merged;
+          this.persist();
+          this.notify();
+        }
+      }
+    } catch {}
+    this.syncing = false;
+  }
+
   subscribe(fn: Listener) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
@@ -59,6 +96,7 @@ class FWStore {
     const key = rec.projectId ? `${rec.projectId}|${rec.controlId}` : rec.controlId;
     this.records[key] = { ...rec };
     this.persist();
+    this.persistServerKey(key);
     this.notify();
   }
 
@@ -70,6 +108,7 @@ class FWStore {
       }
       this.records[id] = rec;
       this.persist();
+      this.persistServerKey(id);
       this.notify();
     } else {
       // backfill risk structure if missing
@@ -77,6 +116,7 @@ class FWStore {
       if (!cur.risk) {
         this.records[id] = { ...cur, risk: { mode: 'likelihood_consequence', likelihood: 0, consequence: 0, riskScore: 0, controlScore: 0, residualRisk: 0, overridden: false } } as any;
         this.persist();
+        this.persistServerKey(id);
         this.notify();
       }
     }
@@ -88,6 +128,7 @@ class FWStore {
     if (!cur) return;
     this.records[id] = { ...cur, ...patch } as FieldworkRecord;
     this.persist();
+    this.persistServerKey(id);
     this.notify();
   }
 
@@ -96,6 +137,7 @@ class FWStore {
     if (!cur) return;
     this.records[id] = { ...cur, [tab]: { ...(cur as any)[tab], ...(patch as any) } } as FieldworkRecord;
     this.persist();
+    this.persistServerKey(id);
     this.notify();
   }
 
@@ -104,6 +146,7 @@ class FWStore {
     if (!cur) return;
     this.records[id] = { ...cur, status };
     this.persist();
+    this.persistServerKey(id);
     this.notify();
   }
 
@@ -127,6 +170,7 @@ class FWStore {
       progress: Math.max(cur.progress, 4)
     };
     this.persist();
+    this.persistServerKey(id);
     this.notify();
   }
 }
