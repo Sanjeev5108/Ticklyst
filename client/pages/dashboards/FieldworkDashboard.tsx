@@ -680,7 +680,8 @@ export default function FieldworkDashboard() {
                           const cfg = activeCfg;
                           const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
                           const res = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
-                          const rc = resolveLevel(res, cfg.residualRisk.thresholds)?.color;
+                          const lvl = getResidualLevel(res, cfg.residualRisk.thresholds);
+                          const rc = lvl?.color;
                           return <span className="inline-flex items-center gap-2"><span>{Math.round((res + Number.EPSILON) * 100) / 100}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
