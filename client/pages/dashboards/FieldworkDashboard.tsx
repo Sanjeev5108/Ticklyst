@@ -528,6 +528,11 @@ export default function FieldworkDashboard() {
   const submitForReview = () => { if (record && selectedControlId) { FieldworkStore.submitForReview(selectedControlId); setRecords(FieldworkStore.getAll()); setSubmitAckOpen(true); } };
   const canOpenTab = (idx: number) => !record ? false : idx <= record.progress + 1;
 
+  const [projDetailsOpen, setProjDetailsOpen] = useState(false);
+
+  const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
+  const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -553,6 +558,9 @@ export default function FieldworkDashboard() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="md:col-span-2 flex justify-end">
+          <Button variant="outline" onClick={() => setProjDetailsOpen(true)} disabled={!selectedProject}>View details</Button>
         </div>
       </div>
 
@@ -1057,6 +1065,93 @@ export default function FieldworkDashboard() {
         </Card>
       ) : null}
 
+      <Dialog open={projDetailsOpen} onOpenChange={setProjDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Details</DialogTitle>
+          </DialogHeader>
+          {selectedProj ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Project Code</div>
+                  <div className="font-medium">{selectedProj.code || selectedProj.data?.projectCode || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Client</div>
+                  <div className="font-medium">{selectedProj.clientName || selectedProj.data?.clientName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Project Name</div>
+                  <div className="font-medium">{selectedProj.name || selectedProj.data?.projectName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Division</div>
+                  <div className="font-medium">{selectedProj.data?.division || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Nature of Assignment</div>
+                  <div className="font-medium">{selectedProj.data?.auditType || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Reporting Frequency</div>
+                  <div className="font-medium">{selectedProj.data?.reportingFrequency || '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Project Description</div>
+                <div className="font-medium whitespace-pre-wrap">{selectedProj.data?.description || '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Start Date</div>
+                  <div className="font-medium">{formatDate(selectedProj.startDate || selectedProj.data?.startDate)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">End Date</div>
+                  <div className="font-medium">{formatDate(selectedProj.endDate || selectedProj.data?.endDate)}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Progress</div>
+                <div className="text-sm">{selectedProj.data?.progress != null ? `${selectedProj.data?.progress}%` : '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Division Heads</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.divisionHeads) && selectedProj.data?.divisionHeads.length ? selectedProj.data?.divisionHeads.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Partners</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.partners) && selectedProj.data?.partners.length ? selectedProj.data?.partners.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Leaders</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.teamLeaders) && selectedProj.data?.teamLeaders.length ? selectedProj.data?.teamLeaders.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Members</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.teamMembers) && selectedProj.data?.teamMembers.length ? selectedProj.data?.teamMembers.join(', ') : '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Audit Universe</div>
+                <div className="text-sm">{Array.isArray(selectedProj.data?.auditUniverse) && selectedProj.data?.auditUniverse.length ? selectedProj.data?.auditUniverse.join(', ') : '-'}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Scope Notes</div>
+                <div className="text-sm whitespace-pre-wrap">{selectedProj.data?.scopeNotes || '-'}</div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={openFW && !!record} onOpenChange={setOpenFW}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
