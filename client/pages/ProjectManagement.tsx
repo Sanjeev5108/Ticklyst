@@ -576,11 +576,11 @@ export default function ProjectManagement() {
             <Progress value={project.progress} className="h-2" />
           </div>
 
-          {/* Tasks */}
+          {/* Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1 text-xs text-gray-600">
               <CheckCircle2 className="h-3 w-3" />
-              <span>{project.totalTasks} Tasks</span>
+              <span>{project.totalTasks} Controls</span>
             </div>
             <div className="flex items-center space-x-1 text-xs text-gray-600">
               <span>{project.completedTasks}/{project.totalTasks}</span>
