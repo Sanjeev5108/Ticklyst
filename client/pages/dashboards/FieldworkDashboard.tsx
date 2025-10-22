@@ -1012,11 +1012,26 @@ export default function FieldworkDashboard() {
                               <div className={`inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm ${st === 'rejected' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="break-words">{last.content}</div>
-                                  {rejCount > 0 && (
-                                    <span className={`ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 ${st === 'rejected' ? 'border border-red-300 text-red-700' : 'border border-green-300 text-green-700'}`} title="Times rejected">
-                                      ×{rejCount}
-                                    </span>
-                                  )}
+                                  {rejCount > 0 ? (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button className={`ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 ${st === 'rejected' ? 'border border-red-300 text-red-700' : 'border border-green-300 text-green-700'}`} title="Times rejected">
+                                          ×{rejCount}
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-80 p-2">
+                                        <div className="text-xs font-medium mb-1">Past rejection comments</div>
+                                        <div className="space-y-2 max-h-64 overflow-auto">
+                                          {hist.filter(h => (h.content || '').startsWith('Rejected')).map((h, i) => (
+                                            <div key={i} className="p-2 border rounded bg-red-50 text-red-800">
+                                              <div className="break-words">{h.content}</div>
+                                              <div className="mt-1 text-[10px] text-red-700">— {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  ) : null}
                                 </div>
                                 <div className={`mt-1 text-xs ${st === 'rejected' ? 'text-red-700' : 'text-green-700'} opacity-80`}>— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
                               </div>
