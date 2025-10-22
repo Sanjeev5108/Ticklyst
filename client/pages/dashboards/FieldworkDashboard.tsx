@@ -107,6 +107,24 @@ export default function FieldworkDashboard() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
 
+  const getResidualLevel = (val: number, thresholds: any): { level: string; color?: string } | undefined => {
+    const ranges = Array.isArray(thresholds?.ranges) ? [...thresholds.ranges] : [];
+    if (ranges.length === 0) return undefined;
+    ranges.sort((a:any,b:any)=> (a.from??0)-(b.from??0));
+    if (val <= 0) {
+      const first = ranges[0];
+      return { level: first?.label || 'Low', color: first?.color || thresholds?.heatmapColors?.[first?.label] || '#10B981' };
+    }
+    const min = ranges[0].from;
+    const max = ranges[ranges.length-1].to;
+    const v = Math.min(max, Math.max(min, val));
+    for (const r of ranges) {
+      if (v >= r.from && v <= r.to) return { level: r.label, color: r.color || thresholds?.heatmapColors?.[r.label] };
+    }
+    const last = ranges[ranges.length-1];
+    return { level: last?.label, color: last?.color || thresholds?.heatmapColors?.[last?.label] };
+  };
+
   const [riskConfigVersion, setRiskConfigVersion] = useState(0);
   const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   useEffect(() => {
