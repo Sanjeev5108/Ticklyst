@@ -522,7 +522,8 @@ export default function ProjectManagement() {
     }
     const next = projects.map(p => {
       const total = countTotalControlsFromTree((p as any).details?.selectedChecklistTree);
-      const approved = approvedMap[p.id]?.size || 0;
+      const approvedRaw = approvedMap[p.id]?.size || 0;
+      const approved = Math.min(approvedRaw, total);
       const progress = total > 0 ? Math.round((approved / total) * 100) : 0;
       const totalTasks = total;
       const completedTasks = approved;
