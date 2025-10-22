@@ -101,6 +101,7 @@ export default function ATRDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [controlsSearch, setControlsSearch] = useState('');
   const [selectedControl, setSelectedControl] = useState<string | null>(null);
+  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
 
   useEffect(() => {
     if (controls.length) return;
