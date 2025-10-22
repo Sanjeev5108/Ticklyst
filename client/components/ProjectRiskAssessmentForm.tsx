@@ -212,61 +212,39 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     }
   }, [cfg.riskScoringModel, cfg.residualRisk?.parameter, cfg.riskScore.scale.min, cfg.riskScore.scale.max, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max]);
 
-  // Clamp breakpoints when parameter changes or relevant scales change
+  // Clamp breakpoints for ACTIVE parameter only, using its own scale; persist to per-parameter cache
   React.useEffect(() => {
+    if (cfg.riskScoringModel === 'standard') { setBreakpointErrors([]); return; }
     const param = cfg.residualRisk?.parameter || 'residualRisk';
-    const ranges = cfg.residualRisk.thresholds.ranges || [];
-    if (!ranges.length) return;
+    const activeRanges = (paramRanges[param] && paramRanges[param].length ? paramRanges[param] : cfg.residualRisk.thresholds.ranges) || [];
+    if (!activeRanges.length) return;
 
-    // In Standard model we fully control ranges; avoid mutating to prevent duplicates like "2–2"
-    if (cfg.riskScoringModel === 'standard') {
-      setBreakpointErrors([]);
-      return;
-    }
-
-    // Calculate parameter-specific min/max without using getParameterMin/Max to avoid circular dependency
     let min: number, max: number;
-    if (param === 'likelihood') {
-      min = cfg.riskScore?.likelihood?.scale?.min ?? 1;
-      max = cfg.riskScore?.likelihood?.scale?.max ?? 5;
-    } else if (param === 'consequence') {
-      min = cfg.riskScore?.consequence?.scale?.min ?? 1;
-      max = cfg.riskScore?.consequence?.scale?.max ?? 5;
-    } else if (param === 'controlScore') {
-      min = cfg.controlScore?.scale?.min ?? 1;
-      max = cfg.controlScore?.scale?.max ?? 5;
-    } else {
-      // riskScore or residualRisk
-      min = cfg.riskScore?.scale?.min ?? 1;
-      max = cfg.riskScore?.scale?.max ?? 25;
-    }
+    if (param === 'likelihood') { min = cfg.riskScore?.likelihood?.scale?.min ?? 1; max = cfg.riskScore?.likelihood?.scale?.max ?? 5; }
+    else if (param === 'consequence') { min = cfg.riskScore?.consequence?.scale?.min ?? 1; max = cfg.riskScore?.consequence?.scale?.max ?? 5; }
+    else if (param === 'controlScore') { min = cfg.controlScore?.scale?.min ?? 1; max = cfg.controlScore?.scale?.max ?? 5; }
+    else { min = cfg.riskScore?.scale?.min ?? 1; max = cfg.riskScore?.scale?.max ?? 25; }
 
-    const current = getBreakpointsFromRanges(ranges);
+    const current = getBreakpointsFromRanges(activeRanges);
     if (current.length === 0) return;
 
-    // Check if adjustment is needed
     const needsAdjustment = current[0] !== min || current[current.length - 1] !== max ||
       current.some((v, i) => i > 0 && i < current.length - 1 && (v < min + 1 || v > max - 1 || (i > 0 && v <= current[i - 1])));
-
     if (!needsAdjustment) return;
 
-    setCfg(prev => {
-      const next = [...current];
-      next[0] = min;
-      next[next.length - 1] = max;
-
-      for (let i = 1; i < next.length - 1; i++) {
-        next[i] = Math.min(Math.max(Math.round(next[i]), min + 1), max - 1);
-        if (next[i] <= next[i - 1]) next[i] = next[i - 1] + 1;
-        if (i + 1 < next.length && next[i] >= next[i + 1]) next[i] = Math.max(next[i + 1] - 1, min + 1);
-      }
-
-      const errs = validateBreakpoints(next, min, max);
-      setBreakpointErrors(errs);
-      const newRanges = getRangesFromBreakpoints(next, ranges);
-      return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
-    });
-  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max]);
+    const next = [...current];
+    next[0] = min; next[next.length - 1] = max;
+    for (let i = 1; i < next.length - 1; i++) {
+      next[i] = Math.min(Math.max(Math.round(next[i]), min + 1), max - 1);
+      if (next[i] <= next[i - 1]) next[i] = next[i - 1] + 1;
+      if (i + 1 < next.length && next[i] >= next[i + 1]) next[i] = Math.max(next[i + 1] - 1, min + 1);
+    }
+    const errs = validateBreakpoints(next, min, max);
+    setBreakpointErrors(errs);
+    const newRanges = getRangesFromBreakpoints(next, activeRanges);
+    setParamRanges(prev => ({ ...prev, [param]: newRanges }));
+    setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig));
+  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max, paramRanges]);
 
   return (
     <Tabs defaultValue="risk" className="space-y-4">
