@@ -16,6 +16,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(value);
   const [openColorPickerFor, setOpenColorPickerFor] = React.useState<number | null>(null);
   const [breakpointErrors, setBreakpointErrors] = React.useState<string[]>([]);
+  // Keep distinct threshold ranges per-parameter to avoid flicker when switching between differently-scaled params
+  const [paramRanges, setParamRanges] = React.useState<Record<string, any[]>>({});
 
   React.useEffect(() => { setCfg(value); }, [value]);
   React.useEffect(() => { onChange(cfg); }, [cfg]);
