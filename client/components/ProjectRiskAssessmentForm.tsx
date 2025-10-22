@@ -443,6 +443,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                               setBreakpointErrors(errors);
                               if (!errors[idx]) {
                                 const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                                const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                 setCfg(prev => ({
                                   ...prev,
                                   residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } }
@@ -472,6 +474,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                   const newRanges = [...ranges];
                                   if (newRanges[idx]) {
                                     newRanges[idx] = { ...newRanges[idx], label: e.target.value };
+                                    const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                    setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                     setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } });
                                   }
                                 }}
@@ -495,7 +499,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                         {['#000000','#FFFFFF','#1F2937','#4B5563','#2563EB','#F97316','#EF4444','#10B981','#F59E0B','#8B5CF6'].map(c => (
                                           <button key={c} type="button" title={c} className={"h-5 w-5 rounded border border-gray-300 " + (range?.color === c ? 'ring-2 ring-blue-500' : '')} style={{ backgroundColor: c }} onClick={() => {
                                             const newRanges = [...ranges];
-                                            if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: c }; setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
+                                            if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: c }; const p = cfg.residualRisk?.parameter || 'residualRisk'; setParamRanges(prev => ({ ...prev, [p]: newRanges })); setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
                                             setOpenColorPickerFor(null);
                                           }} />
                                         ))}
@@ -504,7 +508,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                     <div className="border-t pt-2">
                                       <Input placeholder="Custom color (#rrggbb)" value={range?.color || ''} onChange={(e) => {
                                         const newRanges = [...ranges];
-                                        if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: e.target.value }; setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
+                                        if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: e.target.value }; const p = cfg.residualRisk?.parameter || 'residualRisk'; setParamRanges(prev => ({ ...prev, [p]: newRanges })); setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
                                       }} className="text-xs" />
                                     </div>
                                   </div>
@@ -520,6 +524,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                 if (idx === 0 || idx === breakpoints.length - 1) return;
                                 const newBreakpoints = breakpoints.filter((_, i) => i !== idx);
                                 const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                                const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                 setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } });
                                 setBreakpointErrors([]);
                               }} disabled={idx === 0 || idx === breakpoints.length - 1}>Remove</Button>
@@ -552,6 +558,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                     newBreakpoints.splice(bestGapIndex + 1, 0, clampedValue);
 
                     const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                    const p = (prev.residualRisk?.parameter || 'residualRisk');
+                    setParamRanges(pr => ({ ...pr, [p]: newRanges }));
                     return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
                   });
                 }} disabled={isStandard || ((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
