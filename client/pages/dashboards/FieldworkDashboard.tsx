@@ -287,7 +287,7 @@ export default function FieldworkDashboard() {
               const ctrls: string[] = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
               ctrls.forEach((ctrl, idx) => {
                 const id = mkId([procName, subName, actName, riskName, String(idx+1)]);
-                rows.push({ id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' });
+                rows.push({ id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' });
               });
             }
           }
@@ -301,7 +301,7 @@ export default function FieldworkDashboard() {
     if (allowed.size === 0) { setMatrixRows([]); return; }
     const rows = controls
       .filter(c => allowed.has(c.process || ''))
-      .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
+      .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
@@ -514,8 +514,8 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-64">Risk</th>
                     <th className="text-left p-3 w-64">Control</th>
                     <th className="text-left p-3 w-64">Control Owner</th>
-                    <th className="text-left p-3 w-40">Likelihood</th>
-                    <th className="text-left p-3 w-40">Consequence</th>
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Likelihood</th>)}
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Consequence</th>)}
                     <th className="text-left p-3 w-40">Risk Score</th>
                     <th className="text-left p-3 w-40">Control Score</th>
                     <th className="text-left p-3 w-40">Residual Risk</th>
@@ -547,52 +547,68 @@ export default function FieldworkDashboard() {
                       <td className="p-3 align-top w-64 break-words">
                         <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
                       </td>
-                      {/* Likelihood */}
-                      <td className="p-3 align-top w-40 break-words">
-                        {activeCfg.riskScore.mode === 'likelihood_consequence' ? (
-                          records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
-                            <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
-                          ) : (
-                            <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={row.likelihood}
-                              onChange={(e)=> { const min = activeCfg.riskScore.likelihood?.scale.min ?? 1; const max = activeCfg.riskScore.likelihood?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: nv } : r)); }}
-                            />
-                          )
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      {/* Consequence */}
-                      <td className="p-3 align-top w-40 break-words">
-                        {activeCfg.riskScore.mode === 'likelihood_consequence' ? (
-                          records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
-                            <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
-                          ) : (
-                            <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={row.consequence}
-                              onChange={(e)=> { const min = activeCfg.riskScore.consequence?.scale.min ?? 1; const max = activeCfg.riskScore.consequence?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: nv } : r)); }}
-                            />
-                          )
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
+                      {activeCfg.riskScore.mode === 'likelihood_consequence' && (
+                        <>
+                          {/* Likelihood */}
+                          <td className="p-3 align-top w-40 break-words">
+                            {records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
+                              <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
+                            ) : (
+                              <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={row.likelihood}
+                                onChange={(e)=> { const min = activeCfg.riskScore.likelihood?.scale.min ?? 1; const max = activeCfg.riskScore.likelihood?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: nv } : r)); }}
+                              />
+                            )}
+                          </td>
+                          {/* Consequence */}
+                          <td className="p-3 align-top w-40 break-words">
+                            {records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
+                              <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
+                            ) : (
+                              <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={row.consequence}
+                                onChange={(e)=> { const min = activeCfg.riskScore.consequence?.scale.min ?? 1; const max = activeCfg.riskScore.consequence?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: nv } : r)); }}
+                              />
+                            )}
+                          </td>
+                        </>
+                      )}
                       {/* Risk Score */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
                           const cfg = activeCfg;
                           const status = records[row.id]?.status || 'draft';
                           if (cfg.riskScore.mode === 'single') {
+                            const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
+                            const pickColor = (val: number) => {
+                              const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
+                              labels.sort((a,b)=>a.value-b.value);
+                              let chosen = labels[0];
+                              for (const l of labels) { if (val >= l.value) chosen = l; }
+                              return chosen?.color;
+                            };
                             if (status === 'draft' || status === 'submitted') {
-                              const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
+                              const c = pickColor(row.riskScore);
                               return (
-                                <Input type="number" step={1} min={min} max={max} value={row.riskScore}
-                                  onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: nv } : r)); }}
-                                />
+                                <span className="inline-flex items-center gap-2">
+                                  <Input type="number" step={1} min={min} max={max} value={row.riskScore}
+                                    onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: nv } : r)); }}
+                                  />
+                                  {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
+                                </span>
                               );
                             }
-                            return <span>{records[row.id]?.risk?.riskScore ?? '-'}</span>;
+                            const v = records[row.id]?.risk?.riskScore ?? '-';
+                            const c = typeof v === 'number' ? pickColor(v) : undefined;
+                            return <span className="inline-flex items-center gap-2"><span>{v}</span>{c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}</span>;
                           }
                           const v = computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
-                          const rc = resolveLevel(v, cfg.residualRisk.thresholds)?.color;
+                          const pickRiskColor = (val: number) => {
+                            const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
+                            labels.sort((a,b)=>a.value-b.value);
+                            let chosen = labels[0];
+                            for (const l of labels) { if (val >= l.value) chosen = l; }
+                            return chosen?.color;
+                          };
+                          const rc = pickRiskColor(v || 0);
                           return <span className="inline-flex items-center gap-2"><span>{v || 0}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
@@ -601,21 +617,27 @@ export default function FieldworkDashboard() {
                         {(() => {
                           const cfg = activeCfg;
                           const status = records[row.id]?.status || 'draft';
+                          const pickControlColor = (val: number) => {
+                            const labels = Array.isArray(cfg.controlScore.labels) ? [...cfg.controlScore.labels] : [];
+                            labels.sort((a,b)=>a.value-b.value);
+                            let chosen = labels[0];
+                            for (const l of labels) { if (val >= l.value) chosen = l; }
+                            return chosen?.color;
+                          };
                           if (status === 'draft' || status === 'submitted') {
                             const min = cfg.controlScore.scale.min; const max = cfg.controlScore.scale.max;
+                            const c = pickControlColor(row.controlScore);
                             return (
-                              <Input type="number" step={1} min={min} max={max} value={row.controlScore}
-                                onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: nv } : r)); }}
-                              />
+                              <span className="inline-flex items-center gap-2">
+                                <Input type="number" step={1} min={min} max={max} value={row.controlScore}
+                                  onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: nv } : r)); }}
+                                />
+                                {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
+                              </span>
                             );
                           }
                           const v = records[row.id]?.risk?.controlScore ?? '-';
-                          const bins = [cfg.controlScore.scale.min, cfg.controlScore.scale.min+1, cfg.controlScore.scale.min+2, cfg.controlScore.scale.min+3, cfg.controlScore.scale.max];
-                          const colors = ['#10B981','#F59E0B','#F97316','#EF4444'];
-                          let cc: string | undefined;
-                          if (typeof v === 'number') {
-                            for (let i=0;i<bins.length-1;i++){ if (v>=bins[i] && v<=bins[i+1]) { cc = colors[i]; break; } }
-                          }
+                          const cc = typeof v === 'number' ? pickControlColor(v) : undefined;
                           return <span className="inline-flex items-center gap-2"><span>{v}</span>{cc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: cc }} /> : null}</span>;
                         })()}
                       </td>
