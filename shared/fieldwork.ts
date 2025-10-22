@@ -36,6 +36,7 @@ export interface ARCRow {
 
 export interface FieldworkRecord {
   controlId: string;
+  projectId?: string; // link to project for review filtering
   status: FieldworkStatus;
   progress: number;
   activeTab: number;
