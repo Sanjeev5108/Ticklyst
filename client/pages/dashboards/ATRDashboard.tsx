@@ -111,6 +111,18 @@ export default function ATRDashboard() {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) return;
+        const rows = await res.json();
+        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
+        setProjects(mapped);
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
     if (controls.length) return;
     const normalizeRows = (data: any): any[] => {
       if (!data) return [];
@@ -433,6 +445,12 @@ export default function ATRDashboard() {
   };
 
   const reportableRows = useMemo(() => {
+    const slug = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    const partsFromId = (id: string) => {
+      const parts = String(id || '').split('|');
+      // expect: fw|proc|sub|act|risk|idx
+      return { proc: parts[1] || '', sub: parts[2] || '' };
+    };
     const all = Object.values(fwRecords || {});
     const approved = all.filter(r => r.status === 'approved');
     const yesReportable = approved.filter(r => {
@@ -446,20 +464,36 @@ export default function ATRDashboard() {
       const uid = `${pid}|${r.controlId}`;
       if (seen.has(uid)) continue;
       seen.add(uid);
-      const match = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
+      let processName = '';
+      let subprocessName = '';
+      if (r.projectId) {
+        const proj = projects.find(p => p.id === r.projectId)?.raw;
+        const tree = proj?.data?.selectedChecklistTree || {};
+        const { proc, sub } = partsFromId(r.controlId);
+        // resolve process
+        for (const pName of Object.keys(tree || {})) {
+          if (slug(pName) === proc) { processName = pName; const subs = tree[pName]?.subprocesses || {}; for (const sName of Object.keys(subs)) { if (slug(sName) === sub) { subprocessName = sName; break; } } break; }
+        }
+      }
+      if (!processName || !subprocessName) {
+        const { proc, sub } = partsFromId(r.controlId);
+        processName = processName || proc.replace(/-/g,' ');
+        subprocessName = subprocessName || sub.replace(/-/g,' ');
+      }
+      const match = controls.find(c => c.id === r.controlId);
       rows.push({
         id: r.controlId,
         projectId: r.projectId,
         control: a.control || match?.name || '',
-        process: match?.process || '',
-        subprocess: match?.subprocess || '',
+        process: processName || match?.process || '',
+        subprocess: subprocessName || match?.subprocess || '',
         activity: a.activity || match?.activity || '',
         risk: a.risk || match?.risk || ''
       });
     }
     return rows;
-  }, [fwRecords, controls]);
+  }, [fwRecords, controls, projects]);
 
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
