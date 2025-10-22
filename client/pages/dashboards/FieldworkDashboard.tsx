@@ -569,7 +569,7 @@ export default function FieldworkDashboard() {
                             {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                               <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
                             ); } return (
-                              <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={row.likelihood}
+                              <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={Number.isFinite(Number(row.likelihood)) ? row.likelihood : (activeCfg.riskScore.likelihood?.scale.min ?? 1)}
                                 onChange={(e)=> { const min = activeCfg.riskScore.likelihood?.scale.min ?? 1; const max = activeCfg.riskScore.likelihood?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: nv } : r)); }}
                               />
                             ); })()}
@@ -579,7 +579,7 @@ export default function FieldworkDashboard() {
                             {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                               <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
                             ); } return (
-                              <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={row.consequence}
+                              <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={Number.isFinite(Number(row.consequence)) ? row.consequence : (activeCfg.riskScore.consequence?.scale.min ?? 1)}
                                 onChange={(e)=> { const min = activeCfg.riskScore.consequence?.scale.min ?? 1; const max = activeCfg.riskScore.consequence?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: nv } : r)); }}
                               />
                             ); })()}
@@ -613,7 +613,7 @@ export default function FieldworkDashboard() {
                               const c = pickColor(row.riskScore);
                               return (
                                 <span className="inline-flex items-center gap-2">
-                                  <Input type="number" step={1} min={min} max={max} value={row.riskScore}
+                                  <Input type="number" step={1} min={min} max={max} value={Number.isFinite(Number(row.riskScore)) ? row.riskScore : min}
                                     onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: nv } : r)); }}
                                   />
                                   {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
@@ -662,7 +662,7 @@ export default function FieldworkDashboard() {
                             const c = pickControlColor(row.controlScore);
                             return (
                               <span className="inline-flex items-center gap-2">
-                                <Input type="number" step={1} min={min} max={max} value={row.controlScore}
+                                <Input type="number" step={1} min={min} max={max} value={Number.isFinite(Number(row.controlScore)) ? row.controlScore : min}
                                   onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: nv } : r)); }}
                                 />
                                 {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
