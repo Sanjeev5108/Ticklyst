@@ -697,7 +697,7 @@ export default function FieldworkDashboard() {
                       </td>
                       {/* Color */}
                       <td className="p-3 align-top w-24 break-words">
-                        {(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale); const rrl = resolveLevel(rr, cfg.residualRisk.thresholds); return rrl?.color ? <span className="inline-block w-5 h-5 rounded" title={rrl.level} style={{ backgroundColor: rrl.color }} /> : <span className="text-slate-400">-</span>; })()}
+                        {(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale); const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds); return rrl?.color ? <span className="inline-block w-5 h-5 rounded" title={rrl?.level} style={{ backgroundColor: rrl.color }} /> : <span className="inline-block w-5 h-5 rounded bg-emerald-500" title="Low" />; })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
                         <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
