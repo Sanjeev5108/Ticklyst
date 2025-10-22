@@ -297,6 +297,7 @@ export default function ProjectManagement() {
             checklistTemplate: r.data?.checklistTemplate || [],
             customChecklistItems: r.data?.customChecklistItems || '',
             selectedChecklistTree: r.data?.selectedChecklistTree || null,
+            riskConfig: r.data?.riskConfig || null,
           }
         }));
         setProjects(mapped);
@@ -378,6 +379,7 @@ export default function ProjectManagement() {
         scopeNotes: projectData.scopeNotes || '',
         reportingFrequency: projectData.reportingFrequency || '',
         emailNotifications: !!projectData.emailNotifications,
+        riskConfig: projectData.riskConfig || null,
       }
     };
 
@@ -415,6 +417,7 @@ export default function ProjectManagement() {
     auditCommentsModule: true,
     workflowStatus: 'Draft',
     changeLogsEnabled: true,
+    riskConfig: (p as any).details?.riskConfig || null,
   });
 
   const handleEditSubmit = async (data: any) => {
@@ -442,6 +445,7 @@ export default function ProjectManagement() {
         checklistTemplate: data.checklistTemplate || [],
         customChecklistItems: data.customChecklistItems || '',
         selectedChecklistTree: data.selectedChecklistTree || null,
+        riskConfig: data.riskConfig || p.details?.riskConfig || null,
       }
     } : p));
     try {
