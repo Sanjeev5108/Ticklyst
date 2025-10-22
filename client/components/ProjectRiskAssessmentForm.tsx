@@ -160,16 +160,17 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     setCfg(prev => {
       const newMin = derivedMin; const newMax = derivedMax;
       const control = { ...prev.controlScore, scale: { min: clamp(prev.controlScore.scale.min, newMin, newMax), max: clamp(prev.controlScore.scale.max, newMin, newMax) } };
-      const param = prev.residualRisk?.parameter || 'residualRisk';
-      let residual = prev.residualRisk;
-      if (param === 'riskScore' || param === 'residualRisk') {
-        const ranges = prev.residualRisk.thresholds.ranges || [];
-        const adjRanges = ranges.map(r => ({ from: clamp(Math.round(r.from), newMin, newMax), to: clamp(Math.round(r.to), newMin, newMax), label: r.label, color: r.color }));
-        residual = { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: adjRanges } };
+      const activeParam = prev.residualRisk?.parameter || 'residualRisk';
+      const next: RiskAssessmentConfig = { ...prev, riskScore: { ...prev.riskScore, scale: { min: newMin, max: newMax } }, controlScore: control } as RiskAssessmentConfig;
+      if (activeParam === 'riskScore' || activeParam === 'residualRisk') {
+        const ranges = (paramRanges[activeParam] && paramRanges[activeParam].length ? paramRanges[activeParam] : prev.residualRisk.thresholds.ranges) || [];
+        const adj = ranges.map(r => ({ from: clamp(Math.round(r.from), newMin, newMax), to: clamp(Math.round(r.to), newMin, newMax), label: r.label, color: r.color }));
+        setParamRanges(pr => ({ ...pr, [activeParam]: adj }));
+        next.residualRisk = { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: adj } } as any;
       }
-      return { ...prev, riskScore: { ...prev.riskScore, scale: { min: newMin, max: newMax } }, controlScore: control, residualRisk: residual } as RiskAssessmentConfig;
+      return next;
     });
-  }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale]);
+  }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale, paramRanges]);
 
   // Initialize and lock ranges for Standard model based on selected parameter to avoid flicker between 1–5 and 1–25
   React.useEffect(() => {
