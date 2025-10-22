@@ -416,7 +416,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
               <h3 className="font-medium">Threshold Ranges</h3>
               <div className="space-y-2">
                 {(() => {
-                  const ranges = cfg.residualRisk.thresholds.ranges || [];
+                  const p = cfg.residualRisk?.parameter || 'residualRisk';
+                  const ranges = (paramRanges[p] && paramRanges[p].length ? paramRanges[p] : cfg.residualRisk.thresholds.ranges) || [];
                   const breakpoints = getBreakpointsFromRanges(ranges);
 
                   return breakpoints.length > 0 ? breakpoints.map((breakpoint, idx) => {
