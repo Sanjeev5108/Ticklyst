@@ -313,7 +313,7 @@ export default function FieldworkDashboard() {
       }
       rows.sort((a,b)=> (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
       const merged = rows.map(r => {
-        const rec = records[r.id];
+        const rec = records[selectedProject ? `${selectedProject}|${r.id}` : r.id];
         if (!rec) return r;
         if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
         const a: any = (rec as any).arc || {};
@@ -355,7 +355,7 @@ export default function FieldworkDashboard() {
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
     const merged = rows.map(r => {
-      const rec = records[r.id];
+      const rec = records[selectedProject ? `${selectedProject}|${r.id}` : r.id];
       if (!rec) return r;
       if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
       const a: any = (rec as any).arc || {};
@@ -393,12 +393,12 @@ export default function FieldworkDashboard() {
   const samplingMethodologyOptions = ['Random Sampling','Systematic Sampling','Stratified Sampling','Cluster Sampling','Monetary Unit Sampling (MUS)','Judgmental Sampling'];
   const controlEffectivenessOptions = ['Yes','No'];
 
-  const getStatus = useCallback((id: string) => records[id]?.status || 'draft', [records]);
+  const getStatus = useCallback((id: string) => { const key = selectedProject ? `${selectedProject}|${id}` : id; return records[key]?.status || 'draft'; }, [records, selectedProject]);
 
-  const rejectedCount = useMemo(() => Object.values(records).filter(r => r.status === 'rejected').length, [records]);
+  const rejectedCount = useMemo(() => Object.values(records).filter(r => r.status === 'rejected' && (!selectedProject || r.projectId === selectedProject)).length, [records, selectedProject]);
 
   const rejectedRows = useMemo(() => {
-    const all = Object.values(records).filter(r => r.status === 'rejected');
+    const all = Object.values(records).filter(r => r.status === 'rejected' && (!selectedProject || r.projectId === selectedProject));
     return all.map(r => {
       const ctrl = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
@@ -429,7 +429,7 @@ export default function FieldworkDashboard() {
   }, [records, controls]);
 
   const approvedRows = useMemo(() => {
-    const all = Object.values(records).filter(r => r.status === 'approved');
+    const all = Object.values(records).filter(r => r.status === 'approved' && (!selectedProject || r.projectId === selectedProject));
     return all.map(r => {
       const ctrl = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
@@ -474,7 +474,8 @@ export default function FieldworkDashboard() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = controls.filter(c => {
-      const rec = records[c.id];
+      const key = selectedProject ? `${selectedProject}|${c.id}` : c.id;
+      const rec = records[key];
       const status = rec?.status || 'draft';
       if (statusFilter === 'All') return true;
       if (statusFilter === 'Draft') return status === 'draft';
@@ -492,9 +493,11 @@ export default function FieldworkDashboard() {
   }, [controls, search, records, statusFilter]);
 
   const openFieldworkFor = (id: string) => {
-    setSelectedControlId(id);
-    FieldworkStore.ensure(id, () => ({
+    const recId = selectedProject ? `${selectedProject}|${id}` : id;
+    setSelectedControlId(recId);
+    FieldworkStore.ensure(recId, () => ({
       controlId: id,
+      projectId: selectedProject || undefined,
       status: 'draft',
       progress: 0,
       activeTab: 0,
@@ -620,7 +623,7 @@ export default function FieldworkDashboard() {
                 </thead>
                 <tbody>
                   {displayedRows.map((row) => (
-                    <tr key={row.id} className={`border-t ${records[row.id]?.status === 'rejected' ? 'bg-red-50' : ''}`}>
+                    <tr key={row.id} className={`border-t ${(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'bg-red-50' : ''}`}>
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
@@ -682,7 +685,7 @@ export default function FieldworkDashboard() {
                                 </span>
                               );
                             }
-                            const v = records[row.id]?.risk?.riskScore ?? '-';
+                            const v = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.risk?.riskScore ?? '-';
                             const c = typeof v === 'number' ? pickColor(v) : undefined;
                             return <span className="inline-flex items-center gap-2"><span>{v}</span>{c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}</span>;
                           }
@@ -731,7 +734,7 @@ export default function FieldworkDashboard() {
                               </span>
                             );
                           }
-                          const v = records[row.id]?.risk?.controlScore ?? '-';
+                          const v = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.risk?.controlScore ?? '-';
                           const cc = typeof v === 'number' ? pickControlColor(v) : undefined;
                           return <span className="inline-flex items-center gap-2"><span>{v}</span>{cc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: cc }} /> : null}</span>;
                         })()}
@@ -940,7 +943,8 @@ export default function FieldworkDashboard() {
                             disabled={(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); return cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; })()}
                             onClick={() => {
                               const cfg = RiskConfigStore.getGlobal();
-                              FieldworkStore.ensure(row.id, () => ({
+                              const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                              FieldworkStore.ensure(recKey, () => ({
                                 controlId: row.id,
                                 status: 'draft',
                                 progress: 0,
@@ -951,7 +955,7 @@ export default function FieldworkDashboard() {
                                 remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
                                 report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
                               }));
-                              const statusNow = records[row.id]?.status || 'draft';
+                              const statusNow = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
                               const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
                               let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
                               if (cfg.residualRisk.constraintResidualLEQRisk) {
@@ -959,7 +963,7 @@ export default function FieldworkDashboard() {
                               }
                               const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
                               const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
-                              FieldworkStore.patch(row.id, { projectId: selectedProject || undefined,
+                              FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
                                 arc: {
                                   activity: row.activity,
                                   risk: row.risk,
@@ -993,16 +997,16 @@ export default function FieldworkDashboard() {
                                   lastCalculatedAt: new Date().toISOString()
                                 }
                               });
-                              FieldworkStore.submitForReview(row.id);
+                              FieldworkStore.submitForReview(recKey);
                               setRecords(FieldworkStore.getAll());
                               setSubmitAckOpen(true);
                             }}
                           >
-                            <Share2 className="h-3 w-3 mr-2" /> {records[row.id]?.status === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
+                            <Share2 className="h-3 w-3 mr-2" /> {(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
                           </Button>
                         ); })()}
                         {(() => {
-                          const hist = records[row.id]?.reviewHistory || [];
+                          const hist = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.reviewHistory || [];
                           if (hist.length === 0) return null;
                           const last = hist[hist.length - 1];
                           const st = records[row.id]?.status;
