@@ -544,9 +544,6 @@ export default function FieldworkDashboard() {
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
-                      <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
-                      </td>
                       {activeCfg.riskScore.mode === 'likelihood_consequence' && (
                         <>
                           {/* Likelihood */}
