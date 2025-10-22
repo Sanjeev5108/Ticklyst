@@ -513,7 +513,6 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-64">Activity</th>
                     <th className="text-left p-3 w-64">Risk</th>
                     <th className="text-left p-3 w-64">Control</th>
-                    <th className="text-left p-3 w-64">Control Owner</th>
                     {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Likelihood</th>)}
                     {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Consequence</th>)}
                     <th className="text-left p-3 w-40">Risk Score</th>
