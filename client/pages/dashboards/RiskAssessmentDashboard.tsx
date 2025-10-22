@@ -1535,7 +1535,7 @@ export default function RiskAssessmentDashboard() {
             <p><strong>Example 2: Strategic Risk – Supply Chain Disruption</strong></p>
             <p>Likelihood = 3/5, Consequence = 4/5 → IRS = 3 × 4 = 12 (Medium-High)</p>
             <p>Control Score: Design=5 (1.5), Implementation=4 (1.6), Coverage=4 (0.6), Monitoring=4 (0.6) → Total = 4.3/5 → 86% effective</p>
-            <p>Residual Risk: 12 �� (1 − 0.86) = 1.7 (Low)</p>
+            <p>Residual Risk: 12 × (1 − 0.86) = 1.7 (Low)</p>
 
             <h4 className="font-semibold">6️⃣ Summary Flow</h4>
             <p>Rate Likelihood &amp; Consequence → Inherent Risk Score<br/>Rate Controls → Control Score &amp; Effectiveness<br/>Apply formula → Residual Risk<br/>Visualize on Heatmaps → Reporting &amp; Decision-making</p>
