@@ -23,6 +23,7 @@ import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEm
 import { login } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
 import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode } from "./routes/framework";
+import { getAllFieldwork, getFieldworkById, upsertFieldwork, bulkUpsertFieldwork } from "./routes/fieldwork";
 
 export function createServer() {
   const app = express();
@@ -59,6 +60,12 @@ export function createServer() {
   app.post('/api/framework/nodes', createFrameworkNode);
   app.put('/api/framework/nodes/*', updateFrameworkNode);
   app.delete('/api/framework/nodes/*', deleteFrameworkNode);
+
+  // Fieldwork persistence
+  app.get('/api/fieldwork', getAllFieldwork);
+  app.get('/api/fieldwork/:id', getFieldworkById);
+  app.put('/api/fieldwork/:id', upsertFieldwork);
+  app.post('/api/fieldwork/bulk', bulkUpsertFieldwork);
 
   // Auditing System API Routes
 
