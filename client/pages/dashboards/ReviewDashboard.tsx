@@ -12,6 +12,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { FileText, CheckCircle2, XCircle, Search, Save } from 'lucide-react';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
+import { RiskConfigStore } from '@/contexts/RiskConfigStore';
+import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
+import { computeResidual, computeRiskScore } from '@shared/risk';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -37,6 +40,8 @@ export default function ReviewDashboard() {
   const [activeTab, setActiveTab] = useState('0');
   const [reviewDraft, setReviewDraft] = useState<Record<string, string>>({});
   const [ackOpen, setAckOpen] = useState(false);
+  const [riskConfigVersion, setRiskConfigVersion] = useState(0);
+  const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   const [ackMsg, setAckMsg] = useState('');
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -61,10 +66,45 @@ export default function ReviewDashboard() {
     }
   }, [projectsForReview, selectedProject]);
 
+  const activeCfg = React.useMemo(() => {
+    if (!selectedProject) return RiskConfigStore.getGlobal();
+    const proj = projects.find(p => p.id === selectedProject) as any;
+    const data = proj?.raw?.data || {};
+    const auditTypeName = data.auditType;
+    const assn = assignmentTypes.find(a => a.name === auditTypeName);
+    const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+    const map = (central.scope as any)?.assignmentMap || {};
+    const mode = assn ? map[assn.id]?.mode : undefined;
+    if (mode === 'project' && data.riskConfig) return data.riskConfig;
+    if (mode === 'assignment' && assn) return RiskConfigStore.get(`assignment|${assn.id}`) || RiskConfigStore.getGlobal();
+    return RiskConfigStore.getGlobal();
+  }, [selectedProject, projects, assignmentTypes, riskConfigVersion]);
+
+  const getResidualLevel = (val: number, thresholds: any): { level: string; color?: string } | undefined => {
+    const ranges = Array.isArray(thresholds?.ranges) ? [...thresholds.ranges] : [];
+    if (ranges.length === 0) return undefined;
+    ranges.sort((a:any,b:any)=> (a.from??0)-(b.from??0));
+    if (val <= 0) {
+      const first = ranges[0];
+      return { level: first?.label || 'Low', color: first?.color || thresholds?.heatmapColors?.[first?.label] || '#10B981' };
+    }
+    const min = ranges[0].from;
+    const max = ranges[ranges.length-1].to;
+    const v = Math.min(max, Math.max(min, val));
+    for (const r of ranges) {
+      if (v >= r.from && v <= r.to) return { level: r.label, color: r.color || thresholds?.heatmapColors?.[r.label] };
+    }
+    const last = ranges[ranges.length-1];
+    return { level: last?.label, color: last?.color || thresholds?.heatmapColors?.[last?.label] };
+  };
+
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
+    const unsubRisk = RiskConfigStore.subscribe(() => setRiskConfigVersion(v=>v+1));
+    const unsubAssn = AssignmentTypeStore.subscribe(() => setAssignmentTypes(AssignmentTypeStore.getAll()));
     setRecords(FieldworkStore.getAll());
-    return () => unsub();
+    setAssignmentTypes(AssignmentTypeStore.getAll());
+    return () => { unsub(); unsubRisk(); unsubAssn(); };
   }, []);
 
   useEffect(() => {
@@ -252,7 +292,7 @@ export default function ReviewDashboard() {
             <table className="w-full text-sm table-fixed">
               <thead className="bg-slate-50 sticky top-0 z-10">
                 <tr>
-                  {['Activity','Risk','Control','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Comments','Approve','Reject'].map(h => (
+                  {['Activity','Risk','Control','Likelihood','Consequence','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Comments','Approve','Reject'].map(h => (
                     <th key={h} className="text-left p-3 w-64">{h}</th>
                   ))}
                 </tr>
@@ -263,6 +303,50 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
+                    {(() => {
+                      const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                      const rec = records[key];
+                      const cfg = activeCfg;
+                      const l = rec?.risk?.likelihood ?? '-';
+                      const c = rec?.risk?.consequence ?? '-';
+                      let rs: any = rec?.risk?.riskScore;
+                      if (typeof rs !== 'number') {
+                        rs = computeRiskScore(cfg.riskScore.mode, rec?.risk?.likelihood, rec?.risk?.consequence, rec?.risk?.riskScore);
+                      }
+                      const pickRiskColor = (val: number) => {
+                        const ranges = cfg.residualRisk?.thresholds?.ranges || [];
+                        if (ranges.length > 0) {
+                          for (let i=0;i<ranges.length;i++) { const r = ranges[i]; if (val >= r.from && val <= r.to) { return r.color || cfg.residualRisk.thresholds?.heatmapColors?.[r.label]; } }
+                        }
+                        const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
+                        labels.sort((a,b)=>a.value-b.value);
+                        let chosen = labels[0];
+                        for (const ln of labels) { if (val >= ln.value) chosen = ln; }
+                        return chosen?.color;
+                      };
+                      const cs: any = rec?.risk?.controlScore ?? '-';
+                      const rr = computeResidual(cfg.residualRisk.formula, Number(rs||0), Number(cs||0), cfg.controlScore.scale);
+                      const lvl = getResidualLevel(rr, cfg.residualRisk.thresholds);
+                      const riskColor = typeof rs === 'number' ? pickRiskColor(rs) : undefined;
+                      const controlColor = (() => {
+                        const labels = Array.isArray(cfg.controlScore.labels) ? [...cfg.controlScore.labels] : [];
+                        labels.sort((a,b)=>a.value-b.value);
+                        let chosen = labels[0];
+                        for (const ln of labels) { if ((cs as number) >= ln.value) chosen = ln; }
+                        return chosen?.color;
+                      })();
+                      return (
+                        <>
+                          <td className="p-3 align-top w-40 break-words"><span>{l}</span></td>
+                          <td className="p-3 align-top w-40 break-words"><span>{c}</span></td>
+                          <td className="p-3 align-top w-40 break-words"><span className="inline-flex items-center gap-2"><span>{rs ?? '-'}</span>{riskColor ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: riskColor }} /> : null}</span></td>
+                          <td className="p-3 align-top w-40 break-words"><span className="inline-flex items-center gap-2"><span>{cs ?? '-'}</span>{controlColor ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: controlColor }} /> : null}</span></td>
+                          <td className="p-3 align-top w-40 break-words"><span className="inline-flex items-center gap-2"><span>{Number.isFinite(rr) ? Math.round((rr + Number.EPSILON) * 100) / 100 : 0}</span>{lvl?.color ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: lvl.color }} /> : null}</span></td>
+                          <td className="p-3 align-top w-40 break-words"><span>{lvl?.level || 'Low'}</span></td>
+                          <td className="p-3 align-top w-24 break-words">{lvl?.color ? <span className="inline-block w-5 h-5 rounded" title={lvl?.level} style={{ backgroundColor: lvl.color }} /> : <span className="inline-block w-5 h-5 rounded bg-emerald-500" title="Low" />}</td>
+                        </>
+                      );
+                    })()}
                     <td className="p-3 align-top w-64 break-words">{row.testOfControl || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.substantiveProcedure || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.samplingApplicable || '-'}</td>
