@@ -631,7 +631,7 @@ export default function FieldworkDashboard() {
                         <>
                           {/* Likelihood */}
                           <td className="p-3 align-top w-40 break-words">
-                            {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                            {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                               <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
                             ); } return (
                               <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={Number.isFinite(Number(row.likelihood)) ? row.likelihood : (activeCfg.riskScore.likelihood?.scale.min ?? 1)}
@@ -641,7 +641,7 @@ export default function FieldworkDashboard() {
                           </td>
                           {/* Consequence */}
                           <td className="p-3 align-top w-40 break-words">
-                            {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                            {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                               <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
                             ); } return (
                               <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={Number.isFinite(Number(row.consequence)) ? row.consequence : (activeCfg.riskScore.consequence?.scale.min ?? 1)}
@@ -766,14 +766,14 @@ export default function FieldworkDashboard() {
                         {(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale); const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds); return rrl?.color ? <span className="inline-block w-5 h-5 rounded" title={rrl?.level} style={{ backgroundColor: rrl.color }} /> : <span className="inline-block w-5 h-5 rounded bg-emerald-500" title="Low" />; })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.controlOwner || '-'}</span>
                         ); } return (
                           <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -787,7 +787,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -801,7 +801,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -814,7 +814,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes' || (() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes' || (() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder={row.samplingApplicable === 'Yes' ? 'Select' : 'Not applicable'} />
                           </SelectTrigger>
@@ -828,7 +828,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -842,14 +842,14 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.attachments || '-'}</span>
                         ); } return (
                           <Input value={row.attachments ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, attachments: e.target.value } : r))} placeholder="Paste link or text" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.auditRemarks || '-'}</span>
                         ); } return (
                           <Input value={row.auditRemarks ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditRemarks: e.target.value } : r))} placeholder="Type remarks" />
@@ -857,7 +857,7 @@ export default function FieldworkDashboard() {
                         {(() => { const cfg = RiskConfigStore.getGlobal(); const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const invalid = cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; return invalid ? <div className="text-xs text-red-600 mt-1">Control Score cannot exceed Risk Score</div> : null; })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -871,7 +871,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -885,7 +885,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
+                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -899,35 +899,35 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.auditObservation || '-'}</span>
                         ); } return (
                           <Input value={row.auditObservation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditObservation: e.target.value } : r))} placeholder="Type observation" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.effect || '-'}</span>
                         ); } return (
                           <Input value={row.effect ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, effect: e.target.value } : r))} placeholder="Describe effect" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.recommendation || '-'}</span>
                         ); } return (
                           <Input value={row.recommendation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, recommendation: e.target.value } : r))} placeholder="Recommendation" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted' || st === 'approved' || st === 'finalized') { return (
                           <span>{row.annexure || '-'}</span>
                         ); } return (
                           <Input value={row.annexure ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, annexure: e.target.value } : r))} placeholder="Annexure ref/link" />
                         ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {(() => { const st = records[row.id]?.status; if (st === 'submitted') { return (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted') { return (
                           <Button size="sm" variant="default" className="bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-md focus-visible:ring-2 focus-visible:ring-green-400 transition" disabled>
                             <CheckCircle2 className="h-3 w-3 mr-2" /> Submitted for Review
                           </Button>
@@ -1009,7 +1009,7 @@ export default function FieldworkDashboard() {
                           const hist = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.reviewHistory || [];
                           if (hist.length === 0) return null;
                           const last = hist[hist.length - 1];
-                          const st = records[row.id]?.status;
+                          const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status;
                           const rejCount = hist.filter(h => (h.content || '').startsWith('Rejected')).length;
                           return (
                             <div className="mt-2">
