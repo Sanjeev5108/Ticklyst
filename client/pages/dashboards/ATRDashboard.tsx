@@ -13,6 +13,8 @@ import {
   MessageSquare,
   Send
 } from 'lucide-react';
+import { FieldworkStore } from '@/contexts/FieldworkStore';
+import { FieldworkRecord } from '@shared/fieldwork';
 
 interface AuditTrackRow {
   id: string;
