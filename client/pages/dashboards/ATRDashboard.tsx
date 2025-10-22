@@ -438,10 +438,16 @@ export default function ATRDashboard() {
       const v = (r as any).arc?.reportable || '';
       return String(v).toLowerCase() === 'yes';
     });
-    return yesReportable.map(r => {
+    const seen = new Set<string>();
+    const rows = [] as { id: string; projectId?: string; control: string; process?: string; subprocess?: string; activity?: string; risk?: string }[];
+    for (const r of yesReportable) {
+      const pid = r.projectId || 'GLOBAL';
+      const uid = `${pid}|${r.controlId}`;
+      if (seen.has(uid)) continue;
+      seen.add(uid);
       const match = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
-      return {
+      rows.push({
         id: r.controlId,
         projectId: r.projectId,
         control: a.control || match?.name || '',
@@ -449,8 +455,9 @@ export default function ATRDashboard() {
         subprocess: match?.subprocess || '',
         activity: a.activity || match?.activity || '',
         risk: a.risk || match?.risk || ''
-      };
-    });
+      });
+    }
+    return rows;
   }, [fwRecords, controls]);
 
   if (selectedClient || selectedControl) {
