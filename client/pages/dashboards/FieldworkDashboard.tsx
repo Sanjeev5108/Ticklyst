@@ -312,7 +312,38 @@ export default function FieldworkDashboard() {
         }
       }
       rows.sort((a,b)=> (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
-      setMatrixRows(rows);
+      const merged = rows.map(r => {
+        const rec = records[r.id];
+        if (!rec) return r;
+        if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
+        const a: any = (rec as any).arc || {};
+        const rr = rec.risk || undefined;
+        return {
+          ...r,
+          controlOwner: a.controlOwner || r.controlOwner,
+          testOfControl: a.testOfControl || r.testOfControl,
+          substantiveProcedure: a.substantiveProcedure || r.substantiveProcedure,
+          samplingApplicable: (a.samplingApplicable as any) || r.samplingApplicable,
+          samplingMethodology: a.samplingMethodology || r.samplingMethodology,
+          controlEffectiveness: (a.controlEffective as any) || r.controlEffectiveness,
+          attachments: a.attachments || r.attachments,
+          auditRemarks: a.auditRemarks || r.auditRemarks,
+          redFlag: (a.redFlag as any) || r.redFlag,
+          reportable: (a.reportable as any) || r.reportable,
+          observationRanking: a.observationRanking || r.observationRanking,
+          auditObservation: a.auditObservation || r.auditObservation,
+          effect: a.effect || r.effect,
+          recommendation: a.recommendation || r.recommendation,
+          annexure: a.annexure || r.annexure,
+          ...(rr ? {
+            likelihood: typeof rr.likelihood === 'number' ? rr.likelihood : r.likelihood,
+            consequence: typeof rr.consequence === 'number' ? rr.consequence : r.consequence,
+            riskScore: typeof rr.riskScore === 'number' ? rr.riskScore : r.riskScore,
+            controlScore: typeof rr.controlScore === 'number' ? rr.controlScore : r.controlScore
+          } : {})
+        };
+      });
+      setMatrixRows(merged);
       return;
     }
     const allowed = new Set(processesForSelectedProject);
@@ -323,8 +354,39 @@ export default function FieldworkDashboard() {
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
-    setMatrixRows(rows);
-  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion, activeCfg]);
+    const merged = rows.map(r => {
+      const rec = records[r.id];
+      if (!rec) return r;
+      if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
+      const a: any = (rec as any).arc || {};
+      const rr = rec.risk || undefined;
+      return {
+        ...r,
+        controlOwner: a.controlOwner || r.controlOwner,
+        testOfControl: a.testOfControl || r.testOfControl,
+        substantiveProcedure: a.substantiveProcedure || r.substantiveProcedure,
+        samplingApplicable: (a.samplingApplicable as any) || r.samplingApplicable,
+        samplingMethodology: a.samplingMethodology || r.samplingMethodology,
+        controlEffectiveness: (a.controlEffective as any) || r.controlEffectiveness,
+        attachments: a.attachments || r.attachments,
+        auditRemarks: a.auditRemarks || r.auditRemarks,
+        redFlag: (a.redFlag as any) || r.redFlag,
+        reportable: (a.reportable as any) || r.reportable,
+        observationRanking: a.observationRanking || r.observationRanking,
+        auditObservation: a.auditObservation || r.auditObservation,
+        effect: a.effect || r.effect,
+        recommendation: a.recommendation || r.recommendation,
+        annexure: a.annexure || r.annexure,
+        ...(rr ? {
+          likelihood: typeof rr.likelihood === 'number' ? rr.likelihood : r.likelihood,
+          consequence: typeof rr.consequence === 'number' ? rr.consequence : r.consequence,
+          riskScore: typeof rr.riskScore === 'number' ? rr.riskScore : r.riskScore,
+          controlScore: typeof rr.controlScore === 'number' ? rr.controlScore : r.controlScore
+        } : {})
+      };
+    });
+    setMatrixRows(merged);
+  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion, activeCfg, records]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
@@ -939,17 +1001,28 @@ export default function FieldworkDashboard() {
                             <Share2 className="h-3 w-3 mr-2" /> {records[row.id]?.status === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
                           </Button>
                         ); })()}
-                        {(records[row.id]?.status === 'rejected' && statusFilter === 'Rejected') || (records[row.id]?.status === 'approved' && statusFilter === 'Approved') ? (
-                          <div className="mt-2">
-                            {(records[row.id]?.reviewHistory || []).slice(-1).map((c, idx) => (
-                              <div key={idx} className={`inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm ${records[row.id]?.status === 'rejected' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
-                                <div className="break-words">{c.content}</div>
-                                <div className={`mt-1 text-xs ${records[row.id]?.status === 'rejected' ? 'text-red-700' : 'text-green-700'} opacity-80`}>— {c.author}, {new Date(c.timestamp).toLocaleString()}</div>
+                        {(() => {
+                          const hist = records[row.id]?.reviewHistory || [];
+                          if (hist.length === 0) return null;
+                          const last = hist[hist.length - 1];
+                          const st = records[row.id]?.status;
+                          const rejCount = hist.filter(h => (h.content || '').startsWith('Rejected')).length;
+                          return (
+                            <div className="mt-2">
+                              <div className={`inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm ${st === 'rejected' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="break-words">{last.content}</div>
+                                  {rejCount > 0 && (
+                                    <span className={`ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 ${st === 'rejected' ? 'border border-red-300 text-red-700' : 'border border-green-300 text-green-700'}`} title="Times rejected">
+                                      ×{rejCount}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className={`mt-1 text-xs ${st === 'rejected' ? 'text-red-700' : 'text-green-700'} opacity-80`}>— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
                               </div>
-                            ))}
-                            {(!records[row.id]?.reviewHistory || (records[row.id]?.reviewHistory?.length || 0) === 0) && <div className="text-sm text-slate-500">No review comments</div>}
-                          </div>
-                        ) : null}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
