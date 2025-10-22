@@ -431,6 +431,27 @@ export default function ATRDashboard() {
     );
   };
 
+  const reportableRows = useMemo(() => {
+    const all = Object.values(fwRecords || {});
+    const approved = all.filter(r => r.status === 'approved');
+    const yesReportable = approved.filter(r => {
+      const v = (r as any).arc?.reportable || '';
+      return String(v).toLowerCase() === 'yes';
+    });
+    return yesReportable.map(r => {
+      const match = controls.find(c => c.id === r.controlId);
+      const a: any = (r as any).arc || {};
+      return {
+        id: r.controlId,
+        control: a.control || match?.name || '',
+        process: match?.process || '',
+        subprocess: match?.subprocess || '',
+        activity: a.activity || match?.activity || '',
+        risk: a.risk || match?.risk || ''
+      };
+    });
+  }, [fwRecords, controls]);
+
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
     const client = selectedClient ? clients.find(c => c.id === selectedClient) : undefined;
