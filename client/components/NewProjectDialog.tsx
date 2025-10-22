@@ -812,7 +812,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     })();
 
     if (changed) updateFormData('selectedChecklistTree', nextTree);
-  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey, mode]);
+  }, [effectiveChecklistProcesses, frameworkTree, soaApplicable, findMatchingKey, mode, open]);
 
   // Auto-expand subprocesses for the selected process so activities are visible
   useEffect(() => {
