@@ -399,7 +399,7 @@ export default function ReviewDashboard() {
                       })()}
                     </td>
                     <td className="p-3 align-top w-64 break-words">
-                      <Button variant="outline" size="sm" onClick={()=>{ if (!user) return; FieldworkStore.addReview(selectedProject ? `${selectedProject}|${row.id}` : row.id, user.username, reviewDraft[row.id] || '', 'Approved'); setAckMsg('Approved successfully'); setAckOpen(true); }}>
+                      <Button variant="default" size="sm" className="bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-md focus-visible:ring-2 focus-visible:ring-green-400 transition" onClick={()=>{ if (!user) return; FieldworkStore.addReview(selectedProject ? `${selectedProject}|${row.id}` : row.id, user.username, reviewDraft[row.id] || '', 'Approved'); setAckMsg('Approved successfully'); setAckOpen(true); }}>
                         Approve
                       </Button>
                     </td>
