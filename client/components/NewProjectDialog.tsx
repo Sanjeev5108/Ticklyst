@@ -717,6 +717,46 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     }
   }, [processesForClient]);
 
+  // Hydrate applicability map from saved selection when editing so UI reflects exact saved ticks
+  const hydratedFromSavedRef = React.useRef(false);
+  useEffect(() => {
+    if (!open) { hydratedFromSavedRef.current = false; return; }
+    if (mode !== 'edit') return;
+    if (!formData.selectedChecklistTree || typeof formData.selectedChecklistTree !== 'object') return;
+    if (!frameworkTree || Object.keys(frameworkTree || {}).length === 0) return;
+    if (hydratedFromSavedRef.current) return;
+
+    const saved: any = formData.selectedChecklistTree as any;
+    const updates: Record<string, boolean> = {};
+    try {
+      Object.entries<any>(saved).forEach(([procName, procVal]) => {
+        const pKey = findMatchingKey(frameworkTree, procName) || procName;
+        updates[`proc|${pKey}`] = true;
+        const subs = (procVal && procVal.subprocesses) || {};
+        Object.entries<any>(subs).forEach(([subName, subVal]) => {
+          updates[`sub|${pKey}|${subName}`] = true;
+          const acts = (subVal && subVal.activities) || {};
+          Object.entries<any>(acts).forEach(([actName, actVal]) => {
+            updates[`act|${pKey}|${subName}|${actName}`] = true;
+            const risks = (actVal && actVal.risks) || {};
+            Object.entries<any>(risks).forEach(([riskName, riskVal]) => {
+              updates[`risk|${pKey}|${subName}|${actName}|${riskName}`] = true;
+              const savedCtrls = Array.isArray(riskVal?.controls) ? riskVal.controls as string[] : [];
+              const fwRisk = (((frameworkTree as any)[pKey]?.subprocesses || {})[subName]?.activities || {})[actName]?.risks?.[riskName];
+              const fwCtrls: string[] = Array.isArray(fwRisk?.controls) ? fwRisk.controls : [];
+              savedCtrls.forEach((c) => {
+                const idx = fwCtrls.findIndex(x => x === c);
+                if (idx >= 0) updates[`ctrl|${pKey}|${subName}|${actName}|${riskName}|${idx}`] = true;
+              });
+            });
+          });
+        });
+      });
+    } catch {}
+    if (Object.keys(updates).length) setSoaApplicable(prev => ({ ...prev, ...updates }));
+    hydratedFromSavedRef.current = true;
+  }, [open, mode, formData.selectedChecklistTree, frameworkTree, findMatchingKey]);
+
   // Keep selectedChecklistTree in sync with selections. If no explicit selections, include full subtree for selected processes.
   // When editing an existing project, do NOT override previously saved selections unless the user changes applicability or templates.
   useEffect(() => {
