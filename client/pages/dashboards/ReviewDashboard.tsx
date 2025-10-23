@@ -67,6 +67,12 @@ export default function ReviewDashboard() {
     }
   }, [projectsForReview, selectedProject]);
 
+  const riskDisabled = React.useMemo(() => {
+    if (!selectedProject) return false;
+    const proj = projects.find(p => p.id === selectedProject);
+    return proj?.raw?.data?.riskModuleEnabled === false;
+  }, [selectedProject, projects]);
+
   const activeCfg = React.useMemo(() => {
     if (!selectedProject) return RiskConfigStore.getGlobal();
     const proj = projects.find(p => p.id === selectedProject) as any;
