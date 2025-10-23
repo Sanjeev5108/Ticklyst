@@ -321,6 +321,7 @@ export default function ReviewDashboard() {
                       const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
                       const rec = records[key];
                       const cfg = activeCfg;
+                      if (riskDisabled) return null;
                       const l = rec?.risk?.likelihood ?? '-';
                       const c = rec?.risk?.consequence ?? '-';
                       let rs: any = rec?.risk?.riskScore;
