@@ -666,6 +666,7 @@ export default function FieldworkDashboard() {
                         </>
                       )}
                       {/* Risk Score */}
+                      {!riskDisabled && (
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
                           const cfg = activeCfg;
@@ -724,6 +725,7 @@ export default function FieldworkDashboard() {
                           return <span className="inline-flex items-center gap-2"><span>{v || 0}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
+                      )}
                       {/* Control Score */}
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
