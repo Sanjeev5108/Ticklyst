@@ -836,7 +836,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     };
 
     let nextTree: any = null;
-    if (hasSelections) {
+    if (hasExplicitSelections) {
       nextTree = filterBySelections(frameworkTree);
     } else {
       const clone: Record<string, any> = {};
