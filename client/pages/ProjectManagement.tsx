@@ -385,6 +385,9 @@ export default function ProjectManagement() {
         scopeNotes: projectData.scopeNotes || '',
         reportingFrequency: projectData.reportingFrequency || '',
         emailNotifications: !!projectData.emailNotifications,
+        checklistTemplate: projectData.checklistTemplate || [],
+        customChecklistItems: projectData.customChecklistItems || '',
+        selectedChecklistTree: projectData.selectedChecklistTree || null,
         riskConfig: projectData.riskConfig || null,
       }
     };
