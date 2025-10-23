@@ -227,6 +227,14 @@ export default function RiskAssessmentDashboard() {
     // otherwise persist the assignment-level mapping
     const id = scopeType === 'global' ? 'global' : 'assignment';
     RiskConfigStore.upsert({ ...cfg, id, scope: { ...cfg.scope, configType: scopeType } });
+    // Also persist the global enable/disable toggle for project creation
+    try {
+      await fetch('/api/settings/riskModuleEnabled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!cfg.enabled })
+      });
+    } catch {}
     toast({ title: 'Saved successfully' });
   };
 
