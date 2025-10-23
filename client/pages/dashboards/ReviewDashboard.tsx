@@ -302,7 +302,11 @@ export default function ReviewDashboard() {
             <table className="w-full text-sm table-fixed">
               <thead className="bg-slate-50 sticky top-0 z-10">
                 <tr>
-                  {['Activity','Risk','Control','Likelihood','Consequence','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Comments','Approve','Reject'].map(h => (
+                  {(
+                    riskDisabled
+                      ? ['Activity','Risk','Control','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Comments','Approve','Reject']
+                      : ['Activity','Risk','Control','Likelihood','Consequence','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Comments','Approve','Reject']
+                  ).map(h => (
                     <th key={h} className="text-left p-3 w-64">{h}</th>
                   ))}
                 </tr>
