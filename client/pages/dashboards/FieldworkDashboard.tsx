@@ -252,6 +252,12 @@ export default function FieldworkDashboard() {
     })();
   }, []);
 
+  const riskDisabled = useMemo(() => {
+    if (!selectedProject) return false;
+    const proj = projects.find(p => p.id === selectedProject);
+    return proj?.raw?.data?.riskModuleEnabled === false;
+  }, [selectedProject, projects]);
+
   const processesForSelectedProject = useMemo(() => {
     if (!selectedProject) return [] as string[];
     const proj = projects.find(p => p.id === selectedProject);
