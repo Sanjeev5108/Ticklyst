@@ -767,17 +767,17 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       return;
     }
 
-    const hasSelections = Object.values(soaApplicable).some(v => v === true);
+    const hasExplicitSelections = Object.values(soaApplicable).some(v => v === true || v === false);
 
     const existingTree = formData.selectedChecklistTree as any;
     const existingProcKeys = existingTree && typeof existingTree === 'object' ? Object.keys(existingTree) : [];
     const sameProcSet = existingProcKeys.length === procs.length && existingProcKeys.every(k => procs.includes(k)) && procs.every(k => existingProcKeys.includes(k));
 
     // Preserve on edit when user hasn't changed applicability/templates
-    if (mode === 'edit' && existingProcKeys.length > 0 && sameProcSet && !hasSelections) return;
+    if (mode === 'edit' && existingProcKeys.length > 0 && sameProcSet && !hasExplicitSelections) return;
 
     // Also avoid rebuilding repeatedly for new projects if already built for the same processes and no selections were made
-    if (!hasSelections && existingTree && sameProcSet) return;
+    if (!hasExplicitSelections && existingTree && sameProcSet) return;
 
     const filterBySelections = (tree: Record<string, any>) => {
       const result: Record<string, any> = {};
