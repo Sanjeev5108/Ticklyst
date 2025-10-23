@@ -210,7 +210,7 @@ export default function RiskAssessmentDashboard() {
     );
   }
 
-  const onSave = () => {
+  const onSave = async () => {
     // If editing a specific assignment type, persist that assignment config
     if (editingAssignmentId) {
       const perId = `assignment|${editingAssignmentId}`;
