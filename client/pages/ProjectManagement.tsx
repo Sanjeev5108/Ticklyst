@@ -857,6 +857,60 @@ export default function ProjectManagement() {
               </div>
 
               <div>
+                <div className="text-sm text-gray-500">Scope & Checklist</div>
+                {(() => {
+                  const tree: any = (selectedProject as any).details?.selectedChecklistTree;
+                  if (!tree || typeof tree !== 'object' || Object.keys(tree).length === 0) {
+                    return <div className="text-sm">-</div>;
+                  }
+                  const renderControls = (controls: string[], prefix: string) => (
+                    <div className="space-y-1">
+                      {controls.map((ctrl, i) => (
+                        <div key={`${prefix}|${ctrl}|${i}`} className="flex items-center gap-2 pl-8">
+                          <Checkbox checked disabled aria-readonly className="h-3.5 w-3.5" />
+                          <span className="text-sm">{ctrl}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                  const items: JSX.Element[] = [];
+                  Object.entries<any>(tree).forEach(([procName, procVal]) => {
+                    items.push(
+                      <div key={`proc|${procName}`} className="mt-2">
+                        <div className="text-sm font-medium text-blue-800">{procName}</div>
+                      </div>
+                    );
+                    const subprocesses = (procVal && procVal.subprocesses) || {};
+                    Object.entries<any>(subprocesses).forEach(([subName, subVal]) => {
+                      items.push(
+                        <div key={`sub|${procName}|${subName}`} className="pl-2">
+                          <div className="text-sm font-medium text-emerald-800">{subName}</div>
+                        </div>
+                      );
+                      const activities = (subVal && subVal.activities) || {};
+                      Object.entries<any>(activities).forEach(([actName, actVal]) => {
+                        items.push(
+                          <div key={`act|${procName}|${subName}|${actName}`} className="pl-4">
+                            <div className="text-sm font-medium text-amber-800">{actName}</div>
+                          </div>
+                        );
+                        const risks = (actVal && actVal.risks) || {};
+                        Object.entries<any>(risks).forEach(([riskName, riskVal]) => {
+                          items.push(
+                            <div key={`risk|${procName}|${subName}|${actName}|${riskName}`} className="pl-6">
+                              <div className="text-sm font-medium text-red-800">{riskName}</div>
+                              {Array.isArray(riskVal?.controls) && riskVal.controls.length > 0 && renderControls(riskVal.controls, `${procName}|${subName}|${actName}|${riskName}`)}
+                            </div>
+                          );
+                        });
+                      });
+                    });
+                  });
+                  return <div className="mt-1 space-y-1">{items}</div>;
+                })()}
+              </div>
+
+              <div>
                 <div className="text-sm text-gray-500">Scope Notes</div>
                 <div className="text-sm whitespace-pre-wrap">{selectedProject.details?.scopeNotes || '-'}</div>
               </div>
