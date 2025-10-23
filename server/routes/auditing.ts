@@ -363,6 +363,10 @@ export const createProject: RequestHandler = async (req, res) => {
     } catch {}
 
     let data = deepMerge(existingData, incomingDataPatch);
+    // For complex nested selections, replace entire structure to reflect exact saved applicability
+    if (incomingDataPatch && Object.prototype.hasOwnProperty.call(incomingDataPatch, 'selectedChecklistTree')) {
+      (data as any).selectedChecklistTree = (incomingDataPatch as any).selectedChecklistTree ?? null;
+    }
     if (!existing) {
       if (data.riskModuleEnabled === undefined) {
         data.riskModuleEnabled = riskModuleEnabled;
