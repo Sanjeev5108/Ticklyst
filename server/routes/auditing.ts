@@ -350,7 +350,24 @@ export const createProject: RequestHandler = async (req, res) => {
     // If body.data is provided, treat it as the data payload; otherwise use full body
     const incomingDataPatch = (body && typeof body.data === 'object' && body.data) ? body.data : body;
     const existingData = (existing && typeof existing.data === 'object' && existing.data) ? existing.data : {};
-    const data = deepMerge(existingData, incomingDataPatch);
+
+    // Determine current global risk module toggle
+    let riskModuleEnabled = true;
+    try {
+      const s = await pool.query('SELECT value FROM app_settings WHERE key=$1 LIMIT 1', ['riskModuleEnabled']);
+      if (s.rows.length) {
+        const val = s.rows[0].value;
+        if (typeof val === 'boolean') riskModuleEnabled = val;
+        else if (val && typeof val === 'object' && typeof val.enabled === 'boolean') riskModuleEnabled = !!val.enabled;
+      }
+    } catch {}
+
+    let data = deepMerge(existingData, incomingDataPatch);
+    if (!existing) {
+      if (data.riskModuleEnabled === undefined) {
+        data.riskModuleEnabled = riskModuleEnabled;
+      }
+    }
 
     const code = incomingCode ?? existing?.code ?? null;
     const name = incomingName;
