@@ -610,13 +610,13 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-64">Activity</th>
                     <th className="text-left p-3 w-64">Risk</th>
                     <th className="text-left p-3 w-64">Control</th>
-                    {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Likelihood</th>)}
-                    {activeCfg.riskScore.mode === 'likelihood_consequence' && (<th className="text-left p-3 w-40">Consequence</th>)}
-                    <th className="text-left p-3 w-40">Risk Score</th>
-                    <th className="text-left p-3 w-40">Control Score</th>
-                    <th className="text-left p-3 w-40">Residual Risk</th>
-                    <th className="text-left p-3 w-40">Risk Level</th>
-                    <th className="text-left p-3 w-24">Color</th>
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (<th className="text-left p-3 w-40">Likelihood</th>)}
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (<th className="text-left p-3 w-40">Consequence</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Risk Score</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Control Score</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Residual Risk</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Risk Level</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-24">Color</th>)}
                     <th className="text-left p-3 w-64">Control Owner</th>
                     <th className="text-left p-3 w-64">Test of Control</th>
                     <th className="text-left p-3 w-64">Substantive Procedure</th>
