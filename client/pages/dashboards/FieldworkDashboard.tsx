@@ -641,7 +641,7 @@ export default function FieldworkDashboard() {
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
-                      {activeCfg.riskScore.mode === 'likelihood_consequence' && (
+                      {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (
                         <>
                           {/* Likelihood */}
                           <td className="p-3 align-top w-40 break-words">
