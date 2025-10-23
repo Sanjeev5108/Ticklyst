@@ -804,14 +804,17 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
               const rkId = `risk|${procKey}|${spName}|${acName}|${rkName}`;
               const includeRiskDirect = soaApplicable[rkId] === true;
               const ctrls = Array.isArray(rkNode.controls) ? rkNode.controls : [];
-              const selectedCtrls: string[] = [];
+              const ancestorIncluded = includeProcDirect || includeSubDirect || includeActDirect || includeRiskDirect;
+              const includedCtrls: string[] = [];
               ctrls.forEach((c: string, idx: number) => {
                 const ctrlId = `ctrl|${procKey}|${spName}|${acName}|${rkName}|${idx}`;
-                if (soaApplicable[ctrlId] === true) selectedCtrls.push(c);
+                const flag = soaApplicable[ctrlId];
+                if (flag === false) return; // explicitly Not Applicable => exclude
+                if (flag === true) { includedCtrls.push(c); return; }
+                if (ancestorIncluded) includedCtrls.push(c); // inherit inclusion if parent marked Applicable
               });
-              const includeRisk = includeRiskDirect || selectedCtrls.length > 0;
-              if (includeRisk) {
-                riskOut[rkName] = { name: rkName, controls: selectedCtrls.length ? selectedCtrls : ctrls };
+              if (includedCtrls.length > 0) {
+                riskOut[rkName] = { name: rkName, controls: includedCtrls };
               }
             }
             const includeAct = includeActDirect || Object.keys(riskOut).length > 0;
