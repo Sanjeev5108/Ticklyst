@@ -535,7 +535,7 @@ export default function ProjectManagement() {
       if (projects[i] !== next[i]) { changed = true; break; }
     }
     if (changed) setProjects(next);
-  }, [fwRecords, projects.map(p=>p.id).join('|')]);
+  }, [fwRecords, projects]);
 
   const ProjectCard = ({ project }: { project: Project }) => (
     <Card className="mb-4 hover:shadow-md transition-shadow cursor-pointer">
