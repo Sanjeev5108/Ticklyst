@@ -762,7 +762,7 @@ export default function ClientManagement() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Industry</Label>
+                  <Label className="text-sm font-medium">Industry <span className="text-red-500">*</span></Label>
                   <div className="mt-1">
                     <IndustrySelect value={newClient.industry || ''} onChange={(value) => setNewClient({ ...newClient, industry: value })} placeholder="Select industry" baseOptions={industryOptions} />
                   </div>
