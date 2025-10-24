@@ -289,7 +289,7 @@ export default function HRDashboard() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   value={newEmployee.name}
@@ -298,7 +298,7 @@ export default function HRDashboard() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
                   type="email"
@@ -308,7 +308,7 @@ export default function HRDashboard() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
                 <Select 
                   value={newEmployee.role} 
                   onValueChange={(value) => setNewEmployee({ ...newEmployee, role: value as UserRole })}
@@ -340,7 +340,7 @@ export default function HRDashboard() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="password">Temporary Password</Label>
+                <Label htmlFor="password">Temporary Password <span className="text-red-500">*</span></Label>
                 <Input
                   id="password"
                   type="password"
@@ -364,15 +364,15 @@ export default function HRDashboard() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Full Name</Label>
+              <Label htmlFor="edit-name">Full Name <span className="text-red-500">*</span></Label>
               <Input id="edit-name" value={editEmployee.name} onChange={(e)=>setEditEmployee({ ...editEmployee, name: e.target.value })} placeholder="Enter full name" />
             </div>
             <div>
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email">Email <span className="text-red-500">*</span></Label>
               <Input id="edit-email" type="email" value={editEmployee.email} onChange={(e)=>setEditEmployee({ ...editEmployee, email: e.target.value })} placeholder="Enter email address" />
             </div>
             <div>
-              <Label htmlFor="edit-role">Role</Label>
+              <Label htmlFor="edit-role">Role <span className="text-red-500">*</span></Label>
               <Select value={editEmployee.role} onValueChange={(v)=>setEditEmployee({ ...editEmployee, role: v as UserRole })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
@@ -394,8 +394,8 @@ export default function HRDashboard() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-password">Temporary Password</Label>
-              <Input id="edit-password" type="password" value={editEmployee.password} onChange={(e)=>setEditEmployee({ ...editEmployee, password: e.target.value })} placeholder="Set/Reset temporary password (optional)" />
+              <Label htmlFor="edit-password">Temporary Password <span className="text-red-500">*</span></Label>
+              <Input id="edit-password" type="password" value={editEmployee.password} onChange={(e)=>setEditEmployee({ ...editEmployee, password: e.target.value })} placeholder="Enter temporary password" />
             </div>
             <Button onClick={handleUpdateEmployee} className="w-full">Save Changes</Button>
           </div>
