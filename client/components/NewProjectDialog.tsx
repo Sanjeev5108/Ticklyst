@@ -1123,7 +1123,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             <h3 className="text-lg font-semibold">Basic Project Information</h3>
             
             <div>
-              <Label htmlFor="projectName">Project Name</Label>
+              <Label htmlFor="projectName">Project Name <span className="text-red-500">*</span></Label>
               <Input
                 id="projectName"
                 value={formData.projectName}
@@ -1144,7 +1144,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             </div>
 
             <div>
-              <Label htmlFor="clientName">Client Name</Label>
+              <Label htmlFor="clientName">Client Name <span className="text-red-500">*</span></Label>
               <Select value={formData.clientName} onValueChange={(value) => updateFormData('clientName', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Dropdown list of existing clients" />
@@ -1177,7 +1177,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
             </div>
 
             <div>
-              <Label htmlFor="auditType">Nature of Assignment</Label>
+              <Label htmlFor="auditType">Nature of Assignment <span className="text-red-500">*</span></Label>
               <Select value={formData.auditType} onValueChange={(value) => updateFormData('auditType', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select nature of assignment" />
@@ -1206,7 +1206,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       case 2:
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Project Period</h3>
+            <h3 className="text-lg font-semibold">Project Period <span className="text-red-500">*</span></h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label className="mb-2 block">From</Label>
