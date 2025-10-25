@@ -103,6 +103,7 @@ export default function ATRDashboard() {
   const [selectedControl, setSelectedControl] = useState<string | null>(null);
   const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
+  const [reportableProjectFilter, setReportableProjectFilter] = useState<string>('all');
 
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll()));
