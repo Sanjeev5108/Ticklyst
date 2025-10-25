@@ -542,6 +542,7 @@ export default function ATRDashboard() {
                     </thead>
                     <tbody>
                       {reportableRows.filter(r=>{
+                        if (reportableProjectFilter !== 'all' && r.projectId !== reportableProjectFilter) return false;
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
@@ -620,6 +621,7 @@ export default function ATRDashboard() {
                     </thead>
                     <tbody>
                       {reportableRows.filter(r=>{
+                        if (reportableProjectFilter !== 'all' && r.projectId !== reportableProjectFilter) return false;
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
