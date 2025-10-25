@@ -496,6 +496,11 @@ export default function ATRDashboard() {
     return rows;
   }, [fwRecords, controls, projects]);
 
+  const reportableProjectOptions = useMemo(() => {
+    const ids = Array.from(new Set(reportableRows.map(r => r.projectId).filter(Boolean))) as string[];
+    return ids.map(id => ({ id, title: projects.find(p => p.id === id)?.title || id }));
+  }, [reportableRows, projects]);
+
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
     const client = selectedClient ? clients.find(c => c.id === selectedClient) : undefined;
