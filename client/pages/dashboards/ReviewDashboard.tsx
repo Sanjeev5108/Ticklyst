@@ -47,6 +47,14 @@ export default function ReviewDashboard() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projDetailsOpen, setProjDetailsOpen] = useState(false);
 
+  const getRecKey = (controlId: string): string => {
+    if (selectedProject) return `${selectedProject}|${controlId}`;
+    const entry = Object.entries(records).find(([_, r]) => (r as any)?.controlId === controlId && (r as any)?.status === 'submitted');
+    if (entry) return entry[0];
+    const anyEntry = Object.entries(records).find(([_, r]) => (r as any)?.controlId === controlId);
+    return anyEntry ? anyEntry[0] : controlId;
+  };
+
   const submittedCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of Object.values(records)) {
@@ -318,7 +326,7 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
                     {(() => {
-                      const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                      const key = getRecKey(row.id);
                       const rec = records[key];
                       const cfg = activeCfg;
                       if (riskDisabled) return null;
@@ -371,7 +379,7 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">
                       <div>{row.auditRemarks || '-'}</div>
                       {(() => {
-                        const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                        const key = getRecKey(row.id);
                         const hist = records[key]?.auditRemarksHistory || [];
                         if (hist.length === 0) return null;
                         const last = hist[hist.length - 1];
@@ -413,7 +421,7 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">
                       <Input value={reviewDraft[row.id] || ''} onChange={(e)=> setReviewDraft(prev => ({ ...prev, [row.id]: e.target.value }))} placeholder="Add review comments" />
                       {(() => {
-                        const hist = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.reviewHistory || [];
+                        const hist = records[getRecKey(row.id)]?.reviewHistory || [];
                         if (hist.length === 0) return null;
                         const last = hist[hist.length - 1];
                         const rejCount = hist.filter(h => (h.content || '').startsWith('Rejected')).length;
@@ -448,12 +456,12 @@ export default function ReviewDashboard() {
                       })()}
                     </td>
                     <td className="p-3 align-top w-64 break-words">
-                      <Button variant="default" size="sm" className="bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-md focus-visible:ring-2 focus-visible:ring-green-400 transition" onClick={()=>{ if (!user) return; FieldworkStore.addReview(selectedProject ? `${selectedProject}|${row.id}` : row.id, user.username, reviewDraft[row.id] || '', 'Approved'); setAckMsg('Approved successfully'); setAckOpen(true); }}>
+                      <Button variant="default" size="sm" className="bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-md focus-visible:ring-2 focus-visible:ring-green-400 transition" onClick={()=>{ if (!user) return; FieldworkStore.addReview(getRecKey(row.id), user.username, reviewDraft[row.id] || '', 'Approved'); setAckMsg('Approved successfully'); setAckOpen(true); }}>
                         Approve
                       </Button>
                     </td>
                     <td className="p-3 align-top w-64 break-words">
-                      <Button variant="destructive" size="sm" onClick={()=>{ if (!user) return; FieldworkStore.addReview(selectedProject ? `${selectedProject}|${row.id}` : row.id, user.username, reviewDraft[row.id] || '', 'Rejected'); setAckMsg('Rejected'); setAckOpen(true); }}>
+                      <Button variant="destructive" size="sm" onClick={()=>{ if (!user) return; FieldworkStore.addReview(getRecKey(row.id), user.username, reviewDraft[row.id] || '', 'Rejected'); setAckMsg('Rejected'); setAckOpen(true); }}>
                         Reject
                       </Button>
                     </td>
