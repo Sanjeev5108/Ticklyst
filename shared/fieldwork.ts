@@ -96,5 +96,6 @@ export interface FieldworkRecord {
     lastCalculatedAt?: string;
   };
   reviewHistory?: ReviewComment[];
+  auditRemarksHistory?: ReviewComment[];
   arc?: ARCRow;
 }
