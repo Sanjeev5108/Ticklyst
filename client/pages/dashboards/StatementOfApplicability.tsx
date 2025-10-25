@@ -470,7 +470,7 @@ export default function StatementOfApplicability() {
               <CardTitle>Checklist Tree</CardTitle>
               <div className="flex items-center gap-2">
                 <Button variant={showOnlyUndecided ? 'default' : 'outline'} size="sm" onClick={() => setShowOnlyUndecided(v => !v)}>
-                  {showOnlyUndecided ? 'Show All' : 'Show Undecided'}
+                  {showOnlyUndecided ? 'Show All' : 'Show New/Undecided'}
                 </Button>
                 {tab === 'industry' ? (
                   <Button disabled={isSaving} onClick={async () => {
