@@ -790,6 +790,10 @@ export default function ProjectManagement() {
                   <div className="font-medium">{selectedProject.projectCode}</div>
                 </div>
                 <div>
+                  <div className="text-sm text-gray-500">Status</div>
+                  <div className="font-medium">{selectedProject.status === 'completed' ? 'Completed' : selectedProject.status === 'in-progress' ? 'In Progress' : selectedProject.status === 'hold' ? 'Hold' : '-'}</div>
+                </div>
+                <div>
                   <div className="text-sm text-gray-500">Client</div>
                   <div className="font-medium">{selectedProject.client}</div>
                 </div>
