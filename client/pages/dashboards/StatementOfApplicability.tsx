@@ -110,6 +110,7 @@ export default function StatementOfApplicability() {
   const [details, setDetails] = useState<Record<string, NodeDetails>>({});
   const [openItemPicker, setOpenItemPicker] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [showOnlyUndecided, setShowOnlyUndecided] = useState(false);
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
@@ -289,7 +290,7 @@ export default function StatementOfApplicability() {
     return !!parent.isExpanded && isParentExpanded(parent);
   };
 
-  const visibleNodes = React.useMemo(() => tree.filter(n => isParentExpanded(n)).sort((a,b)=>compareHier(a.id,b.id)), [tree, compareHier]);
+  const visibleNodes = React.useMemo(() => (showOnlyUndecided ? tree : tree.filter(n => isParentExpanded(n))).sort((a,b)=>compareHier(a.id,b.id)), [tree, compareHier, showOnlyUndecided]);
   const collectDescendantIds = (id: string, acc: string[] = []) => {
     const children = tree.filter(n => n.parentId === id);
     for (const c of children) { acc.push(c.id); collectDescendantIds(c.id, acc); }
@@ -301,8 +302,8 @@ export default function StatementOfApplicability() {
     const ids: string[] = [];
     for (const id of baseIds) ids.push(id, ...collectDescendantIds(id));
     if (!ids.length) return [] as TreeNode[];
-    return visibleNodes.filter(n => ids.includes(n.id));
-  }, [visibleNodes, selectedProcessesIndustry, selectedProcessesClient, tab, tree]);
+    return visibleNodes.filter(n => ids.includes(n.id)).filter(n => !showOnlyUndecided || ((details[n.id]?.applicable ?? null) === null));
+  }, [visibleNodes, selectedProcessesIndustry, selectedProcessesClient, tab, tree, showOnlyUndecided, details]);
   const toggleSelectIndustry = (id: string) => { setIndustrySelections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
   const toggleSelectClient = (id: string) => { setClientSelections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
 
@@ -468,6 +469,9 @@ export default function StatementOfApplicability() {
             <div className="flex items-center justify-between w-full">
               <CardTitle>Checklist Tree</CardTitle>
               <div className="flex items-center gap-2">
+                <Button variant={showOnlyUndecided ? 'default' : 'outline'} size="sm" onClick={() => setShowOnlyUndecided(v => !v)}>
+                  {showOnlyUndecided ? 'Show All' : 'Show Undecided'}
+                </Button>
                 {tab === 'industry' ? (
                   <Button disabled={isSaving} onClick={async () => {
                     try {
