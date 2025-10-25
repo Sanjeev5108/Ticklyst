@@ -533,7 +533,22 @@ export default function FieldworkDashboard() {
     setRecords(FieldworkStore.getAll());
   };
   const completeCurrentTab = () => { if (!record) return; const idx = record.activeTab; if (record.progress < idx) setRecord({ progress: idx }); if (idx < 4) setRecord({ activeTab: idx + 1, progress: Math.max(record.progress, idx) }); };
-  const submitForReview = () => { if (record && selectedControlId) { FieldworkStore.submitForReview(selectedControlId); setRecords(FieldworkStore.getAll()); setSubmitAckOpen(true); } };
+  const submitForReview = () => {
+    if (record && selectedControlId) {
+      const existing = FieldworkStore.get(selectedControlId);
+      const statusNow = existing?.status || 'draft';
+      const revised = (existing?.remarks?.revisedAuditRemarks || record.remarks.revisedAuditRemarks || '').trim();
+      const baseRemark = (existing?.remarks?.auditRemarks || record.remarks.auditRemarks || '').trim();
+      const auditRemarkToSave = revised || baseRemark;
+      if (statusNow === 'rejected' && auditRemarkToSave) {
+        FieldworkStore.addAuditRemark(selectedControlId, (user?.username || 'User'), auditRemarkToSave);
+        FieldworkStore.patchTab(selectedControlId, 'arc', { auditRemarks: auditRemarkToSave });
+      }
+      FieldworkStore.submitForReview(selectedControlId);
+      setRecords(FieldworkStore.getAll());
+      setSubmitAckOpen(true);
+    }
+  };
   const canOpenTab = (idx: number) => !record ? false : idx <= record.progress + 1;
 
   const [projDetailsOpen, setProjDetailsOpen] = useState(false);
