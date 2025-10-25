@@ -527,6 +527,22 @@ export default function ATRDashboard() {
           <TabsContent value="reportable">
             <Card className="shadow-lg mt-4">
               <CardContent className="p-6">
+                <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div>
+                    <Label>Project</Label>
+                    <Select value={reportableProjectFilter} onValueChange={setReportableProjectFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All projects" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All projects</SelectItem>
+                        {reportableProjectOptions.map(opt => (
+                          <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div style={{maxHeight:420, overflow:'auto'}}>
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 sticky top-0 z-10">
