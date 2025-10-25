@@ -368,7 +368,41 @@ export default function ReviewDashboard() {
                     <td className="p-3 align-top w-64 break-words">{row.samplingMethodology || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.controlEffective || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.attachments || '-'}</td>
-                    <td className="p-3 align-top w-64 break-words">{row.auditRemarks || '-'}</td>
+                    <td className="p-3 align-top w-64 break-words">
+                      <div>{row.auditRemarks || '-'}</div>
+                      {(() => {
+                        const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                        const hist = records[key]?.auditRemarksHistory || [];
+                        if (hist.length === 0) return null;
+                        const last = hist[hist.length - 1];
+                        return (
+                          <div className="mt-2">
+                            <div className="inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm bg-slate-50 border border-slate-200 text-slate-800">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="break-words">{last.content}</div>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 border border-slate-300 text-slate-700" title="Audit remark count">×{hist.length}</button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80 p-2">
+                                    <div className="text-xs font-medium mb-1">Past audit remarks</div>
+                                    <div className="space-y-2 max-h-64 overflow-auto">
+                                      {hist.slice().reverse().map((h, i) => (
+                                        <div key={i} className="p-2 border rounded bg-slate-50 text-slate-800">
+                                          <div className="break-words">{h.content}</div>
+                                          <div className="mt-1 text-[10px] text-slate-600">— {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                              <div className="mt-1 text-xs text-slate-600 opacity-80">— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="p-3 align-top w-64 break-words">{row.redFlag || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.reportable || '-'}</td>
                     <td className="p-3 align-top w-64 break-words">{row.observationRanking || '-'}</td>
