@@ -706,7 +706,7 @@ export default function FieldworkDashboard() {
                               for (const l of labels) { if (val >= l.value) chosen = l; }
                               return chosen?.color;
                             };
-                            if (status === 'draft') {
+                            if (status !== 'submitted' && status !== 'approved' && status !== 'finalized') {
                               const c = pickColor(row.riskScore);
                               return (
                                 <span className="inline-flex items-center gap-2">
@@ -755,7 +755,7 @@ export default function FieldworkDashboard() {
                             for (const l of labels) { if (val >= l.value) chosen = l; }
                             return chosen?.color;
                           };
-                          if (status === 'draft') {
+                          if (status !== 'submitted' && status !== 'approved' && status !== 'finalized') {
                             const min = cfg.controlScore.scale.min; const max = cfg.controlScore.scale.max;
                             const c = pickControlColor(row.controlScore);
                             return (
