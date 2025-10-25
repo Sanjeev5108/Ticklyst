@@ -107,6 +107,7 @@ export default function FieldworkDashboard() {
   const [submitAckOpen, setSubmitAckOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   const getResidualLevel = (val: number, thresholds: any): { level: string; color?: string } | undefined => {
     const ranges = Array.isArray(thresholds?.ranges) ? [...thresholds.ranges] : [];
