@@ -173,6 +173,23 @@ class FWStore {
     this.persistServerKey(id);
     this.notify();
   }
+
+  addAuditRemark(id: string, author: string, content: string) {
+    const cur = this.records[id];
+    if (!cur) return;
+    const text = (content || '').trim();
+    if (!text) return;
+    const entry: ReviewComment = { author, content: text, timestamp: new Date().toISOString() };
+    const history = cur.auditRemarksHistory ? [...cur.auditRemarksHistory, entry] : [entry];
+    this.records[id] = {
+      ...cur,
+      auditRemarksHistory: history,
+      remarks: { ...cur.remarks, auditRemarks: text, revisedAuditRemarks: '' }
+    } as any;
+    this.persist();
+    this.persistServerKey(id);
+    this.notify();
+  }
 }
 
 export const FieldworkStore = new FWStore();
