@@ -973,7 +973,8 @@ export default function FieldworkDashboard() {
                                 remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
                                 report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
                               }));
-                              const statusNow = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
+                              const existing = FieldworkStore.get(recKey);
+                              const statusNow = existing?.status || 'draft';
                               const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
                               let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
                               if (cfg.residualRisk.constraintResidualLEQRisk) {
@@ -981,6 +982,12 @@ export default function FieldworkDashboard() {
                               }
                               const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
                               const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
+                              const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                              const baseRemark = (row.auditRemarks || '').trim();
+                              const auditRemarkToSave = revised || baseRemark;
+                              if (statusNow === 'rejected' && auditRemarkToSave) {
+                                FieldworkStore.addAuditRemark(recKey, (user?.username || 'User'), auditRemarkToSave);
+                              }
                               FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
                                 arc: {
                                   activity: row.activity,
@@ -993,7 +1000,7 @@ export default function FieldworkDashboard() {
                                   controlEffective: (row.controlEffectiveness as any) || '',
                                   controlOwner: row.controlOwner || '',
                                   attachments: row.attachments,
-                                  auditRemarks: row.auditRemarks,
+                                  auditRemarks: auditRemarkToSave,
                                   redFlag: (row.redFlag as any) || '',
                                   reportable: (row.reportable as any) || '',
                                   observationRanking: row.observationRanking,
