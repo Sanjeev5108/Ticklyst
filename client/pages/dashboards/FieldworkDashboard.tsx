@@ -18,6 +18,7 @@ import { RiskConfigStore } from '@/contexts/RiskConfigStore';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { computeResidual, computeRiskScore, resolveLevel } from '@shared/risk';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ControlRow {
   id: string;
@@ -1045,7 +1046,7 @@ export default function FieldworkDashboard() {
                                           {hist.filter(h => (h.content || '').startsWith('Rejected')).map((h, i) => (
                                             <div key={i} className="p-2 border rounded bg-red-50 text-red-800">
                                               <div className="break-words">{h.content}</div>
-                                              <div className="mt-1 text-[10px] text-red-700">— {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                              <div className="mt-1 text-[10px] text-red-700">�� {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
                                             </div>
                                           ))}
                                         </div>
