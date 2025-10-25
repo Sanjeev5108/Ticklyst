@@ -1007,6 +1007,10 @@ export default function FieldworkDashboard() {
                           <Button size="sm" variant="outline" className="text-green-700" disabled>
                             <CheckCircle2 className="h-3 w-3 mr-2" /> Approved
                           </Button>
+                        ); } if (projectLocked) { return (
+                          <Button size="sm" variant="outline" disabled>
+                            <CheckCircle2 className="h-3 w-3 mr-2" /> {projectStatus === 'completed' ? 'Completed' : 'On Hold'}
+                          </Button>
                         ); } return (
                           <Button
                             size="sm"
@@ -1147,6 +1151,10 @@ export default function FieldworkDashboard() {
                 <div>
                   <div className="text-sm text-gray-500">Project Code</div>
                   <div className="font-medium">{selectedProj.code || selectedProj.data?.projectCode || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Status</div>
+                  <div className="font-medium">{String(selectedProj.status||'') === 'completed' ? 'Completed' : String(selectedProj.status||'') === 'in-progress' ? 'In Progress' : String(selectedProj.status||'') === 'hold' ? 'Hold' : '-'}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Client</div>
