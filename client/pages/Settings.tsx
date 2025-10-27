@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import * as XLSX from 'xlsx';
+import { Filter, Rows3, Columns2, Download } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
