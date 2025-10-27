@@ -79,6 +79,8 @@ export default function HRDashboard() {
     { title: 'Total Employees', value: employees.length, icon: Users, color: 'text-blue-600' },
     { title: 'Active Users', value: employees.filter(e => e.isActive).length, icon: UserPlus, color: 'text-green-600' },
     { title: 'Inactive Users', value: employees.filter(e => !e.isActive).length, icon: UserMinus, color: 'text-red-600' },
+    { title: 'Division Heads', value: employees.filter(e => e.role === 'Division Head').length, icon: Shield, color: 'text-orange-600' },
+    { title: 'Division Partners', value: employees.filter(e => e.role === 'Division Partner').length, icon: Shield, color: 'text-indigo-600' },
     { title: 'Team Leaders', value: employees.filter(e => e.role === 'Team Leader').length, icon: Shield, color: 'text-yellow-600' },
     { title: 'Team Members', value: employees.filter(e => e.role === 'Team Member').length, icon: Shield, color: 'text-purple-600' }
   ];
