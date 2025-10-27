@@ -51,6 +51,7 @@ function AssignmentTypesEditor() {
   const [filterStatus, setFilterStatus] = useState<'all'|'active'|'purged'>('all');
   const allFields = ['Assignment Type','Status'] as const;
   const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
+  const [groupBy, setGroupBy] = useState<'none'|'assignmentType'|'status'>('none');
   useEffect(() => {
     const setFromStore = () => setItems(AssignmentTypeStore.getAll());
     const unsub = AssignmentTypeStore.subscribe(setFromStore);
