@@ -28,10 +28,33 @@ async function ensureTable() {
   await pool.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS password_hash TEXT');
 }
 
-// Create table on module load (best-effort)
-ensureTable().catch((err) => {
-  console.error("Failed to ensure employees table:", err.message || err);
-});
+async function seedDefaultAdmin() {
+  if (!connectionString) return;
+  try {
+    const countRes = await pool.query('SELECT COUNT(1) AS c FROM employees');
+    const c = Number(countRes.rows[0]?.c || 0);
+    if (c > 0) return;
+    const email = process.env.DEFAULT_ADMIN_EMAIL || 'sanjeev.v@astralbusinessconsulting.in';
+    const name = process.env.DEFAULT_ADMIN_NAME || 'Admin';
+    const password = process.env.DEFAULT_ADMIN_PASSWORD || '123456789';
+    const hash = await bcrypt.hash(password, 10);
+    const id = (globalThis as any).crypto?.randomUUID?.() || Date.now().toString();
+    await pool.query(
+      'INSERT INTO employees (id, name, email, role, division, is_active, created_at, password_hash) VALUES ($1,$2,$3,$4,$5,$6,now(),$7) ON CONFLICT (email) DO NOTHING',
+      [id, name, email, 'Admin', null, true, hash]
+    );
+    console.log(`[seed] Default admin ensured for ${email}`);
+  } catch (err:any) {
+    console.error('Failed to seed default admin:', err?.message || err);
+  }
+}
+
+// Create table and seed on module load (best-effort)
+ensureTable()
+  .then(() => seedDefaultAdmin())
+  .catch((err) => {
+    console.error("Failed to ensure employees table:", err.message || err);
+  });
 
 export const getEmployees: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: "DATABASE_URL not configured" });
