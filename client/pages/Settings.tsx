@@ -183,6 +183,68 @@ function RoleAccessEditor() {
   const [selectedRole, setSelectedRole] = React.useState<string>(ROLES[0]);
   const [selectedUser, setSelectedUser] = React.useState<string>('none');
 
+  const exportAccessControls = async () => {
+    try {
+      const md = await import('./ModularDashboard');
+      const modules = (md && md.modules) ? md.modules as any[] : [];
+      const idToName: Record<string,string> = {};
+      modules.forEach((m:any)=>{ idToName[m.id] = m.name; });
+
+      const fetchJson = async (key: string) => {
+        try { const res = await fetch(`/api/settings/${key}`); if (res.ok) return await res.json(); } catch {}
+        try { return JSON.parse(localStorage.getItem(key) || 'null') || {}; } catch { return {}; }
+      };
+
+      const roleMap: Record<string,string[]> = Object.keys(mapState||{}).length ? mapState : await fetchJson('roleModuleMap');
+      const roleScope: Record<string,string> = Object.keys(scopeState||{}).length ? scopeState : await fetchJson('roleProjectScope');
+      const userMap: Record<string,string[]> = Object.keys(userMapState||{}).length ? userMapState : await fetchJson('userModuleMap');
+      const userScope: Record<string,string> = Object.keys(userScopeState||{}).length ? userScopeState : await fetchJson('userProjectScope');
+
+      let employees: any[] = [];
+      try {
+        const raw = localStorage.getItem('employees');
+        if (raw) employees = JSON.parse(raw);
+        else {
+          const res = await fetch('/api/employees');
+          if (res.ok) employees = await res.json();
+        }
+      } catch {}
+
+      const toModuleNames = (ids: string[] = []) => (ids||[]).map(id => idToName[id] || id).join(', ');
+
+      const roleRows: any[] = [];
+      const ALL_ROLES = ['Admin','HR','Division Partner','Division Head','Team Leader','Team Member'];
+      for (const role of ALL_ROLES) {
+        const mods = roleMap[role] || [];
+        roleRows.push({ Role: role, Modules: toModuleNames(mods), Scope: roleScope[role] || 'all' });
+      }
+
+      const roleEmpRows: any[] = [];
+      (employees||[]).forEach((e:any)=>{
+        roleEmpRows.push({ Role: e.role || '', Employee: e.name || '', Email: e.email || '', Division: e.division || '', Status: (e.isActive ?? true) ? 'Active' : 'Purged' });
+      });
+
+      const empAccessRows: any[] = [];
+      const byId: Record<string, any> = {};
+      (employees||[]).forEach((e:any)=>{ if (e?.id) byId[String(e.id)] = e; });
+      Object.keys(userMap||{}).forEach(uid => {
+        const e = byId[uid] || {};
+        empAccessRows.push({ Employee: e.name || uid, Email: e.email || '', Modules: toModuleNames(userMap[uid]||[]), Scope: userScope[uid] || 'all' });
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.json_to_sheet(roleRows);
+      const ws2 = XLSX.utils.json_to_sheet(roleEmpRows);
+      const ws3 = XLSX.utils.json_to_sheet(empAccessRows);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Role Access Controls');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Role Employees');
+      XLSX.utils.book_append_sheet(wb, ws3, 'Employee Access');
+      XLSX.writeFile(wb, 'settings-access-controls.xlsx');
+    } catch (e) {
+      console.error('Export failed', e);
+    }
+  };
+
   React.useEffect(() => {
     let mounted = true;
     (async () => {
