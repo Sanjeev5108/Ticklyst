@@ -119,10 +119,10 @@ function AssignmentTypesEditor() {
                   <Label className="text-xs">Status</Label>
                   <Select value={filterStatus} onValueChange={(v:any)=>setFilterStatus(v)}>
                     <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
+                    <SelectContent className="z-[210]">
                       <SelectItem value="purged">Purged</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
