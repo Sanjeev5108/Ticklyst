@@ -135,7 +135,7 @@ function AssignmentTypesEditor() {
         </div>
       </div>
       <div className="space-y-2">
-        {items.map(item => (
+        {filtered.map(item => (
           <div key={item.id} className="flex items-center gap-2 border rounded p-2">
             {editing[item.id] !== undefined ? (
               <>
