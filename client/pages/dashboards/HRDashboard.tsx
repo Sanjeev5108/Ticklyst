@@ -6,20 +6,27 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Search, 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  Search,
   Users,
   UserPlus,
   UserMinus,
   Mail,
-  Shield
+  Shield,
+  Filter as FilterIcon,
+  Columns2,
+  Rows3,
+  Download
 } from 'lucide-react';
 import { UserRole } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface Employee {
   id: string;
@@ -56,6 +63,12 @@ export default function HRDashboard() {
   });
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [filterRoles, setFilterRoles] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all'|'active'|'inactive'>('all');
+  const [filterDivisions, setFilterDivisions] = useState<string[]>([]);
+  const [groupBy, setGroupBy] = useState<'none'|'role'|'status'|'division'>('none');
+  const allFields = ['Name','Email','Role','Division','Status','Last Login'] as const;
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
 
   const roles: UserRole[] = ['Admin', 'HR', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'];
   const divisions = ['Audit & Assurance', 'Risk Advisory', 'Continuous Assurance Services', 'Cycle Count', 'Fixed Asset Management', 'Consulting', 'Best Accountant'];
@@ -193,11 +206,16 @@ export default function HRDashboard() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return employees.filter(emp => {
+      const matchesTerm = emp.name.toLowerCase().includes(term) || emp.email.toLowerCase().includes(term) || emp.role.toLowerCase().includes(term) || (emp.division||'').toLowerCase().includes(term);
+      const matchesRole = !filterRoles.length || filterRoles.includes(emp.role);
+      const matchesStatus = filterStatus === 'all' || (filterStatus === 'active' ? emp.isActive : !emp.isActive);
+      const matchesDivision = !filterDivisions.length || filterDivisions.includes(emp.division);
+      return matchesTerm && matchesRole && matchesStatus && matchesDivision;
+    });
+  }, [employees, searchTerm, filterRoles, filterStatus, filterDivisions]);
 
   const getRoleBadgeColor = (role: UserRole) => {
     const colors: Record<string,string> = {
@@ -415,80 +433,205 @@ export default function HRDashboard() {
 
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Search className="h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search employees..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search employees..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4" /> Filters</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">Role</div>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto pr-1">
+                    {roles.map(r => (
+                      <label key={r} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={filterRoles.includes(r)} onCheckedChange={(v)=> setFilterRoles(prev => v ? [...prev, r] : prev.filter(x=>x!==r))} />
+                        <span>{r}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">Status</div>
+                  <div className="flex items-center gap-2 text-sm">
+                    {(['all','active','inactive'] as const).map(s => (
+                      <Button key={s} size="sm" variant={filterStatus===s?'default':'outline'} onClick={()=>setFilterStatus(s)} className="capitalize">{s}</Button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-600 mb-1">Division</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-auto pr-1">
+                    {divisions.map(d => (
+                      <label key={d} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={filterDivisions.includes(d)} onCheckedChange={(v)=> setFilterDivisions(prev => v ? [...prev, d] : prev.filter(x=>x!==d))} />
+                        <span>{d}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>{ setFilterRoles([]); setFilterStatus('all'); setFilterDivisions([]); }}>Reset</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Group By</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['none','role','status','division'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'none' ? 'None' : opt}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4" /> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" onClick={()=>{
+            const rows = filteredEmployees.map(e => {
+              const row: Record<string, any> = {};
+              for (const f of selectedFields) {
+                if (f === 'Name') row['Name'] = e.name;
+                else if (f === 'Email') row['Email'] = e.email;
+                else if (f === 'Role') row['Role'] = e.role;
+                else if (f === 'Division') row['Division'] = e.division;
+                else if (f === 'Status') row['Status'] = e.isActive ? 'Active' : 'Purged';
+                else if (f === 'Last Login') row['Last Login'] = e.lastLogin || '';
+              }
+              return row;
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+            XLSX.writeFile(wb, 'employees.xlsx');
+          }} className="flex items-center gap-2"><Download className="h-4 w-4" /> Export XLSX</Button>
+        </div>
+      </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Division</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
+                {selectedFields.includes('Name') && (<TableHead>Name</TableHead>)}
+                {selectedFields.includes('Email') && (<TableHead>Email</TableHead>)}
+                {selectedFields.includes('Role') && (<TableHead>Role</TableHead>)}
+                {selectedFields.includes('Division') && (<TableHead>Division</TableHead>)}
+                {selectedFields.includes('Status') && (<TableHead>Status</TableHead>)}
+                {selectedFields.includes('Last Login') && (<TableHead>Last Login</TableHead>)}
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>{employee.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getRoleBadgeColor(employee.role)}>
-                      {employee.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{employee.division}</TableCell>
-                  <TableCell>
-                    <Badge className={employee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                      {employee.isActive ? 'Active' : 'Purged'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{employee.lastLogin || 'Never'}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" title="Edit" aria-label="Edit" onClick={() => openEditEmployee(employee)}>
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                      {employee.isActive ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveEmployee(employee.id)}
-                          title="Purge"
-                          aria-label="Purge"
-                        >
-                          <UserMinus className="h-4 w-4" />
+              {(() => {
+                const renderRow = (employee: Employee) => (
+                  <TableRow key={employee.id}>
+                    {selectedFields.includes('Name') && (<TableCell className="font-medium">{employee.name}</TableCell>)}
+                    {selectedFields.includes('Email') && (
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span>{employee.email}</span>
+                        </div>
+                      </TableCell>
+                    )}
+                    {selectedFields.includes('Role') && (
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(employee.role)}>
+                          {employee.role}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {selectedFields.includes('Division') && (<TableCell>{employee.division}</TableCell>)}
+                    {selectedFields.includes('Status') && (
+                      <TableCell>
+                        <Badge className={employee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {employee.isActive ? 'Active' : 'Purged'}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {selectedFields.includes('Last Login') && (<TableCell>{employee.lastLogin || 'Never'}</TableCell>)}
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" title="Edit" aria-label="Edit" onClick={() => openEditEmployee(employee)}>
+                          <Edit3 className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleReactivateEmployee(employee.id)}
-                          title="Reactivate"
-                          aria-label="Reactivate"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {employee.isActive ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveEmployee(employee.id)}
+                            title="Purge"
+                            aria-label="Purge"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReactivateEmployee(employee.id)}
+                            title="Reactivate"
+                            aria-label="Reactivate"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+
+                if (groupBy === 'none') {
+                  return filteredEmployees.map(emp => renderRow(emp));
+                }
+
+                const groups: Record<string, Employee[]> = {};
+                for (const e of filteredEmployees) {
+                  const key = groupBy === 'role' ? e.role : groupBy === 'status' ? (e.isActive ? 'Active' : 'Purged') : (e.division || '');
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(e);
+                }
+                const keys = Object.keys(groups).sort();
+                return keys.map(k => (
+                  <>
+                    <TableRow key={`group-${k}`}>
+                      <TableCell colSpan={selectedFields.length + 1} className="bg-slate-50 text-slate-700 font-medium">{k || '—'} ({groups[k].length})</TableCell>
+                    </TableRow>
+                    {groups[k].map(e => renderRow(e))}
+                  </>
+                ));
+              })()}
             </TableBody>
           </Table>
         </CardContent>
