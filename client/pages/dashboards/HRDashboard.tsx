@@ -624,12 +624,12 @@ export default function HRDashboard() {
                 }
                 const keys = Object.keys(groups).sort();
                 return keys.map(k => (
-                  <>
-                    <TableRow key={`group-${k}`}>
+                  <Fragment key={`grpwrap-${k}`}>
+                    <TableRow>
                       <TableCell colSpan={selectedFields.length + 1} className="bg-slate-50 text-slate-700 font-medium">{k || '—'} ({groups[k].length})</TableCell>
                     </TableRow>
                     {groups[k].map(e => renderRow(e))}
-                  </>
+                  </Fragment>
                 ));
               })()}
             </TableBody>
