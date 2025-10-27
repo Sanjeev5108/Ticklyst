@@ -246,8 +246,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   useEffect(() => {
     const sync = () => {
       const all = AssignmentTypeStore.getAll();
+      const active = all.filter((a:any) => a && (a.active ?? true));
       setAssignmentTypes(all.map(a => ({ id: (a as any).id, name: (a as any).name })));
-      setNatureOptions(all.map((a:any)=>a.name));
+      setNatureOptions(active.map((a:any)=>a.name));
     };
     const unsub = AssignmentTypeStore.subscribe(sync);
     sync();
