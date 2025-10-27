@@ -255,7 +255,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     const unsub = AssignmentTypeStore.subscribe(sync);
     sync();
     return () => unsub();
-  }, []);
+  }, [formData.auditType]);
 
   const [processesForClient, setProcessesForClient] = useState<string[]>([]);
   const [newSubprocess, setNewSubprocess] = useState('');
