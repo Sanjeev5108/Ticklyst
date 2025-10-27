@@ -109,7 +109,7 @@ function AssignmentTypesEditor() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64">
+            <PopoverContent className="w-64 z-[200]">
               <div className="space-y-3">
                 <div>
                   <Label className="text-xs">Assignment Type</Label>
