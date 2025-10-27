@@ -485,8 +485,10 @@ export default function ClientManagement() {
     const matchesSearch = name.includes(term) || location.includes(term);
     const matchesSector = selectedSector === 'all' || (client.sector || client.industry) === selectedSector;
     const matchesState = filterStateVal === 'all' || (client.state || '').toLowerCase() === filterStateVal.toLowerCase();
-    const matchesCity = !filterCity || (client.city || '').toLowerCase().includes(filterCity.toLowerCase());
-    return matchesSearch && matchesSector && matchesState && matchesCity;
+    const matchesName = !filterName || (client.name || '').toLowerCase().includes(filterName.toLowerCase());
+    const matchesFilterSector = filterSector === 'all' || (client.sector || client.industry || '').toLowerCase() === filterSector.toLowerCase();
+    const matchesIndustry = filterIndustry === 'all' || (client.industry || '').toLowerCase() === filterIndustry.toLowerCase();
+    return matchesSearch && matchesSector && matchesState && matchesName && matchesFilterSector && matchesIndustry;
   });
 
   useEffect(() => {
