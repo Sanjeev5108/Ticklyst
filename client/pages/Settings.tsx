@@ -70,12 +70,29 @@ function AssignmentTypesEditor() {
   });
 
   const exportAssignment = () => {
-    const rows = filtered.map(it => {
+    const makeRow = (it: any) => {
       const row: Record<string, any> = {};
       if (selectedFields.includes('Assignment Type')) row['Assignment Type'] = it.name;
       if (selectedFields.includes('Status')) row['Status'] = (it.active ?? true) ? 'Active' : 'Purged';
       return row;
-    });
+    };
+    let rows: any[] = [];
+    if (groupBy === 'none') {
+      rows = filtered.map(makeRow);
+    } else {
+      const groups: Record<string, any[]> = {};
+      for (const it of filtered) {
+        const key = groupBy === 'status' ? ((it.active ?? true) ? 'Active' : 'Purged') : it.name;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(it);
+      }
+      const keys = Object.keys(groups).sort();
+      for (const k of keys) {
+        rows.push({ Group: k });
+        rows.push(...groups[k].map(makeRow));
+        rows.push({});
+      }
+    }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Assignment');
