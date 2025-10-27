@@ -62,6 +62,25 @@ function AssignmentTypesEditor() {
   const purge = (id: string) => { AssignmentTypeStore.setActive(id, false); };
   const restore = (id: string) => { AssignmentTypeStore.setActive(id, true); };
 
+  const filtered = items.filter(it => {
+    const nameOk = !filterName || it.name.toLowerCase().includes(filterName.toLowerCase());
+    const statusOk = filterStatus === 'all' ? true : filterStatus === 'active' ? (it.active ?? true) : !(it.active ?? true);
+    return nameOk && statusOk;
+  });
+
+  const exportAssignment = () => {
+    const rows = filtered.map(it => {
+      const row: Record<string, any> = {};
+      if (selectedFields.includes('Assignment Type')) row['Assignment Type'] = it.name;
+      if (selectedFields.includes('Status')) row['Status'] = (it.active ?? true) ? 'Active' : 'Purged';
+      return row;
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Assignment');
+    XLSX.writeFile(wb, 'settings-assignment.xlsx');
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
