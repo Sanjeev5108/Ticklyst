@@ -25,6 +25,7 @@
     "dotenv": "^17.2.0",
     "express": "^4.18.2",
     "pg": "^8.11.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
