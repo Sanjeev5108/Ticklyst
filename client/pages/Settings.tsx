@@ -47,6 +47,10 @@ function AssignmentTypesEditor() {
   const [items, setItems] = useState<{id:string; name:string; description?:string; active?:boolean}[]>([]);
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<Record<string,string>>({});
+  const [filterName, setFilterName] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all'|'active'|'purged'>('all');
+  const allFields = ['Assignment Type','Status'] as const;
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
   useEffect(() => {
     const setFromStore = () => setItems(AssignmentTypeStore.getAll());
     const unsub = AssignmentTypeStore.subscribe(setFromStore);
