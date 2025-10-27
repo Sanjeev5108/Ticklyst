@@ -83,9 +83,56 @@ function AssignmentTypesEditor() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input placeholder="Add new assignment type" value={newName} onChange={(e)=>setNewName(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input placeholder="Add new assignment type" value={newName} onChange={(e)=>setNewName(e.target.value)} className="max-w-xs" />
         <Button onClick={add}>Add</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Assignment Type</Label>
+                  <Input value={filterName} onChange={(e)=>setFilterName(e.target.value)} placeholder="Search by name" />
+                </div>
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={filterStatus} onValueChange={(v:any)=>setFilterStatus(v)}>
+                    <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="purged">Purged</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>{ setFilterName(''); setFilterStatus('all'); }}>Reset</Button></div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['Assignment Type','Status'] as const).map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Assignment Type','Status'])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" onClick={exportAssignment} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
       <div className="space-y-2">
         {items.map(item => (
