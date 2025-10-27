@@ -248,7 +248,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
       const all = AssignmentTypeStore.getAll();
       const active = all.filter((a:any) => a && (a.active ?? true));
       setAssignmentTypes(all.map(a => ({ id: (a as any).id, name: (a as any).name })));
-      setNatureOptions(active.map((a:any)=>a.name));
+      const activeNames = active.map((a:any)=>a.name);
+      const includeCurrent = formData.auditType && !activeNames.includes(formData.auditType) ? [formData.auditType] : [];
+      setNatureOptions([...activeNames, ...includeCurrent]);
     };
     const unsub = AssignmentTypeStore.subscribe(sync);
     sync();
