@@ -132,6 +132,20 @@ function AssignmentTypesEditor() {
           </Popover>
           <Popover>
             <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48">
+              <div className="grid gap-2">
+                {(['none','assignmentType','status'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'none' ? 'None' : (opt === 'assignmentType' ? 'Assignment Type' : 'Status')}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
             </PopoverTrigger>
             <PopoverContent className="w-56">
