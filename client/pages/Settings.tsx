@@ -51,7 +51,8 @@ function AssignmentTypesEditor() {
   }, []);
   const add = () => { AssignmentTypeStore.add(newName); setNewName(''); };
   const save = (id: string) => { const v = (editing[id]||'').trim(); if (v) AssignmentTypeStore.rename(id, v); setEditing(prev => { const c = {...prev}; delete c[id]; return c; }); };
-  const remove = (id: string) => { AssignmentTypeStore.remove(id); };
+  const purge = (id: string) => { AssignmentTypeStore.setActive(id, false); };
+  const restore = (id: string) => { AssignmentTypeStore.setActive(id, true); };
 
   return (
     <div className="space-y-3">
@@ -69,9 +70,16 @@ function AssignmentTypesEditor() {
               </>
             ) : (
               <>
-                <div className="flex-1 text-sm">{item.name}</div>
+                <div className={`flex-1 text-sm ${item.active === false ? 'line-through text-gray-500' : ''}`}>
+                  {item.name}
+                  {item.active === false && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">Purged</span>}
+                </div>
                 <Button size="sm" variant="outline" onClick={()=> setEditing(prev=>({ ...prev, [item.id]: item.name }))}>Rename</Button>
-                <Button size="sm" variant="destructive" onClick={()=>remove(item.id)}>Delete</Button>
+                {item.active === false ? (
+                  <Button size="sm" variant="secondary" onClick={()=>restore(item.id)}>Restore</Button>
+                ) : (
+                  <Button size="sm" variant="destructive" onClick={()=>purge(item.id)}>Purge</Button>
+                )}
               </>
             )}
           </div>
