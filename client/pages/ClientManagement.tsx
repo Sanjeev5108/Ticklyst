@@ -1029,8 +1029,36 @@ export default function ClientManagement() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-72">
+            <PopoverContent className="w-80">
               <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Name</Label>
+                  <Input value={filterName} onChange={(e)=>setFilterName(e.target.value)} placeholder="Search by name" />
+                </div>
+                <div>
+                  <Label className="text-xs">Sector</Label>
+                  <Select value={filterSector} onValueChange={setFilterSector}>
+                    <SelectTrigger><SelectValue placeholder="Sector" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => (c.sector || c.industry)).filter(Boolean))).sort().map(sec => (
+                        <SelectItem key={sec as string} value={sec as string}>{sec as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Industry</Label>
+                  <Select value={filterIndustry} onValueChange={setFilterIndustry}>
+                    <SelectTrigger><SelectValue placeholder="Industry" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => c.industry).filter(Boolean))).sort().map(ind => (
+                        <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label className="text-xs">State</Label>
                   <Select value={filterStateVal} onValueChange={setFilterStateVal}>
@@ -1038,17 +1066,13 @@ export default function ClientManagement() {
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
                       {Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort().map(st => (
-                        <SelectItem key={st} value={st as string}>{st}</SelectItem>
+                        <SelectItem key={st as string} value={st as string}>{st as string}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label className="text-xs">City</Label>
-                  <Input value={filterCity} onChange={(e)=>setFilterCity(e.target.value)} placeholder="Search by city" />
-                </div>
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={()=>{ setFilterStateVal('all'); setFilterCity(''); }}>Reset</Button>
+                  <Button size="sm" variant="outline" onClick={()=>{ setFilterName(''); setFilterSector('all'); setFilterIndustry('all'); setFilterStateVal('all'); }}>Reset</Button>
                 </div>
               </div>
             </PopoverContent>
