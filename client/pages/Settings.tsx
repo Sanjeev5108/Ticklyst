@@ -435,6 +435,7 @@ function RoleAccessEditor() {
             </Select>
           </div>
         </div>
+        <div className="ml-2"><Button size="sm" onClick={exportAccessControls} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button></div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
