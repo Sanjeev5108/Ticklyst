@@ -408,7 +408,9 @@ export default function ClientManagement() {
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [filterStateVal, setFilterStateVal] = useState<string>('all');
-  const [filterCity, setFilterCity] = useState<string>('');
+  const [filterName, setFilterName] = useState<string>('');
+  const [filterSector, setFilterSector] = useState<string>('all');
+  const [filterIndustry, setFilterIndustry] = useState<string>('all');
   const allFields = ['Name','Industry','Location','City','State','Pincode','Website','Contact Name','Contact Email','Projects','Ongoing','Revenue','Rating','Created At'] as const;
   const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
   const [groupBy, setGroupBy] = useState<'none'|'industry'|'state'|'city'>('none');
