@@ -10,12 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Plus, 
-  Search, 
-  Building2, 
-  MapPin, 
-  Globe, 
+import {
+  Plus,
+  Search,
+  Building2,
+  MapPin,
+  Globe,
   Star,
   Users,
   Calendar,
@@ -23,9 +23,13 @@ import {
   Filter,
   Grid3x3,
   List,
-  Upload
+  Upload,
+  Rows3,
+  Columns2,
+  Download
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface ContactPerson {
   name: string;
@@ -403,6 +407,11 @@ export default function ClientManagement() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [filterStateVal, setFilterStateVal] = useState<string>('all');
+  const [filterCity, setFilterCity] = useState<string>('');
+  const allFields = ['Name','Industry','Location','City','State','Pincode','Website','Contact Name','Contact Email','Projects','Ongoing','Revenue','Rating','Created At'] as const;
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
+  const [groupBy, setGroupBy] = useState<'none'|'industry'|'state'|'city'>('none');
 
   // New client form state
   const [newClient, setNewClient] = useState<Partial<Client>>({
@@ -472,8 +481,10 @@ export default function ClientManagement() {
     const name = (client.name || '').toLowerCase();
     const location = (client.location || '').toLowerCase();
     const matchesSearch = name.includes(term) || location.includes(term);
-    const matchesSector = selectedSector === 'all' || client.sector === selectedSector;
-    return matchesSearch && matchesSector;
+    const matchesSector = selectedSector === 'all' || (client.sector || client.industry) === selectedSector;
+    const matchesState = filterStateVal === 'all' || (client.state || '').toLowerCase() === filterStateVal.toLowerCase();
+    const matchesCity = !filterCity || (client.city || '').toLowerCase().includes(filterCity.toLowerCase());
+    return matchesSearch && matchesSector && matchesState && matchesCity;
   });
 
   useEffect(() => {
@@ -1004,12 +1015,116 @@ export default function ClientManagement() {
         </div>
       </div>
 
-      {/* Results count */}
+      {/* Results and Export Toolbar */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
           {filteredClients.length} of {clients.length} clients
         </p>
-        <Button variant="destructive" size="sm" onClick={handleDeleteAllClients}>Delete All</Button>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">State</Label>
+                  <Select value={filterStateVal} onValueChange={setFilterStateVal}>
+                    <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort().map(st => (
+                        <SelectItem key={st} value={st as string}>{st}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">City</Label>
+                  <Input value={filterCity} onChange={(e)=>setFilterCity(e.target.value)} placeholder="Search by city" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={()=>{ setFilterStateVal('all'); setFilterCity(''); }}>Reset</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['none','industry','state','city'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'none' ? 'None' : opt}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" onClick={()=>{
+            const makeRow = (c: Client) => {
+              const row: Record<string, any> = {};
+              const cp = (c.contactPersons && c.contactPersons[0]) || c.contactPerson || { name:'', email:'' } as any;
+              if (selectedFields.includes('Name')) row['Name'] = c.name;
+              if (selectedFields.includes('Industry')) row['Industry'] = c.sector || c.industry || '';
+              if (selectedFields.includes('Location')) row['Location'] = c.location || '';
+              if (selectedFields.includes('City')) row['City'] = c.city || '';
+              if (selectedFields.includes('State')) row['State'] = c.state || '';
+              if (selectedFields.includes('Pincode')) row['Pincode'] = c.pincode || '';
+              if (selectedFields.includes('Website')) row['Website'] = c.website || '';
+              if (selectedFields.includes('Contact Name')) row['Contact Name'] = cp?.name || '';
+              if (selectedFields.includes('Contact Email')) row['Contact Email'] = cp?.email || '';
+              if (selectedFields.includes('Projects')) row['Projects'] = c.stats?.projects ?? '';
+              if (selectedFields.includes('Ongoing')) row['Ongoing'] = c.stats?.ongoing ?? '';
+              if (selectedFields.includes('Revenue')) row['Revenue'] = c.stats?.revenue ?? '';
+              if (selectedFields.includes('Rating')) row['Rating'] = c.stats?.rating ?? '';
+              if (selectedFields.includes('Created At')) row['Created At'] = c.createdAt || '';
+              return row;
+            };
+            let rows: any[] = [];
+            if (groupBy === 'none') rows = filteredClients.map(makeRow);
+            else {
+              const groups: Record<string, Client[]> = {};
+              for (const c of filteredClients) {
+                const k = groupBy === 'industry' ? (c.sector || c.industry || '') : groupBy === 'state' ? (c.state || '') : (c.city || '');
+                if (!groups[k]) groups[k] = [];
+                groups[k].push(c);
+              }
+              const keys = Object.keys(groups).sort();
+              for (const k of keys) {
+                rows.push({ Group: k });
+                rows.push(...groups[k].map(makeRow));
+                rows.push({});
+              }
+            }
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+            XLSX.writeFile(wb, 'clients.xlsx');
+          }} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteAllClients}>Delete All</Button>
+        </div>
       </div>
 
       {/* Client Grid */}
