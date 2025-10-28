@@ -313,6 +313,27 @@ export const createClient: RequestHandler = async (req, res) => {
   }
 };
 
+export const updateClient: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const { name, industry, details } = req.body || {};
+  const det = typeof details === 'object' && details ? details : (() => {
+    const copy = { ...(req.body || {}) } as any;
+    delete copy.name; delete copy.industry; delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+    return copy;
+  })();
+  try {
+    const q = await pool.query('UPDATE clients SET name=$1, industry=$2, details=$3, updated_at=now() WHERE id=$4 RETURNING id, name, industry, details, created_at', [name, industry, det, id]);
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    const r = q.rows[0];
+    res.json({ id: r.id, name: r.name, industry: r.industry, ...(r.details || {}), createdAt: r.created_at });
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
 export const deleteAllClients: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   try {
