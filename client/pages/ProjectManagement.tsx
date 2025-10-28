@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Columns2, Rows3, Download } from 'lucide-react';
+import { computeRiskScore, computeResidual, resolveLevel } from '@shared/risk';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
@@ -814,7 +815,6 @@ export default function ProjectManagement() {
               const rc:any = (proj as any)?.details?.riskConfig;
               if (rc && rc.enabled !== false) {
                 try {
-                  const { computeRiskScore, computeResidual, resolveLevel } = await import('@shared/risk');
                   const like = rc?.riskScore?.likelihood?.scale; const cons = rc?.riskScore?.consequence?.scale; const rscale = rc?.riskScore?.scale; const cscale = rc?.controlScore?.scale || {min:1,max:5};
                   const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
                   const l = like ? mid(like) : undefined; const c = cons ? mid(cons) : undefined; const riskVal = computeRiskScore(rc?.riskScore?.mode, l as any, c as any, rscale ? mid(rscale) : undefined);
