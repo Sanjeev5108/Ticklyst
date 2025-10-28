@@ -188,9 +188,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   });
 
   useEffect(() => {
-    // update projectCode when startDate changes (only for new projects)
+    // update projectCode when startDate or existing codes change (only for new projects)
     if (mode === 'new') setFormData(prev => ({ ...prev, projectCode: generateProjectCode(prev.startDate) }));
-  }, [formData.startDate, mode]);
+  }, [formData.startDate, mode, existingProjectCodes]);
 
   // Seed clients from cache for instant dropdown, then refresh from API
   useEffect(() => {
