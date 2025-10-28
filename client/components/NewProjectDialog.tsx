@@ -129,13 +129,33 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     if (h.endsWith('.fly.dev')) return true;
     return true;
   }, []);
+  const [existingProjectCodes, setExistingProjectCodes] = useState<string[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) return;
+        const rows = await res.json();
+        const codes: string[] = (rows || []).map((r: any) => String(r.code || r.data?.projectCode || ''));
+        setExistingProjectCodes(codes.filter(Boolean));
+      } catch {}
+    })();
+  }, []);
+
   const generateProjectCode = (date: Date | null) => {
     const d = date || new Date();
     const month = d.getMonth();
     const year = d.getFullYear();
     const fyStart = month >= 3 ? year : year - 1; // fiscal year starts April
     const fyString = `${fyStart}-${fyStart + 1}`;
-    return `${fyString} 001`;
+    const matches = existingProjectCodes.filter(c => c.startsWith(`${fyString} `));
+    const maxSeq = matches.reduce((acc, c) => {
+      const m = c.match(/(\d+)$/);
+      const n = m ? parseInt(m[1], 10) : 0;
+      return Math.max(acc, isNaN(n) ? 0 : n);
+    }, 0);
+    const next = String(maxSeq + 1).padStart(3, '0');
+    return `${fyString} ${next}`;
   };
 
   const [formData, setFormData] = useState<ProjectFormData>({
