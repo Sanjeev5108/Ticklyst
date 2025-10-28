@@ -1125,9 +1125,7 @@ export default function ClientManagement() {
               if (selectedFields.includes('Contact Email')) row['Contact Email'] = cp?.email || '';
               if (selectedFields.includes('Projects')) row['Projects'] = c.stats?.projects ?? '';
               if (selectedFields.includes('Ongoing')) row['Ongoing'] = c.stats?.ongoing ?? '';
-              if (selectedFields.includes('Revenue')) row['Revenue'] = c.stats?.revenue ?? '';
-              if (selectedFields.includes('Rating')) row['Rating'] = c.stats?.rating ?? '';
-              if (selectedFields.includes('Created At')) row['Created At'] = c.createdAt || '';
+  if (selectedFields.includes('Created At')) row['Created At'] = c.createdAt || '';
               return row;
             };
             let rows: any[] = [];
