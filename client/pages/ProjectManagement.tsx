@@ -338,22 +338,32 @@ export default function ProjectManagement() {
   const holdProjects = filteredProjects.filter(p => p.status === 'hold');
 
   const handleCreateProject = async (projectData: any) => {
-    // If projectData provides a projectCode (from dialog), prefer it; otherwise generate
-    let projectCode = projectData.projectCode;
-    if (!projectCode) {
+    // Build payload and let server assign authoritative project code
+    const tempId = `PRJ-${Date.now()}`;
+    const payload = { ...projectData, id: tempId, status: 'in-progress' };
+
+    let serverResp: any = null;
+    try {
+      const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      serverResp = res.ok ? await res.json() : null;
+    } catch {}
+
+    const assignedId = serverResp?.id || tempId;
+    const assignedCode = serverResp?.code || (() => {
+      // Fallback local generation (in case API unavailable)
       const sd = projectData.startDate ? new Date(projectData.startDate) : new Date();
       const month = sd.getMonth();
       const year = sd.getFullYear();
-      const fyStart = month >= 3 ? year : year - 1; // fiscal year starting April
+      const fyStart = month >= 3 ? year : year - 1;
       const fyString = `${fyStart}-${fyStart + 1}`;
       const existingCount = projects.filter(p => p.projectCode && p.projectCode.startsWith(fyString)).length;
       const seq = String(existingCount + 1).padStart(3, '0');
-      projectCode = `${fyString} ${seq}`;
-    }
+      return `${fyString} ${seq}`;
+    })();
 
     const newProject: Project = {
-      id: Date.now().toString(),
-      projectCode,
+      id: assignedId,
+      projectCode: assignedCode,
       title: projectData.projectName,
       client: projectData.clientName,
       status: 'in-progress',
@@ -405,9 +415,6 @@ export default function ProjectManagement() {
       }
     };
 
-    try {
-      await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...projectData, id: newProject.id, status: 'in-progress' }) });
-    } catch {}
     setProjects(prev => [...prev, newProject]);
   };
 
