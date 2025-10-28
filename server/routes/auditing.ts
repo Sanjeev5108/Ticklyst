@@ -419,12 +419,54 @@ export const createProject: RequestHandler = async (req, res) => {
       }
     }
 
-    const code = incomingCode ?? existing?.code ?? null;
+    // Compute/assign project code following fiscal year and sequential numbering
+    let code: string | null = incomingCode ?? existing?.code ?? null;
     const name = incomingName;
     const clientName = incomingClientName;
     const status = incomingStatus;
     const startDate = incomingStart;
     const endDate = incomingEnd;
+
+    // Generate code when not provided, based on start date (or today) using FY starting April 1
+    if (!code) {
+      const refDate = startDate ? new Date(startDate) : new Date();
+      const month = refDate.getMonth(); // 0-based; 3 => April
+      const year = refDate.getFullYear();
+      const fyStart = month >= 3 ? year : year - 1;
+      const fyString = `${fyStart}-${fyStart + 1}`;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Find the current max sequence for this FY
+        const maxRes = await client.query(
+          `SELECT COALESCE(MAX(CAST(regexp_replace(code, '.* (\\d+)$', '\\1') AS INT)), 0) AS max_seq
+           FROM projects
+           WHERE code LIKE $1`,
+          [`${fyString} %`]
+        );
+        let nextSeq = (maxRes.rows[0]?.max_seq as number) + 1;
+        let nextCode = `${fyString} ${String(nextSeq).padStart(3, '0')}`;
+        // Minimal collision avoidance: bump until unique within txn
+        // (No unique index exists on code)
+        // Ensure not used already in this transaction snapshot
+        // Check existence and increment if needed
+        // Limit attempts to avoid infinite loop
+        for (let i = 0; i < 5; i++) {
+          const existsRes = await client.query('SELECT 1 FROM projects WHERE code=$1 LIMIT 1', [nextCode]);
+          if (existsRes.rowCount === 0) break;
+          nextSeq += 1;
+          nextCode = `${fyString} ${String(nextSeq).padStart(3, '0')}`;
+        }
+        code = nextCode;
+        await client.query('COMMIT');
+      } catch (err) {
+        try { await client.query('ROLLBACK'); } catch {}
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
 
     await pool.query(
       'INSERT INTO projects(id, code, name, client_name, status, start_date, end_date, data, created_by, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now()) ON CONFLICT (id) DO UPDATE SET code=EXCLUDED.code, name=EXCLUDED.name, client_name=EXCLUDED.client_name, status=EXCLUDED.status, start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date, data=EXCLUDED.data, created_by=EXCLUDED.created_by, updated_at=now()',
