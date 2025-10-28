@@ -854,7 +854,7 @@ export default function FrameworkDashboard() {
   const [fwFilter, setFwFilter] = useState<'all'|'process'|'subprocess'|'activity'|'risk_related'>('all');
   const [fwGroupBy, setFwGroupBy] = useState<'none'|'process'|'subprocess'|'activity'|'risk'>('none');
   const fwAllFields = [
-    'Process','Subprocess','Activity','Risk','Control','risk related departments','controls related departments','Risk Category','Control type','Reference'
+    'Process','Subprocess','Activity','Risk','Control','Risk Category','Control type','Reference'
   ];
   const [fwSelectedFields, setFwSelectedFields] = useState<string[]>(['Process','Subprocess','Activity','Risk','Control','Risk Category','Control type','Reference']);
 
@@ -973,8 +973,6 @@ export default function FrameworkDashboard() {
               if (fwSelectedFields.includes('Activity')) row['Activity']=aName;
               if (fwSelectedFields.includes('Risk')) row['Risk']=riskName;
               if (fwSelectedFields.includes('Control')) row['Control']=controlName;
-              if (fwSelectedFields.includes('risk related departments')) row['risk related departments']=Array.isArray(riskDept)?riskDept.join(', '):'';
-              if (fwSelectedFields.includes('controls related departments')) row['controls related departments']=Array.isArray(ctrlDept)?ctrlDept.join(', '):'';
               if (fwSelectedFields.includes('Risk Category')) row['Risk Category']=rcat;
               if (fwSelectedFields.includes('Control type')) row['Control type']=ctype;
               if (fwSelectedFields.includes('Reference')) row['Reference']=ref || n.id;
