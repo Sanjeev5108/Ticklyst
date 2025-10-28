@@ -115,7 +115,7 @@ export default function StatementOfApplicability() {
   const [showOnlyUndecided, setShowOnlyUndecided] = useState(false);
   const [filterApplicability, setFilterApplicability] = useState<'all'|'app'|'na'|'undecided'>('all');
   const allFields = ['Process','Subprocess','Activity','Risk','Control','Risk Related Departments','Controls Related Departments','Risk Category','Control Type','Reference','Applicability','Industry','Client'] as const;
-  const [selectedFields, setSelectedFields] = useState<string[]>(['Process','Subprocess','Activity','Applicability','Reference']);
+  const [selectedFields, setSelectedFields] = useState<string[]>(['Process','Subprocess','Activity','Risk','Control','Reference','Applicability','Industry']);
   const [groupBy, setGroupBy] = useState<'none'|'applicability'|'industry'|'client'|'process'|'subprocess'|'activity'>('none');
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -460,7 +460,7 @@ export default function StatementOfApplicability() {
                 ))}
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
-                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Process','Subprocess','Activity','Applicability','Reference'])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Process','Subprocess','Activity','Risk','Control','Reference','Applicability','Industry'])}>Default</Button>
                   <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
                 </div>
               </div>
