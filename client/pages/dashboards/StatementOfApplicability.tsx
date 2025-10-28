@@ -535,6 +535,117 @@ export default function StatementOfApplicability() {
                 )}
               </div>
             </div>
+            <div className="mt-3 flex items-center gap-2 flex-wrap justify-end">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 z-[60]">
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Applicability</Label>
+                      <Select value={filterApplicability} onValueChange={(v:any)=>setFilterApplicability(v)}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                        <SelectContent className="z-[70]">
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="app">Applicable</SelectItem>
+                          <SelectItem value="na">Not Applicable</SelectItem>
+                          <SelectItem value="undecided">Undecided</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>setFilterApplicability('all')}>Reset</Button></div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56">
+                  <div className="grid gap-2">
+                    {(['none','applicability','industry','client','process','subprocess','activity'] as const).map(opt => (
+                      <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                        {opt === 'none' ? 'None' : opt}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72">
+                  <div className="grid gap-2">
+                    {allFields.map(f => (
+                      <label key={f} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                        <span>{f}</span>
+                      </label>
+                    ))}
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                      <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Process','Subprocess','Activity','Applicability','Reference'])}>Default</Button>
+                      <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+                const rowsBase = renderNodes
+                  .filter(n=>{
+                    const app = details[n.id]?.applicable;
+                    return filterApplicability==='all' ? true : filterApplicability==='app' ? app===true : filterApplicability==='na' ? app===false : app===null || app===undefined;
+                  })
+                  .map(n=>{
+                    const path: string[] = [];
+                    let cur: TreeNode | undefined = n;
+                    while (cur) {
+                      if (cur.type === 'process') path[0] = cur.name;
+                      else if (cur.type === 'subprocess') path[1] = cur.name;
+                      else if (cur.type === 'activity') path[2] = cur.name;
+                      cur = cur.parentId ? tree.find(x=>x.id===cur!.parentId) || undefined : undefined;
+                    }
+                    const row: Record<string, any> = {};
+                    const app = details[n.id]?.applicable;
+                    if (selectedFields.includes('Process')) row['Process'] = path[0] || '';
+                    if (selectedFields.includes('Subprocess')) row['Subprocess'] = path[1] || '';
+                    if (selectedFields.includes('Activity')) row['Activity'] = path[2] || '';
+                    if (selectedFields.includes('Risk Related Departments')) row['risk related departments'] = '';
+                    if (selectedFields.includes('Controls Related Departments')) row['controls related departments'] = '';
+                    if (selectedFields.includes('Risk Category')) row['Risk Category'] = '';
+                    if (selectedFields.includes('Control Type')) row['Control type'] = '';
+                    if (selectedFields.includes('Reference')) row['Reference'] = n.id;
+                    if (selectedFields.includes('Applicability')) row['Applicability'] = app===true ? 'Applicable' : app===false ? 'Not Applicable' : 'Undecided';
+                    if (selectedFields.includes('Industry')) row['Industry'] = tab==='industry' ? selectedIndustry : (selectedClient?.industry||'');
+                    if (selectedFields.includes('Client')) row['Client'] = tab==='client' ? (selectedClient?.name||'') : '';
+                    return row;
+                  });
+                let rows: any[] = [];
+                if (groupBy==='none') rows = rowsBase;
+                else {
+                  const groups: Record<string, any[]> = {};
+                  for (const r of rowsBase) {
+                    let key = '';
+                    if (groupBy==='applicability') key = r['Applicability'] || '';
+                    else if (groupBy==='industry') key = r['Industry'] || '';
+                    else if (groupBy==='client') key = r['Client'] || '';
+                    else if (groupBy==='process') key = r['Process'] || '';
+                    else if (groupBy==='subprocess') key = r['Subprocess'] || '';
+                    else if (groupBy==='activity') key = r['Activity'] || '';
+                    if (!groups[key]) groups[key]=[];
+                    groups[key].push(r);
+                  }
+                  const keys = Object.keys(groups).sort();
+                  for (const k of keys) { rows.push({ Group: k }); rows.push(...groups[k]); rows.push({}); }
+                }
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'SoA');
+                XLSX.writeFile(wb, 'soa.xlsx');
+              }}><Download className="h-4 w-4"/> Export XLSX</Button>
+            </div>
           </CardHeader>
           <CardContent className="pt-0 flex-1 min-h-0 flex flex-col">
 
