@@ -1080,7 +1080,7 @@ export default function ClientManagement() {
                 <div>
                   <Label className="text-xs">Sector</Label>
                   <Select value={filterSector} onValueChange={setFilterSector}>
-                    <SelectTrigger><SelectValue placeholder="Sector" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Sector" /></SelectTrigger>
                     <SelectContent className="z-[60]">
                       <SelectItem value="all">All</SelectItem>
                       {Array.from(new Set(clients.map(c => (c.sector || c.industry)).filter(Boolean))).sort().map(sec => (
@@ -1092,7 +1092,7 @@ export default function ClientManagement() {
                 <div>
                   <Label className="text-xs">Industry</Label>
                   <Select value={filterIndustry} onValueChange={setFilterIndustry}>
-                    <SelectTrigger><SelectValue placeholder="Industry" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Industry" /></SelectTrigger>
                     <SelectContent className="z-[60]">
                       <SelectItem value="all">All</SelectItem>
                       {Array.from(new Set(clients.map(c => c.industry).filter(Boolean))).sort().map(ind => (
@@ -1104,7 +1104,7 @@ export default function ClientManagement() {
                 <div>
                   <Label className="text-xs">State</Label>
                   <Select value={filterStateVal} onValueChange={setFilterStateVal}>
-                    <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="State" /></SelectTrigger>
                     <SelectContent className="z-[60]">
                       <SelectItem value="all">All</SelectItem>
                       {Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort().map(st => (
