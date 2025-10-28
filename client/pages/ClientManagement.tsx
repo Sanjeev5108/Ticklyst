@@ -1191,7 +1191,6 @@ export default function ClientManagement() {
             XLSX.utils.book_append_sheet(wb, ws, 'Clients');
             XLSX.writeFile(wb, 'clients.xlsx');
           }} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button>
-          <Button variant="destructive" size="sm" onClick={handleDeleteAllClients}>Delete All</Button>
         </div>
       </div>
 
