@@ -40,9 +40,17 @@ export const setSetting: RequestHandler = async (req, res) => {
     }
     if (value === undefined) return res.status(400).json({ error: 'missing_value' });
 
+    // Ensure we persist a valid JSONB value. Convert to JSON text and use explicit cast to jsonb.
+    let dbVal: string;
+    if (typeof value === 'string') {
+      try { JSON.parse(value); dbVal = value; } catch { return res.status(400).json({ error: 'invalid_json_payload' }); }
+    } else {
+      dbVal = JSON.stringify(value);
+    }
+
     await pool.query(
-      'INSERT INTO app_settings(key, value, updated_at) VALUES ($1,$2,now()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()',
-      [key, value]
+      'INSERT INTO app_settings(key, value, updated_at) VALUES ($1,$2::jsonb,now()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()',
+      [key, dbVal]
     );
     res.status(204).send();
   } catch (e:any) {
