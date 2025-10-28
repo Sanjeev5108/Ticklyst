@@ -474,7 +474,7 @@ export default function RiskAssessmentDashboard() {
             const list = (filterAssignment==='all' ? assignmentTypes : assignmentTypes.filter(a=>a.id===filterAssignment));
 
             const getCfgFor = (id:string) => {
-              const specific = configs.find(c => c.id === `assignment|${id}`);
+              const specific = RiskConfigStore.get(`assignment|${id}`);
               return specific || RiskConfigStore.getGlobal();
             };
 
@@ -1516,7 +1516,7 @@ export default function RiskAssessmentDashboard() {
 
               const inherentFormula = mode === 'single'
                 ? `${cfg.naming.riskDisplayName} (manual) = ${rManual}`
-                : `${cfg.naming.riskDisplayName} = Likelihood × Impact = ${l} × ${c} = ${riskScore}`;
+                : `${cfg.naming.riskDisplayName} = Likelihood × Impact = ${l} �� ${c} = ${riskScore}`;
 
               const displayResidualLabel = cfg.naming.residualDisplayName === 'Net Risk' ? 'Residual Risk' : cfg.naming.residualDisplayName;
 
