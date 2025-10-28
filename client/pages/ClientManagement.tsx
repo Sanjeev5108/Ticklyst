@@ -665,8 +665,50 @@ export default function ClientManagement() {
       updatedObj = updated;
       return updated;
     });
+    const prevClients = clients;
     setClients(next);
     if (updatedObj) setSelectedClientDetails(updatedObj);
+
+    (async () => {
+      try {
+        const details = {
+          location: updatedObj?.location,
+          city: updatedObj?.city,
+          state: updatedObj?.state,
+          pincode: updatedObj?.pincode,
+          street1: updatedObj?.street1,
+          street2: updatedObj?.street2,
+          website: updatedObj?.website,
+          logo: updatedObj?.logo,
+          contactPersons: updatedObj?.contactPersons,
+          contactPerson: updatedObj?.contactPerson,
+          auditUniverse: updatedObj?.auditUniverse,
+          stats: updatedObj?.stats
+        };
+        if (apiEnabled && editClientId) {
+          const res = await fetch(`/api/clients/${encodeURIComponent(editClientId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: updatedObj?.name, industry: updatedObj?.industry || updatedObj?.sector, details }) });
+          if (!res.ok) {
+            // rollback
+            setClients(prevClients);
+            toast({ title: 'Failed to save client to server' });
+          } else {
+            const saved = await res.json();
+            const norm = normalizeClient({ ...saved, sector: saved.sector || saved.industry, location: saved.location || `${saved.city || ''}${saved.city ? ', ' : ''}${saved.state || ''}` });
+            setClients(prev => prev.map(c => c.id === norm.id ? norm : c));
+            try { localStorage.setItem('clients', JSON.stringify(prev.map(c => c.id === norm.id ? norm : c))); } catch {}
+            toast({ title: 'Client updated' });
+          }
+        } else {
+          try { localStorage.setItem('clients', JSON.stringify(next)); } catch {}
+          toast({ title: 'Client updated (local)' });
+        }
+      } catch (e) {
+        console.error(e);
+        setClients(prevClients);
+        toast({ title: 'Error saving client' });
+      }
+    })();
+
     setIsEditClientOpen(false);
   };
 
