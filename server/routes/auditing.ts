@@ -260,8 +260,33 @@ export const createChecklistQuestion: RequestHandler = (req, res) => {
 export const getClients: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   try {
+    // Aggregate project counts per client_name
+    let counts: Record<string, { total: number; inProgress: number }> = {};
+    try {
+      const pq = await pool.query(
+        `SELECT COALESCE(client_name,'') AS client_name,
+                COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'in-progress')::int AS in_progress
+         FROM projects
+         GROUP BY COALESCE(client_name,'')`
+      );
+      for (const r of pq.rows) counts[r.client_name] = { total: r.total || 0, inProgress: r.in_progress || 0 };
+    } catch {}
+
     const q = await pool.query('SELECT id, name, industry, details, created_at FROM clients ORDER BY created_at DESC');
-    const rows = q.rows.map(r => ({ id: r.id, name: r.name, industry: r.industry, ...(r.details || {}), createdAt: r.created_at }));
+    const rows = q.rows.map(r => {
+      const base = typeof r.details === 'object' && r.details ? { ...r.details } : {};
+      const key = r.name || '';
+      const agg = counts[key] || { total: 0, inProgress: 0 };
+      const stats = {
+        projects: agg.total,
+        ongoing: agg.inProgress,
+        revenue: base?.stats?.revenue ?? '$0',
+        rating: base?.stats?.rating ?? 0,
+        progressPercentage: base?.stats?.progressPercentage ?? 0,
+      };
+      return { id: r.id, name: r.name, industry: r.industry, ...base, stats, createdAt: r.created_at };
+    });
     res.json(rows);
   } catch (e: any) {
     console.error(e);
