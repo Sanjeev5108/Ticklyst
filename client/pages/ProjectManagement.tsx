@@ -787,7 +787,7 @@ export default function ProjectManagement() {
                 return Object.keys(tree||{}).join(', ');
               } catch { return ''; }
             };
-            for (const p of list) {
+            const buildRow = (p: any) => {
               const f: Record<string, any> = {};
               if (selectedFields.includes('Project No')) f['Project No'] = p.projectCode;
               if (selectedFields.includes('Client')) f['Client'] = p.client;
@@ -802,8 +802,64 @@ export default function ProjectManagement() {
               if (selectedFields.includes('Member')) f['Member'] = (p.details?.teamMembers||[]).join(', ');
               if (selectedFields.includes('Process')) f['Process'] = getProcesses((p as any).details?.selectedChecklistTree);
               if (selectedFields.includes('% of completion')) f['% of completion'] = `${p.progress}%`;
+              return f;
+            };
 
-              if (groupBy==='project') { rows.push({ Group: p.projectCode || p.title }); rows.push(f); rows.push({}); } else { rows.push(f); }
+            const getGroupKeys = (p:any, key:string): string[] => {
+              switch (key) {
+                case 'Project No': return [p.projectCode || p.title || ''];
+                case 'Client': return [p.client || '(none)'];
+                case 'Division': return [p.details?.division || '(none)'];
+                case 'Assignment type': return [p.details?.auditType || p.category || '(none)'];
+                case 'Audit Period': return [`${p.startDate || ''} - ${p.endDate || ''}`];
+                case 'Project start Date': return [p.startDate || ''];
+                case 'Project status': return [p.status || ''];
+                case 'Partner': {
+                  const arr = (p.details?.partners||[]) as string[];
+                  return (arr.length?arr:['(none)']);
+                }
+                case 'Division Head': {
+                  const arr = (p.details?.divisionHeads||[]) as string[];
+                  return (arr.length?arr:['(none)']);
+                }
+                case 'Team Leader': {
+                  const arr = (p.details?.teamLeaders||[]) as string[];
+                  return (arr.length?arr:['(none)']);
+                }
+                case 'Member': {
+                  const arr = (p.details?.teamMembers||[]) as string[];
+                  return (arr.length?arr:['(none)']);
+                }
+                case 'Process': {
+                  try {
+                    const tree = (p as any).details?.selectedChecklistTree || {};
+                    const keys = Object.keys(tree||{});
+                    return keys.length ? keys : ['(none)'];
+                  } catch { return ['(none)']; }
+                }
+                case '% of completion': return [`${p.progress}%`];
+                default: return [''];
+              }
+            };
+
+            if (groupBy==='none') {
+              for (const p of list) rows.push(buildRow(p));
+            } else {
+              const grouped: Record<string, any[]> = {};
+              for (const p of list) {
+                const keys = getGroupKeys(p, groupBy);
+                const row = buildRow(p);
+                for (const k of keys) {
+                  if (!grouped[k]) grouped[k] = [];
+                  grouped[k].push(row);
+                }
+              }
+              const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+              for (const label of labels) {
+                rows.push({ Group: label });
+                grouped[label].forEach(r => rows.push(r));
+                rows.push({});
+              }
             }
 
             const wb = XLSX.utils.book_new();
