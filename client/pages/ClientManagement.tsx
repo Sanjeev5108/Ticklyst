@@ -1224,10 +1224,6 @@ export default function ClientManagement() {
                   </div>
                   <div className="flex items-center space-x-6">
                     <Badge variant="secondary">{client.industry}</Badge>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{client.stats?.revenue || '$0'}</p>
-                      <p className="text-xs text-gray-500">Revenue</p>
-                    </div>
                     <Button variant="outline" size="sm" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
                       View Details
                     </Button>
