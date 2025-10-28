@@ -9,9 +9,13 @@ import NewProjectDialog from '@/components/NewProjectDialog';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Columns2, Rows3, Download } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
@@ -245,6 +249,14 @@ export default function ProjectManagement() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
+
+  // Export toolbar state
+  const [filterProject, setFilterProject] = useState<string>('all');
+  const [groupBy, setGroupBy] = useState<'generic'|'project'>('generic');
+  const allFields = [
+    'Project No','Client','Division','Assignment type','Audit Period','Project start Date','Project status','Partner','Division Head','Team Leader','Member','Process','% of completion'
+  ];
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
 
   const ROLE_PROJECT_SCOPE_KEY = 'roleProjectScope';
   const getRoleProjectScope = (role?: string) => {
@@ -681,13 +693,157 @@ export default function ProjectManagement() {
               className="pl-10"
             />
           </div>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
         </div>
-        
+
+        {/* Export toolbar */}
         <div className="flex items-center gap-2">
+          {/* Filter by project */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 z-[60]">
+              <Label className="text-xs">Project</Label>
+              <Select value={filterProject} onValueChange={(v:any)=>setFilterProject(v)}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                <SelectContent className="z-[70] max-h-64">
+                  <SelectItem value="all">All</SelectItem>
+                  {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.projectCode || p.title}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <div className="flex justify-end pt-2"><Button size="sm" variant="outline" onClick={()=>setFilterProject('all')}>Reset</Button></div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['generic','project'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt==='generic' ? 'Generic report' : 'By project'}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            const list = (filterProject==='all' ? projects : projects.filter(p=>p.id===filterProject));
+
+            const rows:any[] = [];
+            const getProcesses = (tree:any) => {
+              try {
+                return Object.keys(tree||{}).join(', ');
+              } catch { return ''; }
+            };
+            for (const p of list) {
+              const f: Record<string, any> = {};
+              if (selectedFields.includes('Project No')) f['Project No'] = p.projectCode;
+              if (selectedFields.includes('Client')) f['Client'] = p.client;
+              if (selectedFields.includes('Division')) f['Division'] = p.details?.division || '';
+              if (selectedFields.includes('Assignment type')) f['Assignment type'] = p.details?.auditType || p.category || '';
+              if (selectedFields.includes('Audit Period')) f['Audit Period'] = `${p.startDate || ''} - ${p.endDate || ''}`;
+              if (selectedFields.includes('Project start Date')) f['Project start Date'] = p.startDate || '';
+              if (selectedFields.includes('Project status')) f['Project status'] = p.status;
+              if (selectedFields.includes('Partner')) f['Partner'] = (p.details?.partners||[]).join(', ');
+              if (selectedFields.includes('Division Head')) f['Division Head'] = (p.details?.divisionHeads||[]).join(', ');
+              if (selectedFields.includes('Team Leader')) f['Team Leader'] = (p.details?.teamLeaders||[]).join(', ');
+              if (selectedFields.includes('Member')) f['Member'] = (p.details?.teamMembers||[]).join(', ');
+              if (selectedFields.includes('Process')) f['Process'] = getProcesses((p as any).details?.selectedChecklistTree);
+              if (selectedFields.includes('% of completion')) f['% of completion'] = `${p.progress}%`;
+
+              if (groupBy==='project') { rows.push({ Group: p.projectCode || p.title }); rows.push(f); rows.push({}); } else { rows.push(f); }
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, 'Projects');
+
+            // Risk Log for single project selection
+            if (filterProject !== 'all') {
+              const proj = projects.find(p=>p.id===filterProject);
+              const tree:any = (proj as any)?.details?.selectedChecklistTree;
+              const riskRows:any[] = [];
+              if (tree && typeof tree==='object') {
+                Object.entries<any>(tree).forEach(([proc, procVal]) => {
+                  const subs = (procVal && procVal.subprocesses) || {};
+                  Object.entries<any>(subs).forEach(([sub, subVal]) => {
+                    const acts = (subVal && subVal.activities) || {};
+                    Object.entries<any>(acts).forEach(([act, actVal]) => {
+                      const risks = (actVal && actVal.risks) || {};
+                      Object.entries<any>(risks).forEach(([risk, riskVal]) => {
+                        const ctrls = Array.isArray(riskVal?.controls) ? riskVal.controls : [];
+                        if (ctrls.length===0) riskRows.push({ Process:proc, Subprocess:sub, Activity:act, Risk:risk });
+                        ctrls.forEach((ctrl:string) => riskRows.push({ Process:proc, Subprocess:sub, Activity:act, Risk:risk, Control:ctrl }));
+                      });
+                    });
+                  });
+                });
+              }
+              const ws2 = XLSX.utils.json_to_sheet(riskRows);
+              XLSX.utils.book_append_sheet(wb, ws2, 'Risk Log');
+
+              // Risk Assessment Summary if enabled
+              const rc:any = (proj as any)?.details?.riskConfig;
+              if (rc && rc.enabled !== false) {
+                try {
+                  const { computeRiskScore, computeResidual, resolveLevel } = await import('@shared/risk');
+                  const like = rc?.riskScore?.likelihood?.scale; const cons = rc?.riskScore?.consequence?.scale; const rscale = rc?.riskScore?.scale; const cscale = rc?.controlScore?.scale || {min:1,max:5};
+                  const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
+                  const l = like ? mid(like) : undefined; const c = cons ? mid(cons) : undefined; const riskVal = computeRiskScore(rc?.riskScore?.mode, l as any, c as any, rscale ? mid(rscale) : undefined);
+                  const resid = computeResidual(rc?.residualRisk?.formula, riskVal, mid(cscale), cscale);
+                  const level = resolveLevel(Math.round(resid), rc?.residualRisk?.thresholds)?.level || '';
+                  const raRows = [{
+                    'Risk Scoring Model': rc?.riskScoringModel || '',
+                    'Calculation Mode': rc?.riskScore?.mode || '',
+                    'Likelihood Scale': like ? `${like.min}–${like.max}` : '',
+                    'Consequence Scale': cons ? `${cons.min}–${cons.max}` : '',
+                    'Risk Scale': rscale ? `${rscale.min}–${rscale.max}` : '',
+                    'Control Scale': cscale ? `${cscale.min}–${cscale.max}` : '',
+                    'Residual Parameter': rc?.residualRisk?.parameter || 'residualRisk',
+                    'Residual Formula': rc?.residualRisk?.formula || '',
+                    'Residual Ranges': (rc?.residualRisk?.thresholds?.ranges||[]).map((r:any)=>`${r.label}: ${r.from}–${r.to}`).join(', '),
+                    'Example Risk Score': riskVal,
+                    'Example Residual': Math.round(resid*100)/100,
+                    'Residual Level': level
+                  }];
+                  const ws3 = XLSX.utils.json_to_sheet(raRows);
+                  XLSX.utils.book_append_sheet(wb, ws3, 'Risk Assessment Summary');
+                } catch {}
+              }
+            }
+
+            XLSX.writeFile(wb, 'projects.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+
+          {/* view mode toggles */}
           <Button
             variant={viewMode === 'board' ? 'default' : 'outline'}
             size="sm"
