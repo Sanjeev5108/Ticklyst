@@ -114,7 +114,7 @@ export default function StatementOfApplicability() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [showOnlyUndecided, setShowOnlyUndecided] = useState(false);
   const [filterApplicability, setFilterApplicability] = useState<'all'|'app'|'na'|'undecided'>('all');
-  const allFields = ['Process','Subprocess','Activity','Risk Related Departments','Controls Related Departments','Risk Category','Control Type','Reference','Applicability','Industry','Client'] as const;
+  const allFields = ['Process','Subprocess','Activity','Risk','Control','Risk Related Departments','Controls Related Departments','Risk Category','Control Type','Reference','Applicability','Industry','Client'] as const;
   const [selectedFields, setSelectedFields] = useState<string[]>(['Process','Subprocess','Activity','Applicability','Reference']);
   const [groupBy, setGroupBy] = useState<'none'|'applicability'|'industry'|'client'|'process'|'subprocess'|'activity'>('none');
 
