@@ -744,11 +744,11 @@ export default function ProjectManagement() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56">
+            <PopoverContent className="w-64">
               <div className="grid gap-2">
-                {(['generic','project'] as const).map(opt => (
-                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
-                    {opt==='generic' ? 'Generic report' : 'By project'}
+                {groupOptions.map(opt => (
+                  <Button key={opt.key} variant={groupBy===opt.key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setGroupBy(opt.key)}>
+                    {opt.label}
                   </Button>
                 ))}
               </div>
