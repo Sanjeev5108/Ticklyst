@@ -998,7 +998,10 @@ export default function FrameworkDashboard() {
             }
 
             const wb = XLSX.utils.book_new();
-            const ws1 = XLSX.utils.json_to_sheet(rows);
+            // enforce output column order
+            const preferredOrder = ['Process','Subprocess','Activity','Risk','Risk Category','Control','Control type','Reference'];
+            const cols = preferredOrder.filter(c => fwSelectedFields.includes(c));
+            const ws1 = XLSX.utils.json_to_sheet(rows, { header: cols });
             XLSX.utils.book_append_sheet(wb, ws1, 'Framework');
 
             // Risk Log sheet
