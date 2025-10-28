@@ -253,7 +253,23 @@ export default function ProjectManagement() {
 
   // Export toolbar state
   const [filterProject, setFilterProject] = useState<string>('all');
-  const [groupBy, setGroupBy] = useState<'generic'|'project'>('generic');
+  const [groupBy, setGroupBy] = useState<string>('none');
+  const groupOptions: { key: string; label: string }[] = [
+    { key: 'none', label: 'No grouping' },
+    { key: 'Project No', label: 'Project No' },
+    { key: 'Client', label: 'Client' },
+    { key: 'Division', label: 'Division' },
+    { key: 'Assignment type', label: 'Assignment type' },
+    { key: 'Audit Period', label: 'Audit Period' },
+    { key: 'Project start Date', label: 'Project start Date' },
+    { key: 'Project status', label: 'Project status' },
+    { key: 'Partner', label: 'Partner' },
+    { key: 'Division Head', label: 'Division Head' },
+    { key: 'Team Leader', label: 'Team Leader' },
+    { key: 'Member', label: 'Member' },
+    { key: 'Process', label: 'Process' },
+    { key: '% of completion', label: '% of completion' },
+  ];
   const allFields = [
     'Project No','Client','Division','Assignment type','Audit Period','Project start Date','Project status','Partner','Division Head','Team Leader','Member','Process','% of completion'
   ];
