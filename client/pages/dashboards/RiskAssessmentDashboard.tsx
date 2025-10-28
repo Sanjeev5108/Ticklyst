@@ -45,9 +45,7 @@ export default function RiskAssessmentDashboard() {
   const allFields = [
     'Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Risk Scale','Control Scale','Residual Parameter','Residual Formula','Residual Scale','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'
   ];
-  const [selectedFields, setSelectedFields] = React.useState<string[]>([
-    'Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Control Scale','Residual Parameter','Residual Formula','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'
-  ]);
+  const [selectedFields, setSelectedFields] = React.useState<string[]>(allFields.filter(f => f !== 'Residual Formula'));
 
   // Projects (sourced from ProjectManagement mock list)
   const projects = [
@@ -462,7 +460,7 @@ export default function RiskAssessmentDashboard() {
                 ))}
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
-                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Control Scale','Residual Parameter','Residual Formula','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(allFields.filter(f => f !== 'Residual Formula'))}>Default</Button>
                   <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
                 </div>
               </div>
