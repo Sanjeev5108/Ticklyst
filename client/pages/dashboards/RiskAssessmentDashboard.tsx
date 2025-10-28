@@ -12,8 +12,12 @@ import { RiskConfigStore } from '@/contexts/RiskConfigStore';
 import { RiskAssessmentConfig, RiskCalcMode, ResidualFormula, RiskScoringModel, clamp, computeResidual, computeRiskScore } from '@shared/risk';
 import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
-import { Info } from 'lucide-react';
+import { Info, Filter as FilterIcon, Rows3, Columns2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import * as XLSX from 'xlsx';
+import { resolveLevel } from '@shared/risk';
 
 const LS_SCOPE_TYPE = 'risk_scope_type';
 const LS_SELECTED_ASSIGNMENT = 'risk_selected_assignment';
@@ -34,6 +38,16 @@ export default function RiskAssessmentDashboard() {
   const [openColorPickerFor, setOpenColorPickerFor] = React.useState<number | null>(null);
   const [breakpointErrors, setBreakpointErrors] = React.useState<string[]>([]);
   const { toast } = useToast();
+
+  // Export toolbar state
+  const [filterAssignment, setFilterAssignment] = React.useState<string>('all');
+  const [groupBy, setGroupBy] = React.useState<'generic'|'assignment'>('generic');
+  const allFields = [
+    'Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Risk Scale','Control Scale','Residual Parameter','Residual Formula','Residual Scale','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'
+  ];
+  const [selectedFields, setSelectedFields] = React.useState<string[]>([
+    'Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Control Scale','Residual Parameter','Residual Formula','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'
+  ]);
 
   // Projects (sourced from ProjectManagement mock list)
   const projects = [
@@ -390,6 +404,133 @@ export default function RiskAssessmentDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Risk Assessment Module</h1>
         <Badge className="bg-emerald-100 text-emerald-800">Configuration</Badge>
+      </div>
+
+      {/* Export toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Filter by Assignment Type */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 z-[60]">
+              <div className="space-y-2">
+                <Label className="text-xs">Assignment Type</Label>
+                <Select value={filterAssignment} onValueChange={(v:any)=>setFilterAssignment(v)}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                  <SelectContent className="z-[70]">
+                    <SelectItem value="all">All</SelectItem>
+                    {assignmentTypes.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex justify-end pt-1"><Button size="sm" variant="outline" onClick={()=>setFilterAssignment('all')}>Reset</Button></div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['generic','assignment'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'generic' ? 'Generic report' : 'By assignment type'}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Control Scale','Residual Parameter','Residual Formula','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            const list = (filterAssignment==='all' ? assignmentTypes : assignmentTypes.filter(a=>a.id===filterAssignment));
+
+            const getCfgFor = (id:string) => {
+              const specific = configs.find(c => c.id === `assignment|${id}`);
+              return specific || RiskConfigStore.getGlobal();
+            };
+
+            const rows: any[] = [];
+            for (const a of list) {
+              const conf = getCfgFor(a.id) as RiskAssessmentConfig;
+              const like = conf.riskScore?.likelihood?.scale || { min: 1, max: 5 } as any;
+              const cons = conf.riskScore?.consequence?.scale || { min: 1, max: 5 } as any;
+              const rscale = conf.riskScore?.scale || { min: 1, max: (like.max||5) * (cons.max||5) };
+              const cscale = conf.controlScore?.scale || { min: 1, max: 5 };
+
+              const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
+              const lVal = mid(like);
+              const cVal = mid(cons);
+              const ctrlVal = mid(cscale);
+              const riskVal = computeRiskScore(conf.riskScore.mode, lVal, cVal, mid(rscale));
+              const residualVal = computeResidual(conf.residualRisk.formula, riskVal, ctrlVal, cscale);
+              const level = resolveLevel(Math.round(residualVal), conf.residualRisk.thresholds)?.level || '';
+
+              const row: Record<string, any> = {};
+              if (selectedFields.includes('Assignment Type')) row['Assignment Type'] = a.name;
+              if (selectedFields.includes('Risk Scoring Model')) row['Risk Scoring Model'] = conf.riskScoringModel || '';
+              if (selectedFields.includes('Calculation Mode')) row['Calculation Mode'] = conf.riskScore.mode;
+              if (selectedFields.includes('Likelihood Scale')) row['Likelihood Scale'] = like ? `${like.min}–${like.max}` : '';
+              if (selectedFields.includes('Consequence Scale')) row['Consequence Scale'] = cons ? `${cons.min}–${cons.max}` : '';
+              if (selectedFields.includes('Risk Scale')) row['Risk Scale'] = rscale ? `${rscale.min}–${rscale.max}` : '';
+              if (selectedFields.includes('Control Scale')) row['Control Scale'] = cscale ? `${cscale.min}–${cscale.max}` : '';
+              if (selectedFields.includes('Residual Parameter')) row['Residual Parameter'] = conf.residualRisk?.parameter || 'residualRisk';
+              if (selectedFields.includes('Residual Formula')) row['Residual Formula'] = conf.residualRisk?.formula || '';
+              if (selectedFields.includes('Residual Scale')) {
+                const rs = conf.residualRisk?.scale || rscale;
+                row['Residual Scale'] = rs ? `${rs.min}–${rs.max}` : '';
+              }
+              if (selectedFields.includes('Residual Ranges')) row['Residual Ranges'] = (conf.residualRisk?.thresholds?.ranges||[]).map(r=>`${r.label}: ${r.from}–${r.to}`).join(', ');
+              if (selectedFields.includes('Example Likelihood')) row['Example Likelihood'] = lVal;
+              if (selectedFields.includes('Example Consequence')) row['Example Consequence'] = cVal;
+              if (selectedFields.includes('Example Control Score')) row['Example Control Score'] = ctrlVal;
+              if (selectedFields.includes('Example Risk Score')) row['Example Risk Score'] = riskVal;
+              if (selectedFields.includes('Example Residual')) row['Example Residual'] = Math.round(residualVal * 100) / 100;
+              if (selectedFields.includes('Residual Level')) row['Residual Level'] = level;
+
+              if (groupBy === 'assignment') {
+                rows.push({ Group: a.name });
+                rows.push(row);
+                rows.push({});
+              } else {
+                rows.push(row);
+              }
+            }
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Risk Assessment');
+            XLSX.writeFile(wb, 'risk_assessment.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
 
       <Card>
