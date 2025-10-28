@@ -937,7 +937,7 @@ export default function FrameworkDashboard() {
           <Button size="sm" className="flex items-center gap-2" onClick={()=>{
             // collect nodes within scope (selected process or all)
             const baseIds = !selectedProcessId
-              ? nodes.filter(n=>n.type==='process').map(n=>n.id)
+              ? nodes.map(n=>n.id)
               : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
             const allowed = nodes.filter(n => baseIds.includes(n.id));
             const filterOk = (n:FrameworkNode) => {
@@ -1003,7 +1003,7 @@ export default function FrameworkDashboard() {
 
             // Risk Log sheet
             const scopeIds = !selectedProcessId
-              ? nodes.filter(n=>n.type==='process').map(n=>n.id)
+              ? nodes.map(n=>n.id)
               : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
             const risks = nodes.filter(n=>scopeIds.includes(n.id) && n.type==='risk');
             const rrows = risks.map(n=>{
