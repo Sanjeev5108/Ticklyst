@@ -481,16 +481,17 @@ export default function RiskAssessmentDashboard() {
             const rows: any[] = [];
             for (const a of list) {
               const conf = getCfgFor(a.id) as RiskAssessmentConfig;
-              const like = conf.riskScore?.likelihood?.scale || { min: 1, max: 5 } as any;
-              const cons = conf.riskScore?.consequence?.scale || { min: 1, max: 5 } as any;
-              const rscale = conf.riskScore?.scale || { min: 1, max: (like.max||5) * (cons.max||5) };
+              const isSingle = conf.riskScore.mode === 'single';
+              const like = isSingle ? undefined : conf.riskScore?.likelihood?.scale;
+              const cons = isSingle ? undefined : conf.riskScore?.consequence?.scale;
+              const rscale = conf.riskScore?.scale || { min: 1, max: (like?.max||5) * (cons?.max||5) };
               const cscale = conf.controlScore?.scale || { min: 1, max: 5 };
 
               const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
-              const lVal = mid(like);
-              const cVal = mid(cons);
+              const lVal = like ? mid(like) : undefined;
+              const cVal = cons ? mid(cons) : undefined;
               const ctrlVal = mid(cscale);
-              const riskVal = computeRiskScore(conf.riskScore.mode, lVal, cVal, mid(rscale));
+              const riskVal = computeRiskScore(conf.riskScore.mode, lVal as any, cVal as any, mid(rscale));
               const residualVal = computeResidual(conf.residualRisk.formula, riskVal, ctrlVal, cscale);
               const level = resolveLevel(Math.round(residualVal), conf.residualRisk.thresholds)?.level || '';
 
@@ -1586,7 +1587,7 @@ export default function RiskAssessmentDashboard() {
                 <tr><td>5</td><td>Almost Certain</td><td>Expected to occur frequently</td><td>More than once a year, &gt;80%</td></tr>
               </tbody>
             </table>
-            <div className="font-semibold">🔑 Tip:</div>
+            <div className="font-semibold">��� Tip:</div>
             <div>If using a 1–10 scale, divide probability bands into finer increments (e.g., 10% each).</div>
 
             <h4 className="font-semibold">2️⃣ Consequence (Impact)</h4>
