@@ -606,11 +606,15 @@ export default function StatementOfApplicability() {
                   })
                   .map(n=>{
                     const path: string[] = [];
+                    let riskName = '';
+                    let controlName = '';
                     let cur: TreeNode | undefined = n;
                     while (cur) {
                       if (cur.type === 'process') path[0] = cur.name;
                       else if (cur.type === 'subprocess') path[1] = cur.name;
                       else if (cur.type === 'activity') path[2] = cur.name;
+                      else if (cur.type === 'risk') riskName = riskName || cur.name;
+                      else if (cur.type === 'control') controlName = controlName || cur.name;
                       cur = cur.parentId ? tree.find(x=>x.id===cur!.parentId) || undefined : undefined;
                     }
                     const row: Record<string, any> = {};
@@ -618,6 +622,8 @@ export default function StatementOfApplicability() {
                     if (selectedFields.includes('Process')) row['Process'] = path[0] || '';
                     if (selectedFields.includes('Subprocess')) row['Subprocess'] = path[1] || '';
                     if (selectedFields.includes('Activity')) row['Activity'] = path[2] || '';
+                    if (selectedFields.includes('Risk')) row['Risk'] = riskName || '';
+                    if (selectedFields.includes('Control')) row['Control'] = controlName || '';
                     if (selectedFields.includes('Risk Related Departments')) row['risk related departments'] = '';
                     if (selectedFields.includes('Controls Related Departments')) row['controls related departments'] = '';
                     if (selectedFields.includes('Risk Category')) row['Risk Category'] = '';
