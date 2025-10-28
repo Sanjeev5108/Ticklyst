@@ -87,6 +87,7 @@ export function createServer() {
   // Clients
   app.get("/api/clients", getClients);
   app.post("/api/clients", createClient);
+  app.put('/api/clients/:id', updateClient);
   app.delete("/api/clients", deleteAllClients as any);
 
   // Projects
