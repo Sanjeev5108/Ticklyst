@@ -880,7 +880,150 @@ export default function FrameworkDashboard() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Export toolbar placed above Add Process */}
+        <div className="flex items-center justify-end gap-2 mt-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 z-[60]">
+              <div className="grid gap-2">
+                {([
+                  {key:'all', label:'All'},
+                  {key:'process', label:'Process'},
+                  {key:'subprocess', label:'Subprocess'},
+                  {key:'activity', label:'Activity'},
+                  {key:'risk_related', label:'Risk related'}
+                ] as {key:any,label:string}[]).map(({key,label})=> (
+                  <Button key={key} variant={fwFilter===key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setFwFilter(key)}>{label}</Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['none','process','subprocess','activity','risk'] as const).map(opt => (
+                  <Button key={opt} variant={fwGroupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setFwGroupBy(opt)}>
+                    {opt==='none' ? 'None' : (opt==='risk' ? 'Risk related' : opt)}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {fwAllFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={fwSelectedFields.includes(f)} onCheckedChange={(v)=> setFwSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([...fwAllFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields(['Process','Subprocess','Activity','Risk','Control','Risk Category','Control type','Reference'])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            // collect nodes within scope (selected process or all)
+            const baseIds = !selectedProcessId
+              ? nodes.filter(n=>n.type==='process').map(n=>n.id)
+              : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
+            const allowed = nodes.filter(n => baseIds.includes(n.id));
+            const filterOk = (n:FrameworkNode) => {
+              if (fwFilter==='all') return true;
+              if (fwFilter==='process') return n.type==='process';
+              if (fwFilter==='subprocess') return n.type==='subprocess';
+              if (fwFilter==='activity') return n.type==='activity';
+              return n.type==='risk' || n.type==='control';
+            };
+            const list = allowed.filter(filterOk);
+
+            const rowsBase = list.map(n => {
+              // climb ancestors to resolve names
+              let cur: FrameworkNode | undefined = n;
+              let pName=''; let sName=''; let aName=''; let riskName=''; let controlName='';
+              while (cur) {
+                if (cur.type==='process') pName = cur.name;
+                else if (cur.type==='subprocess') sName = cur.name;
+                else if (cur.type==='activity') aName = cur.name;
+                else if (cur.type==='risk') riskName = riskName || cur.name;
+                else if (cur.type==='control') controlName = controlName || cur.name;
+                cur = cur.parentId ? nodes.find(x=>x.id===cur!.parentId) : undefined;
+              }
+              const d:any = detailsById[n.id];
+              const riskDept = (n.type==='risk' ? d?.departments_involved : undefined) || (n.type==='control' ? (detailsById[n.parentId||''] as any)?.departments_involved : undefined) || [];
+              const ctrlDept = (n.type==='control' ? d?.departments_involved : undefined) || [];
+              const rcat = (n.type==='risk' ? d?.risk_category : (detailsById[n.type==='control' ? (n.parentId||'') : ''] as any)?.risk_category) || '';
+              const ctype = (n.type==='control' ? d?.control_type : '') || '';
+              const ref = (n.type==='control' ? d?.control_owner : '') || '';
+              const row: Record<string, any> = {};
+              if (fwSelectedFields.includes('Process')) row['Process']=pName;
+              if (fwSelectedFields.includes('Subprocess')) row['Subprocess']=sName;
+              if (fwSelectedFields.includes('Activity')) row['Activity']=aName;
+              if (fwSelectedFields.includes('Risk')) row['Risk']=riskName;
+              if (fwSelectedFields.includes('Control')) row['Control']=controlName;
+              if (fwSelectedFields.includes('risk related departments')) row['risk related departments']=Array.isArray(riskDept)?riskDept.join(', '):'';
+              if (fwSelectedFields.includes('controls related departments')) row['controls related departments']=Array.isArray(ctrlDept)?ctrlDept.join(', '):'';
+              if (fwSelectedFields.includes('Risk Category')) row['Risk Category']=rcat;
+              if (fwSelectedFields.includes('Control type')) row['Control type']=ctype;
+              if (fwSelectedFields.includes('Reference')) row['Reference']=ref || n.id;
+              return row;
+            });
+
+            // group if needed
+            let rows:any[] = [];
+            if (fwGroupBy==='none') rows = rowsBase;
+            else {
+              const groups: Record<string, any[]> = {};
+              for (const r of rowsBase) {
+                let key='';
+                if (fwGroupBy==='process') key = r['Process']||'';
+                else if (fwGroupBy==='subprocess') key = r['Subprocess']||'';
+                else if (fwGroupBy==='activity') key = r['Activity']||'';
+                else if (fwGroupBy==='risk') key = r['Risk']||'';
+                if (!groups[key]) groups[key]=[];
+                groups[key].push(r);
+              }
+              const keys = Object.keys(groups).sort();
+              for (const k of keys) { rows.push({ Group:k }); rows.push(...groups[k]); rows.push({}); }
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws1 = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws1, 'Framework');
+
+            // Risk Log sheet
+            const scopeIds = !selectedProcessId
+              ? nodes.filter(n=>n.type==='process').map(n=>n.id)
+              : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
+            const risks = nodes.filter(n=>scopeIds.includes(n.id) && n.type==='risk');
+            const rrows = risks.map(n=>{
+              let cur: FrameworkNode | undefined = n;
+              let p='';let s='';let a='';
+              while (cur) {
+                if (cur.type==='process') p=cur.name; else if (cur.type==='subprocess') s=cur.name; else if (cur.type==='activity') a=cur.name;
+                cur = cur.parentId ? nodes.find(x=>x.id===cur!.parentId) : undefined;
+              }
+              const det:any = detailsById[n.id];
+              return { Process:p, Subprocess:s, Activity:a, Risk:n.name, 'Risk Category': det?.risk_category || '' };
+            });
+            const ws2 = XLSX.utils.json_to_sheet(rrows);
+            XLSX.utils.book_append_sheet(wb, ws2, 'Risk Log');
+
+            XLSX.writeFile(wb, 'framework.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
         {selectedProcessId && (
           <div className="grid grid-cols-1 gap-3">
             <Input placeholder="Search in tree..." className="w-full" value={treeSearch} onChange={(e) => setTreeSearch(e.target.value)} />
