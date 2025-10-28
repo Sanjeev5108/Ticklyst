@@ -510,8 +510,8 @@ export default function RiskAssessmentDashboard() {
                 row['Residual Scale'] = rs ? `${rs.min}–${rs.max}` : '';
               }
               if (selectedFields.includes('Residual Ranges')) row['Residual Ranges'] = (conf.residualRisk?.thresholds?.ranges||[]).map(r=>`${r.label}: ${r.from}–${r.to}`).join(', ');
-              if (selectedFields.includes('Example Likelihood')) row['Example Likelihood'] = lVal;
-              if (selectedFields.includes('Example Consequence')) row['Example Consequence'] = cVal;
+              if (selectedFields.includes('Example Likelihood')) row['Example Likelihood'] = (lVal ?? '');
+              if (selectedFields.includes('Example Consequence')) row['Example Consequence'] = (cVal ?? '');
               if (selectedFields.includes('Example Control Score')) row['Example Control Score'] = ctrlVal;
               if (selectedFields.includes('Example Risk Score')) row['Example Risk Score'] = riskVal;
               if (selectedFields.includes('Example Residual')) row['Example Residual'] = Math.round(residualVal * 100) / 100;
@@ -1587,7 +1587,7 @@ export default function RiskAssessmentDashboard() {
                 <tr><td>5</td><td>Almost Certain</td><td>Expected to occur frequently</td><td>More than once a year, &gt;80%</td></tr>
               </tbody>
             </table>
-            <div className="font-semibold">��� Tip:</div>
+            <div className="font-semibold">🔑 Tip:</div>
             <div>If using a 1–10 scale, divide probability bands into finer increments (e.g., 10% each).</div>
 
             <h4 className="font-semibold">2️⃣ Consequence (Impact)</h4>
