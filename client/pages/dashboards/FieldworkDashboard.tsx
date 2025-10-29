@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { FileText, Save, CheckCircle2, XCircle, Share2, Search } from 'lucide-react';
+import { FileText, Save, CheckCircle2, XCircle, Share2, Search, Rows3, Columns2, Download } from 'lucide-react';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
