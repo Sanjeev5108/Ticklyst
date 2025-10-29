@@ -15,6 +15,7 @@ import { FileText, Save, CheckCircle2, XCircle, Share2, Search, Rows3, Columns2,
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
+import * as XLSX from 'xlsx';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { computeResidual, computeRiskScore, resolveLevel } from '@shared/risk';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
