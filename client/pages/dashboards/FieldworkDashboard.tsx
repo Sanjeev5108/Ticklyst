@@ -872,13 +872,28 @@ export default function FieldworkDashboard() {
             }
 
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, 'Fieldwork');
+            const safeSheet = (name: string) => name.replace(/[\\/?*\[\]]/g, '').slice(0,31) || 'Sheet';
 
-            if (selectedProject) {
-              // Risk Register sheet
+            const exportSingle = (listLocal: any[], label: string) => {
+              const rowsOut:any[] = [];
+              if (fwGroupBy==='none') {
+                listLocal.forEach(r => rowsOut.push(buildRow(r)));
+              } else {
+                const grouped: Record<string, any[]> = {};
+                listLocal.forEach(r => {
+                  const keys = getGroupKeys(r, fwGroupBy);
+                  const row = buildRow(r);
+                  for (const k of keys) { if (!grouped[k]) grouped[k] = []; grouped[k].push(row); }
+                });
+                const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+                for (const gl of labels) { rowsOut.push({ Group: gl }); grouped[gl].forEach(rr => rowsOut.push(rr)); rowsOut.push({}); }
+              }
+              const ws = XLSX.utils.json_to_sheet(rowsOut);
+              XLSX.utils.book_append_sheet(wb, ws, safeSheet(`FW ${label}`));
+
+              // Risk Register
               const byRisk: Record<string, { riskId: string; description: string; category: string; likelihood: number; impact: number; controls: Set<string>; controlOwner: string; residual: number }> = {};
-              list.forEach(r => {
+              listLocal.forEach(r => {
                 const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence);
                 const residual = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale);
                 const level = resolveLevel(residual, activeCfg.residualRisk.thresholds)?.level || '';
@@ -888,37 +903,33 @@ export default function FieldworkDashboard() {
               });
               const rrRows = Object.values(byRisk).map(v => ({ 'Risk ID': v.riskId, 'Description': v.description, 'Category': v.category, 'Likelihood': v.likelihood, 'Impact': v.impact, 'Controls': Array.from(v.controls).join(', '), 'Control Owner': v.controlOwner, 'Residual Risk': v.residual }));
               const ws2 = XLSX.utils.json_to_sheet(rrRows);
-              XLSX.utils.book_append_sheet(wb, ws2, 'Risk Register');
+              XLSX.utils.book_append_sheet(wb, ws2, safeSheet(`RR ${label}`));
 
-              // Heat Map (raw points)
-              const hmRows = list.map(r => ({ Likelihood: r.likelihood, Impact: r.consequence, 'Risk Score': (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), 'Control Score': r.controlScore, 'Residual Risk': Math.round((computeResidual(activeCfg.residualRisk.formula, (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100, 'Risk Level': (()=>{ const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); return resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || ''; })() }));
+              // Heat Map Data
+              const hmRows = listLocal.map(r => ({ Likelihood: r.likelihood, Impact: r.consequence, 'Risk Score': (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), 'Control Score': r.controlScore, 'Residual Risk': Math.round((computeResidual(activeCfg.residualRisk.formula, (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100, 'Risk Level': (()=>{ const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); return resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || ''; })() }));
               const wsData = XLSX.utils.json_to_sheet(hmRows);
-              XLSX.utils.book_append_sheet(wb, wsData, 'Heat Map Data');
+              XLSX.utils.book_append_sheet(wb, wsData, safeSheet(`HM Data ${label}`));
 
-              // Heat Map matrix with colors (based on rating definition thresholds)
+              // Heat Map matrix with colors
               const Lmin = activeCfg.riskScore.likelihood?.scale.min ?? 1;
               const Lmax = activeCfg.riskScore.likelihood?.scale.max ?? 5;
               const Cmin = activeCfg.riskScore.consequence?.scale.min ?? 1;
               const Cmax = activeCfg.riskScore.consequence?.scale.max ?? 5;
               const counts: Record<string, number> = {};
-              list.forEach(r => { const l = Math.round(Number(r.likelihood||0)); const c = Math.round(Number(r.consequence||0)); const k = `${l}|${c}`; counts[k] = (counts[k]||0)+1; });
+              listLocal.forEach(r => { const l = Math.round(Number(r.likelihood||0)); const c = Math.round(Number(r.consequence||0)); const k = `${l}|${c}`; counts[k] = (counts[k]||0)+1; });
               const header = ['Likelihood \\ Impact'];
               for (let c=Cmin; c<=Cmax; c++) header.push(String(c));
               const aoa: any[][] = [header];
               for (let l=Lmax; l>=Lmin; l--) {
-                const row: any[] = [String(l)];
+                const rw: any[] = [String(l)];
                 for (let c=Cmin; c<=Cmax; c++) {
                   const k = `${l}|${c}`;
-                  row.push(counts[k] ? counts[k] : '');
+                  rw.push(counts[k] ? counts[k] : '');
                 }
-                aoa.push(row);
+                aoa.push(rw);
               }
               const wsHM: any = XLSX.utils.aoa_to_sheet(aoa);
-              const hexToARGB = (hex: string) => {
-                const s = (hex||'').replace('#','');
-                return (s.length===6 ? `FF${s}` : s).toUpperCase();
-              };
-              // Style data cells with threshold colors
+              const hexToARGB = (hex: string) => { const s = (hex||'').replace('#',''); return (s.length===6 ? `FF${s}` : s).toUpperCase(); };
               for (let r=1; r<aoa.length; r++) {
                 const l = Lmax - (r-1);
                 for (let c=1; c<aoa[0].length; c++) {
@@ -929,26 +940,76 @@ export default function FieldworkDashboard() {
                   const addr = XLSX.utils.encode_cell({ r, c });
                   const cell = wsHM[addr] || { t: 's', v: aoa[r][c] };
                   wsHM[addr] = cell;
-                  (wsHM[addr] as any).s = {
-                    alignment: { horizontal: 'center', vertical: 'center' },
-                    fill: color ? { patternType: 'solid', fgColor: { rgb: hexToARGB(color) } } : undefined,
-                    font: { bold: true, color: { rgb: 'FF000000' } },
-                    border: { top:{style:'thin',color:{rgb:'FFCCCCCC'}}, left:{style:'thin',color:{rgb:'FFCCCCCC'}}, right:{style:'thin',color:{rgb:'FFCCCCCC'}}, bottom:{style:'thin',color:{rgb:'FFCCCCCC'}} }
-                  };
+                  (wsHM[addr] as any).s = { alignment: { horizontal: 'center', vertical: 'center' }, fill: color ? { patternType: 'solid', fgColor: { rgb: hexToARGB(color) } } : undefined, font: { bold: true, color: { rgb: 'FF000000' } }, border: { top:{style:'thin',color:{rgb:'FFCCCCCC'}}, left:{style:'thin',color:{rgb:'FFCCCCCC'}}, right:{style:'thin',color:{rgb:'FFCCCCCC'}}, bottom:{style:'thin',color:{rgb:'FFCCCCCC'}} } };
                 }
               }
-              // Style header row/col
-              for (let c=0; c<aoa[0].length; c++) {
-                const addr = XLSX.utils.encode_cell({ r:0, c });
-                if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } };
-              }
-              for (let r=1; r<aoa.length; r++) {
-                const addr = XLSX.utils.encode_cell({ r, c:0 });
-                if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } };
-              }
+              for (let c=0; c<aoa[0].length; c++) { const addr = XLSX.utils.encode_cell({ r:0, c }); if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } }; }
+              for (let r=1; r<aoa.length; r++) { const addr = XLSX.utils.encode_cell({ r, c:0 }); if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } }; }
               (wsHM as any)['!cols'] = Array.from({ length: aoa[0].length }, (_,i)=> ({ wch: i===0 ? 14 : 6 }));
               (wsHM as any)['!rows'] = Array.from({ length: aoa.length }, () => ({ hpt: 22 }));
-              XLSX.utils.book_append_sheet(wb, wsHM, 'Heat Map');
+              XLSX.utils.book_append_sheet(wb, wsHM, safeSheet(`HM ${label}`));
+            };
+
+            if (selectedProject) {
+              exportSingle(list, selectedProject);
+            } else {
+              try {
+                const projRes = await fetch('/api/projects');
+                const projRows = projRes.ok ? await projRes.json() : [];
+                const projMap: Record<string, { code?: string; name?: string }> = {};
+                for (const pr of projRows || []) { projMap[pr.id] = { code: pr.code, name: pr.name }; }
+                const byPid: Record<string, any[]> = {};
+                const allRecs = Object.values(records);
+                for (const rec of allRecs) {
+                  if (!rec.projectId) continue;
+                  const status = rec.status || 'draft';
+                  if (statusFilter === 'Approved' && status !== 'approved') continue;
+                  if (statusFilter === 'Rejected' && status !== 'rejected') continue;
+                  if (statusFilter === 'In progress' && (status === 'approved' || status === 'rejected')) continue;
+                  const ctrl = controls.find(c => c.id === rec.controlId);
+                  const a: any = (rec as any).arc || {};
+                  const samplingApplicable = a.samplingApplicable || (rec.methodology?.verification ? (rec.methodology.verification === 'Sampling' ? 'Yes' : 'No') : '');
+                  const controlEffective = a.controlEffective || (rec.effectiveness?.effectiveness === 'Effective' ? 'Yes' : rec.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
+                  const row = {
+                    id: rec.controlId,
+                    activity: a.activity || ctrl?.activity || '',
+                    risk: a.risk || ctrl?.risk || '',
+                    control: a.control || ctrl?.name || '',
+                    testOfControl: a.testOfControl || (rec.methodology?.methodType === 'Test of Control' ? rec.methodology.procedure : ''),
+                    substantiveProcedure: a.substantiveProcedure || (rec.methodology?.methodType === 'Substantive Procedure' ? rec.methodology.procedure : ''),
+                    samplingApplicable,
+                    samplingMethodology: a.samplingMethodology || rec.methodology?.samplingMethod || '',
+                    controlEffectiveness: controlEffective,
+                    attachments: a.attachments || '',
+                    auditRemarks: a.auditRemarks || rec.remarks.auditRemarks || '',
+                    redFlag: a.redFlag || '',
+                    reportable: a.reportable || '',
+                    observationRanking: a.observationRanking || rec.report.observationRanking || '',
+                    auditObservation: a.auditObservation || rec.report.observation || '',
+                    effect: a.effect || rec.report.riskEffect || '',
+                    recommendation: a.recommendation || rec.report.recommendation || '',
+                    controlOwner: a.controlOwner || '',
+                    annexure: a.annexure || rec.report.annexure || '',
+                    likelihood: rec.risk?.likelihood ?? 0,
+                    consequence: rec.risk?.consequence ?? 0,
+                    riskScore: rec.risk?.riskScore ?? 0,
+                    controlScore: rec.risk?.controlScore ?? 0,
+                  } as any;
+                  if (!byPid[rec.projectId]) byPid[rec.projectId] = [];
+                  byPid[rec.projectId].push(row);
+                }
+                const pids = Object.keys(byPid);
+                if (pids.length === 0) {
+                  exportSingle(list, 'All');
+                } else {
+                  for (const pid of pids) {
+                    const label = projMap[pid]?.code || projMap[pid]?.name || pid;
+                    exportSingle(byPid[pid], label);
+                  }
+                }
+              } catch {
+                exportSingle(list, 'All');
+              }
             }
 
             XLSX.writeFile(wb, 'fieldwork.xlsx');
