@@ -754,7 +754,7 @@ export default function FieldworkDashboard() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
+            <PopoverContent className="w-80 max-h-64 overflow-y-auto p-3">
               <div className="grid gap-2">
                 {fwAllFields.map(f => (
                   <label key={f} className="flex items-center gap-2 text-sm">
@@ -1195,7 +1195,7 @@ export default function FieldworkDashboard() {
                                         {hist.slice().reverse().map((h, i) => (
                                           <div key={i} className="p-2 border rounded bg-slate-50 text-slate-800">
                                             <div className="break-words">{h.content}</div>
-                                            <div className="mt-1 text-[10px] text-slate-600">— {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                            <div className="mt-1 text-[10px] text-slate-600">��� {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
                                           </div>
                                         ))}
                                       </div>
