@@ -9,11 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { FileText, CheckCircle2, XCircle, Search, Save } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, Search, Save, Rows3, Columns2, Download, Filter as FilterIcon } from 'lucide-react';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
+import * as XLSX from 'xlsx';
 import { computeResidual, computeRiskScore } from '@shared/risk';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -46,6 +47,16 @@ export default function ReviewDashboard() {
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projDetailsOpen, setProjDetailsOpen] = useState(false);
+
+  // Export toolbar state
+  const rvAllFields = [
+    'Project No','Project Name','Client',
+    'Activity','Risk','Control','Likelihood','Consequence','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of Control','Substantive Procedure','Sampling Applicable?','Sampling Methodology','Control Effective','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure','Review Status'
+  ] as const;
+  const [rvSelectedFields, setRvSelectedFields] = useState<string[]>([...rvAllFields]);
+  const [rvGroupBy, setRvGroupBy] = useState<'none'|'Review Status'>('none');
+  const [rvFilters, setRvFilters] = useState<{ projCode: string; projName: string; client: string; reviewStatus: ''|'submitted'|'approved'|'rejected' }>({ projCode: '', projName: '', client: '', reviewStatus: '' });
+  const [rvFilterOpen, setRvFilterOpen] = useState(false);
 
   const getRecKey = (controlId: string): string => {
     if (selectedProject) return `${selectedProject}|${controlId}`;
@@ -296,7 +307,167 @@ export default function ReviewDashboard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="md:col-span-2 flex justify-end">
+        <div className="md:col-span-2 flex justify-end items-center gap-2">
+          {/* Filters */}
+          <Popover open={rvFilterOpen} onOpenChange={setRvFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-3">
+              <div className="grid gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Project No</Label>
+                    <Input value={rvFilters.projCode} onChange={(e)=>setRvFilters(prev=>({...prev, projCode:e.target.value}))} placeholder="Search code" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Project Name</Label>
+                    <Input value={rvFilters.projName} onChange={(e)=>setRvFilters(prev=>({...prev, projName:e.target.value}))} placeholder="Search name" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Client</Label>
+                    <Input value={rvFilters.client} onChange={(e)=>setRvFilters(prev=>({...prev, client:e.target.value}))} placeholder="Search client" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Review Status</Label>
+                    <Select value={rvFilters.reviewStatus} onValueChange={(v: any)=> setRvFilters(prev=>({...prev, reviewStatus: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {(['none','Review Status'] as const).map(opt => (
+                  <Button key={opt} variant={rvGroupBy===opt?'default':'outline'} size="sm" className="justify-start" onClick={()=>setRvGroupBy(opt)}>
+                    {opt}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 max-h-64 overflow-y-auto p-3">
+              <div className="grid gap-2">
+                {rvAllFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={rvSelectedFields.includes(f)} onChange={(e)=> setRvSelectedFields(prev => e.target.checked ? [...prev, f as string] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setRvSelectedFields([...rvAllFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setRvSelectedFields([...rvAllFields])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setRvSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            const wb = XLSX.utils.book_new();
+            const safe = (s:string)=> s.replace(/[\\/?*\[\]]/g, '').slice(0,31) || 'Sheet';
+            const includeProject = (p:any) => {
+              const code = p?.code || p?.data?.projectCode || '';
+              const name = p?.name || p?.data?.projectName || '';
+              const client = p?.clientName || p?.data?.clientName || '';
+              if (rvFilters.projCode && !String(code).toLowerCase().includes(rvFilters.projCode.toLowerCase())) return false;
+              if (rvFilters.projName && !String(name).toLowerCase().includes(rvFilters.projName.toLowerCase())) return false;
+              if (rvFilters.client && !String(client).toLowerCase().includes(rvFilters.client.toLowerCase())) return false;
+              return true;
+            };
+            const buildRow = (p:any, rec:any, ctrl:any, a:any) => {
+              const row: Record<string, any> = {};
+              const code = p?.code || p?.data?.projectCode || '';
+              const name = p?.name || p?.data?.projectName || '';
+              const client = p?.clientName || p?.data?.clientName || '';
+              const cfg = activeCfg;
+              const riskVal = computeRiskScore(cfg.riskScore.mode, rec?.risk?.likelihood, rec?.risk?.consequence, rec?.risk?.riskScore);
+              const resid = computeResidual(cfg.residualRisk.formula, Number(riskVal||0), Number(rec?.risk?.controlScore||0), cfg.controlScore.scale);
+              if (rvSelectedFields.includes('Project No')) row['Project No'] = code;
+              if (rvSelectedFields.includes('Project Name')) row['Project Name'] = name;
+              if (rvSelectedFields.includes('Client')) row['Client'] = client;
+              if (rvSelectedFields.includes('Activity')) row['Activity'] = a.activity || ctrl?.activity || '';
+              if (rvSelectedFields.includes('Risk')) row['Risk'] = a.risk || ctrl?.risk || '';
+              if (rvSelectedFields.includes('Control')) row['Control'] = a.control || ctrl?.name || '';
+              if (rvSelectedFields.includes('Likelihood')) row['Likelihood'] = rec?.risk?.likelihood ?? '';
+              if (rvSelectedFields.includes('Consequence')) row['Consequence'] = rec?.risk?.consequence ?? '';
+              if (rvSelectedFields.includes('Risk Score')) row['Risk Score'] = riskVal ?? '';
+              if (rvSelectedFields.includes('Control Score')) row['Control Score'] = rec?.risk?.controlScore ?? '';
+              if (rvSelectedFields.includes('Residual Risk')) row['Residual Risk'] = Math.round((Number(resid||0) + Number.EPSILON) * 100) / 100;
+              if (rvSelectedFields.includes('Risk Level')) row['Risk Level'] = rec?.risk?.residualLevel || '';
+              if (rvSelectedFields.includes('Color')) row['Color'] = '';
+              if (rvSelectedFields.includes('Test of Control')) row['Test of Control'] = a.testOfControl || (rec?.methodology?.methodType === 'Test of Control' ? rec?.methodology?.procedure : '');
+              if (rvSelectedFields.includes('Substantive Procedure')) row['Substantive Procedure'] = a.substantiveProcedure || (rec?.methodology?.methodType === 'Substantive Procedure' ? rec?.methodology?.procedure : '');
+              if (rvSelectedFields.includes('Sampling Applicable?')) row['Sampling Applicable?'] = a.samplingApplicable || (rec?.methodology?.verification ? (rec?.methodology?.verification === 'Sampling' ? 'Yes' : 'No') : '');
+              if (rvSelectedFields.includes('Sampling Methodology')) row['Sampling Methodology'] = a.samplingMethodology || rec?.methodology?.samplingMethod || '';
+              if (rvSelectedFields.includes('Control Effective')) row['Control Effective'] = a.controlEffective || (rec?.effectiveness?.effectiveness === 'Effective' ? 'Yes' : rec?.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
+              if (rvSelectedFields.includes('Attachments')) row['Attachments'] = a.attachments || '';
+              if (rvSelectedFields.includes('Audit Remarks')) row['Audit Remarks'] = a.auditRemarks || rec?.remarks?.auditRemarks || '';
+              if (rvSelectedFields.includes('Red flag')) row['Red flag'] = a.redFlag || '';
+              if (rvSelectedFields.includes('Reportable')) row['Reportable'] = a.reportable || '';
+              if (rvSelectedFields.includes('Observation Ranking')) row['Observation Ranking'] = a.observationRanking || rec?.report?.observationRanking || '';
+              if (rvSelectedFields.includes('Audit Observation')) row['Audit Observation'] = a.auditObservation || rec?.report?.observation || '';
+              if (rvSelectedFields.includes('Effect')) row['Effect'] = a.effect || rec?.report?.riskEffect || '';
+              if (rvSelectedFields.includes('Recommendation')) row['Recommendation'] = a.recommendation || rec?.report?.recommendation || '';
+              if (rvSelectedFields.includes('Annexure')) row['Annexure'] = a.annexure || rec?.report?.annexure || '';
+              if (rvSelectedFields.includes('Review Status')) row['Review Status'] = rec?.status || '';
+              return row;
+            };
+            const exportProject = (proj:any) => {
+              const pid = proj?.id;
+              const recs = Object.values(records).filter(r => r.projectId === pid && r.status && r.status !== 'draft');
+              const list = recs.map(r => {
+                const ctrl = controls.find(c => c.id === r.controlId);
+                const a:any = (r as any).arc || {};
+                return { rec: r, ctrl, arc: a };
+              });
+              const rows = [] as any[];
+              if (rvGroupBy === 'none') {
+                list.forEach(({rec, ctrl, arc}) => rows.push(buildRow(proj?.raw, rec, ctrl, arc)));
+              } else {
+                const grouped: Record<string, any[]> = {};
+                list.forEach(({rec, ctrl, arc}) => {
+                  const key = rec.status || 'submitted';
+                  const row = buildRow(proj?.raw, rec, ctrl, arc);
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key].push(row);
+                });
+                const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+                for (const lab of labels) { rows.push({ Group: lab }); grouped[lab].forEach(r => rows.push(r)); rows.push({}); }
+              }
+              const ws = XLSX.utils.json_to_sheet(rows);
+              XLSX.utils.book_append_sheet(wb, ws, safe(`Review ${proj?.raw?.code || proj?.raw?.name || proj?.id || ''}`));
+            };
+
+            if (selectedProject) {
+              const proj = projects.find(p=>p.id===selectedProject);
+              if (proj && includeProject(proj.raw)) exportProject(proj);
+            } else {
+              projects.forEach(p => { if (includeProject(p.raw)) exportProject(p); });
+            }
+            XLSX.writeFile(wb, 'review.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
           <Button variant="outline" onClick={() => setProjDetailsOpen(true)} disabled={!selectedProject}>View details</Button>
         </div>
       </div>
