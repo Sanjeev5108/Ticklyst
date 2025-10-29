@@ -892,8 +892,63 @@ export default function FieldworkDashboard() {
 
               // Heat Map (raw points)
               const hmRows = list.map(r => ({ Likelihood: r.likelihood, Impact: r.consequence, 'Risk Score': (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), 'Control Score': r.controlScore, 'Residual Risk': Math.round((computeResidual(activeCfg.residualRisk.formula, (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100, 'Risk Level': (()=>{ const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); return resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || ''; })() }));
-              const ws3 = XLSX.utils.json_to_sheet(hmRows);
-              XLSX.utils.book_append_sheet(wb, ws3, 'Heat Map');
+              const wsData = XLSX.utils.json_to_sheet(hmRows);
+              XLSX.utils.book_append_sheet(wb, wsData, 'Heat Map Data');
+
+              // Heat Map matrix with colors (based on rating definition thresholds)
+              const Lmin = activeCfg.riskScore.likelihood?.scale.min ?? 1;
+              const Lmax = activeCfg.riskScore.likelihood?.scale.max ?? 5;
+              const Cmin = activeCfg.riskScore.consequence?.scale.min ?? 1;
+              const Cmax = activeCfg.riskScore.consequence?.scale.max ?? 5;
+              const counts: Record<string, number> = {};
+              list.forEach(r => { const l = Math.round(Number(r.likelihood||0)); const c = Math.round(Number(r.consequence||0)); const k = `${l}|${c}`; counts[k] = (counts[k]||0)+1; });
+              const header = ['Likelihood \\ Impact'];
+              for (let c=Cmin; c<=Cmax; c++) header.push(String(c));
+              const aoa: any[][] = [header];
+              for (let l=Lmax; l>=Lmin; l--) {
+                const row: any[] = [String(l)];
+                for (let c=Cmin; c<=Cmax; c++) {
+                  const k = `${l}|${c}`;
+                  row.push(counts[k] ? counts[k] : '');
+                }
+                aoa.push(row);
+              }
+              const wsHM: any = XLSX.utils.aoa_to_sheet(aoa);
+              const hexToARGB = (hex: string) => {
+                const s = (hex||'').replace('#','');
+                return (s.length===6 ? `FF${s}` : s).toUpperCase();
+              };
+              // Style data cells with threshold colors
+              for (let r=1; r<aoa.length; r++) {
+                const l = Lmax - (r-1);
+                for (let c=1; c<aoa[0].length; c++) {
+                  const impact = Cmin + (c-1);
+                  const riskVal = l * impact;
+                  const lvl = resolveLevel(riskVal, activeCfg.residualRisk.thresholds);
+                  const color = lvl?.color || '';
+                  const addr = XLSX.utils.encode_cell({ r, c });
+                  const cell = wsHM[addr] || { t: 's', v: aoa[r][c] };
+                  wsHM[addr] = cell;
+                  (wsHM[addr] as any).s = {
+                    alignment: { horizontal: 'center', vertical: 'center' },
+                    fill: color ? { patternType: 'solid', fgColor: { rgb: hexToARGB(color) } } : undefined,
+                    font: { bold: true, color: { rgb: 'FF000000' } },
+                    border: { top:{style:'thin',color:{rgb:'FFCCCCCC'}}, left:{style:'thin',color:{rgb:'FFCCCCCC'}}, right:{style:'thin',color:{rgb:'FFCCCCCC'}}, bottom:{style:'thin',color:{rgb:'FFCCCCCC'}} }
+                  };
+                }
+              }
+              // Style header row/col
+              for (let c=0; c<aoa[0].length; c++) {
+                const addr = XLSX.utils.encode_cell({ r:0, c });
+                if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } };
+              }
+              for (let r=1; r<aoa.length; r++) {
+                const addr = XLSX.utils.encode_cell({ r, c:0 });
+                if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } };
+              }
+              (wsHM as any)['!cols'] = Array.from({ length: aoa[0].length }, (_,i)=> ({ wch: i===0 ? 14 : 6 }));
+              (wsHM as any)['!rows'] = Array.from({ length: aoa.length }, () => ({ hpt: 22 }));
+              XLSX.utils.book_append_sheet(wb, wsHM, 'Heat Map');
             }
 
             XLSX.writeFile(wb, 'fieldwork.xlsx');
