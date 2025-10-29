@@ -387,6 +387,19 @@ export default function ReviewDashboard() {
           <Button size="sm" className="flex items-center gap-2" onClick={()=>{
             const wb = XLSX.utils.book_new();
             const safe = (s:string)=> s.replace(/[\\/?*\[\]]/g, '').slice(0,31) || 'Sheet';
+            const usedNames = new Set<string>();
+            const unique = (base:string) => {
+              let name = safe(base);
+              if (!usedNames.has(name)) { usedNames.add(name); return name; }
+              let i = 2;
+              while (true) {
+                const suffix = ` (${i})`;
+                const max = 31 - suffix.length;
+                const candidate = safe(base).slice(0, Math.max(1,max)) + suffix;
+                if (!usedNames.has(candidate)) { usedNames.add(candidate); return candidate; }
+                i++;
+              }
+            };
             const includeProject = (p:any) => {
               const code = p?.code || p?.data?.projectCode || '';
               const name = p?.name || p?.data?.projectName || '';
