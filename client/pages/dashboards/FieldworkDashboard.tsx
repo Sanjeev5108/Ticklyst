@@ -321,7 +321,11 @@ export default function FieldworkDashboard() {
               const ctrls: string[] = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
               ctrls.forEach((ctrl, idx) => {
                 const id = mkId([procName, subName, actName, riskName, String(idx+1)]);
-                rows.push({ id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' });
+                const row: any = { id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' };
+                row.department = procName || '';
+                row.process = procName || '';
+                row.subprocess = subName || '';
+                rows.push(row);
               });
             }
           }
