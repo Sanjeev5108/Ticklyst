@@ -797,7 +797,6 @@ export default function FieldworkDashboard() {
               const resid = Math.round((computeResidual(activeCfg.residualRisk.formula, riskVal, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100;
               const riskLevel = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.level || '';
               const color = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.color || '';
-              if (fwSelectedFields.includes('Department')) f['Department'] = (r as any).department || '';
               if (fwSelectedFields.includes('Activity')) f['Activity'] = r.activity;
               if (fwSelectedFields.includes('Risk')) f['Risk'] = r.risk;
               if (fwSelectedFields.includes('Control')) f['Control'] = r.control;
