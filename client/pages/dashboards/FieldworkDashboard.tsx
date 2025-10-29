@@ -625,7 +625,7 @@ export default function FieldworkDashboard() {
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center gap-2">
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="relative">
@@ -635,21 +635,270 @@ export default function FieldworkDashboard() {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-48 p-2">
-            <div className="flex flex-col gap-1">
-              <Button variant={statusFilter==='In progress'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('In progress'); setFilterOpen(false); }}>In progress</Button>
-              <Button variant={statusFilter==='Approved'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Approved'); setFilterOpen(false); }}>Approved</Button>
-              <Button variant={statusFilter==='Rejected'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Rejected'); setFilterOpen(false); }} className="justify-between">
-                <span>Rejected</span>
-                {rejectedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-red-700"><span className="font-bold">!</span><span className="text-xs">{rejectedCount}</span></span>
-                )}
-              </Button>
+          <PopoverContent align="end" className="w-80 p-3">
+            <div className="grid gap-2">
+              <div className="text-xs text-slate-500">Status</div>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant={statusFilter==='In progress'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('In progress'); setFilterOpen(false); }}>In progress</Button>
+                <Button variant={statusFilter==='Approved'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Approved'); setFilterOpen(false); }}>Approved</Button>
+                <Button variant={statusFilter==='Rejected'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Rejected'); setFilterOpen(false); }} className="justify-between">
+                  <span>Rejected</span>
+                  {rejectedCount > 0 && (<span className="inline-flex items-center gap-1 text-red-700"><span className="font-bold">!</span><span className="text-xs">{rejectedCount}</span></span>)}
+                </Button>
+                <Button variant={statusFilter==='All'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('All'); setFilterOpen(false); }}>Show all</Button>
+              </div>
               <div className="h-px bg-slate-200 my-1" />
-              <Button variant={statusFilter==='All'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('All'); setFilterOpen(false); }}>Show all</Button>
+              <div className="text-xs text-slate-500">Advanced</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={fwFilters.department} onValueChange={(v)=>setFwFilters(prev=>({...prev, department:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Department" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map((r:any)=> (r as any).department || '').filter(Boolean))).sort().map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.activity} onValueChange={(v)=>setFwFilters(prev=>({...prev, activity:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Activity" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.activity || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.risk} onValueChange={(v)=>setFwFilters(prev=>({...prev, risk:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Risk" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.risk || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.controlOwner} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlOwner:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Control Owner" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.controlOwner || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.testOfControl} onValueChange={(v)=>setFwFilters(prev=>({...prev, testOfControl:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Test of control" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.substantiveProcedure} onValueChange={(v)=>setFwFilters(prev=>({...prev, substantiveProcedure:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Substantive procedure" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.samplingApplicability} onValueChange={(v)=>setFwFilters(prev=>({...prev, samplingApplicability:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Sampling applicability" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.controlEffectiveness} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlEffectiveness:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Control Effectiveness" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.redFlag} onValueChange={(v)=>setFwFilters(prev=>({...prev, redFlag:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Red flag" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.reportable} onValueChange={(v)=>setFwFilters(prev=>({...prev, reportable:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Reportable" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.observationRanking} onValueChange={(v)=>setFwFilters(prev=>({...prev, observationRanking:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Observation Ranking" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['High','Medium','Low'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
+        <div className="flex items-center gap-2">
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {fwGroupOptions.map(opt => (
+                  <Button key={opt.key} variant={fwGroupBy===opt.key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setFwGroupBy(opt.key)}>
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {fwAllFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={fwSelectedFields.includes(f)} onChange={(e)=> setFwSelectedFields(prev => e.target.checked ? [...prev, f as string] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([...fwAllFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([...fwAllFields])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            const rowsSrc = displayedRows.slice();
+            const passesFilter = (r:any) => {
+              const between = (v:number, min?:number, max?:number) => {
+                if (typeof v !== 'number' || isNaN(v)) return false;
+                if (min!=null && v < min) return false;
+                if (max!=null && v > max) return false;
+                return true;
+              };
+              if (fwFilters.activity && String(r.activity||'') !== fwFilters.activity) return false;
+              if (fwFilters.risk && String(r.risk||'') !== fwFilters.risk) return false;
+              if (fwFilters.department && String((r as any).department||'') !== fwFilters.department) return false;
+              if (fwFilters.controlOwner && String(r.controlOwner||'') !== fwFilters.controlOwner) return false;
+              if (fwFilters.riskLevel && String(r.riskLevel||'') !== fwFilters.riskLevel) return false;
+              if (fwFilters.testOfControl && String(r.testOfControl||'') !== fwFilters.testOfControl) return false;
+              if (fwFilters.substantiveProcedure && String(r.substantiveProcedure||'') !== fwFilters.substantiveProcedure) return false;
+              if (fwFilters.samplingApplicability && String(r.samplingApplicable||'') !== fwFilters.samplingApplicability) return false;
+              if (fwFilters.controlEffectiveness && String(r.controlEffectiveness||'') !== fwFilters.controlEffectiveness) return false;
+              if (fwFilters.redFlag && String(r.redFlag||'') !== fwFilters.redFlag) return false;
+              if (fwFilters.reportable && String(r.reportable||'') !== fwFilters.reportable) return false;
+              if (fwFilters.observationRanking && String(r.observationRanking||'') !== fwFilters.observationRanking) return false;
+              if ((fwFilters.riskScoreMin!=null || fwFilters.riskScoreMax!=null) && !between(Number(r.riskScore), fwFilters.riskScoreMin, fwFilters.riskScoreMax)) return false;
+              if ((fwFilters.controlScoreMin!=null || fwFilters.controlScoreMax!=null) && !between(Number(r.controlScore), fwFilters.controlScoreMin, fwFilters.controlScoreMax)) return false;
+              if ((fwFilters.residualMin!=null || fwFilters.residualMax!=null) && !between(Number(r.residualRisk), fwFilters.residualMin, fwFilters.residualMax)) return false;
+              return true;
+            };
+            const list = rowsSrc.filter(passesFilter);
+
+            const buildRow = (r:any) => {
+              const f: Record<string, any> = {};
+              const riskVal = (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence));
+              const resid = Math.round((computeResidual(activeCfg.residualRisk.formula, riskVal, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100;
+              const riskLevel = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.level || '';
+              const color = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.color || '';
+              if (fwSelectedFields.includes('Department')) f['Department'] = (r as any).department || '';
+              if (fwSelectedFields.includes('Activity')) f['Activity'] = r.activity;
+              if (fwSelectedFields.includes('Risk')) f['Risk'] = r.risk;
+              if (fwSelectedFields.includes('Control')) f['Control'] = r.control;
+              if (fwSelectedFields.includes('Control Owner')) f['Control Owner'] = r.controlOwner;
+              if (fwSelectedFields.includes('Likelihood')) f['Likelihood'] = r.likelihood;
+              if (fwSelectedFields.includes('Impact')) f['Impact'] = r.consequence;
+              if (fwSelectedFields.includes('Risk Score')) f['Risk Score'] = riskVal;
+              if (fwSelectedFields.includes('Control Score')) f['Control Score'] = r.controlScore;
+              if (fwSelectedFields.includes('Residual Risk')) f['Residual Risk'] = resid;
+              if (fwSelectedFields.includes('Risk Level')) f['Risk Level'] = riskLevel;
+              if (fwSelectedFields.includes('Color')) f['Color'] = color;
+              if (fwSelectedFields.includes('Test of control')) f['Test of control'] = r.testOfControl;
+              if (fwSelectedFields.includes('Substantive procedure')) f['Substantive procedure'] = r.substantiveProcedure;
+              if (fwSelectedFields.includes('Sampling applicability')) f['Sampling applicability'] = r.samplingApplicable;
+              if (fwSelectedFields.includes('Sampling Methodology')) f['Sampling Methodology'] = r.samplingMethodology;
+              if (fwSelectedFields.includes('Control Effectiveness')) f['Control Effectiveness'] = r.controlEffectiveness;
+              if (fwSelectedFields.includes('Attachments')) f['Attachments'] = r.attachments;
+              if (fwSelectedFields.includes('Audit Remarks')) f['Audit Remarks'] = r.auditRemarks;
+              if (fwSelectedFields.includes('Red flag')) f['Red flag'] = r.redFlag;
+              if (fwSelectedFields.includes('Reportable')) f['Reportable'] = r.reportable;
+              if (fwSelectedFields.includes('Observation Ranking')) f['Observation Ranking'] = r.observationRanking;
+              if (fwSelectedFields.includes('Audit Observation')) f['Audit Observation'] = r.auditObservation;
+              if (fwSelectedFields.includes('Effect')) f['Effect'] = r.effect;
+              if (fwSelectedFields.includes('Recommendation')) f['Recommendation'] = r.recommendation;
+              if (fwSelectedFields.includes('Annexure')) f['Annexure'] = r.annexure;
+              return f;
+            };
+
+            const getGroupKeys = (r:any, key:string): string[] => {
+              switch (key) {
+                case 'none': return [''];
+                case 'Department': return [String((r as any).department||'(none)')];
+                case 'Activity': return [String(r.activity||'(none)')];
+                case 'Risk': return [String(r.risk||'(none)')];
+                case 'Risk Score': return [String(activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence))];
+                case 'Control Score': return [String(r.controlScore||'')];
+                case 'Residual Risk': { const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); return [String(Math.round((computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100)]; }
+                case 'Risk Level': { const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); const lvl = resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || '(none)'; return [lvl]; }
+                case 'Control Owner': return [String(r.controlOwner||'(none)')];
+                case 'Test of control': return [String(r.testOfControl||'(none)')];
+                case 'Substantive procedure': return [String(r.substantiveProcedure||'(none)')];
+                case 'Sampling applicability': return [String(r.samplingApplicable||'(none)')];
+                case 'Control Effectiveness': return [String(r.controlEffectiveness||'(none)')];
+                case 'Red flag': return [String(r.redFlag||'(none)')];
+                case 'Reportable': return [String(r.reportable||'(none)')];
+                case 'Observation Ranking': return [String(r.observationRanking||'(none)')];
+                default: return [''];
+              }
+            };
+
+            const rows:any[] = [];
+            if (fwGroupBy==='none') {
+              list.forEach(r => rows.push(buildRow(r)));
+            } else {
+              const grouped: Record<string, any[]> = {};
+              list.forEach(r => {
+                const keys = getGroupKeys(r, fwGroupBy);
+                const row = buildRow(r);
+                for (const k of keys) { if (!grouped[k]) grouped[k] = []; grouped[k].push(row); }
+              });
+              const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+              for (const label of labels) { rows.push({ Group: label }); grouped[label].forEach(rr => rows.push(rr)); rows.push({}); }
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, 'Fieldwork');
+
+            if (selectedProject) {
+              // Risk Register sheet
+              const byRisk: Record<string, { riskId: string; description: string; category: string; likelihood: number; impact: number; controls: Set<string>; controlOwner: string; residual: number }> = {};
+              list.forEach(r => {
+                const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence);
+                const residual = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale);
+                const level = resolveLevel(residual, activeCfg.residualRisk.thresholds)?.level || '';
+                const key = r.risk || r.id;
+                if (!byRisk[key]) byRisk[key] = { riskId: r.id, description: r.risk, category: level, likelihood: r.likelihood, impact: r.consequence, controls: new Set(), controlOwner: r.controlOwner || '', residual: Math.round((residual + Number.EPSILON) * 100) / 100 };
+                byRisk[key].controls.add(r.control);
+              });
+              const rrRows = Object.values(byRisk).map(v => ({ 'Risk ID': v.riskId, 'Description': v.description, 'Category': v.category, 'Likelihood': v.likelihood, 'Impact': v.impact, 'Controls': Array.from(v.controls).join(', '), 'Control Owner': v.controlOwner, 'Residual Risk': v.residual }));
+              const ws2 = XLSX.utils.json_to_sheet(rrRows);
+              XLSX.utils.book_append_sheet(wb, ws2, 'Risk Register');
+
+              // Heat Map (raw points)
+              const hmRows = list.map(r => ({ Likelihood: r.likelihood, Impact: r.consequence, 'Risk Score': (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), 'Control Score': r.controlScore, 'Residual Risk': Math.round((computeResidual(activeCfg.residualRisk.formula, (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100, 'Risk Level': (()=>{ const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); return resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || ''; })() }));
+              const ws3 = XLSX.utils.json_to_sheet(hmRows);
+              XLSX.utils.book_append_sheet(wb, ws3, 'Heat Map');
+            }
+
+            XLSX.writeFile(wb, 'fieldwork.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
 
       {(selectedProject) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
