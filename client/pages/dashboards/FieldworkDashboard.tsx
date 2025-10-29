@@ -649,13 +649,6 @@ export default function FieldworkDashboard() {
               <div className="h-px bg-slate-200 my-1" />
               <div className="text-xs text-slate-500">Advanced</div>
               <div className="grid grid-cols-2 gap-2">
-                <Select value={fwFilters.department} onValueChange={(v)=>setFwFilters(prev=>({...prev, department:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Department" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All</SelectItem>
-                    {Array.from(new Set(matrixRows.map((r:any)=> (r as any).department || '').filter(Boolean))).sort().map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
-                  </SelectContent>
-                </Select>
                 <Select value={fwFilters.activity} onValueChange={(v)=>setFwFilters(prev=>({...prev, activity:v}))}>
                   <SelectTrigger><SelectValue placeholder="Activity" /></SelectTrigger>
                   <SelectContent>
