@@ -481,7 +481,8 @@ export default function ReviewDashboard() {
                 for (const lab of labels) { rows.push({ Group: lab }); grouped[lab].forEach(r => rows.push(r)); rows.push({}); }
               }
               const ws = XLSX.utils.json_to_sheet(rows);
-              XLSX.utils.book_append_sheet(wb, ws, safe(`Review ${proj?.raw?.code || proj?.raw?.name || proj?.id || ''}`));
+              const label = proj?.raw?.code || proj?.raw?.name || proj?.id || '';
+              XLSX.utils.book_append_sheet(wb, ws, unique(`Review ${label}`));
             };
 
             if (selectedProject) {
