@@ -396,12 +396,23 @@ export default function ReviewDashboard() {
               if (rvFilters.client && !String(client).toLowerCase().includes(rvFilters.client.toLowerCase())) return false;
               return true;
             };
+            const resolveCfg = (raw:any) => {
+              const data = raw?.data || {};
+              const auditTypeName = data.auditType;
+              const assn = assignmentTypes.find(a => a.name === auditTypeName);
+              const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+              const map = (central.scope as any)?.assignmentMap || {};
+              const mode = assn ? map[assn.id]?.mode : undefined;
+              if (mode === 'project' && data.riskConfig) return data.riskConfig;
+              if (mode === 'assignment' && assn) return RiskConfigStore.get(`assignment|${assn.id}`) || RiskConfigStore.getGlobal();
+              return RiskConfigStore.getGlobal();
+            };
             const buildRow = (p:any, rec:any, ctrl:any, a:any) => {
               const row: Record<string, any> = {};
               const code = p?.code || p?.data?.projectCode || '';
               const name = p?.name || p?.data?.projectName || '';
               const client = p?.clientName || p?.data?.clientName || '';
-              const cfg = activeCfg;
+              const cfg = resolveCfg(p);
               const riskVal = computeRiskScore(cfg.riskScore.mode, rec?.risk?.likelihood, rec?.risk?.consequence, rec?.risk?.riskScore);
               const resid = computeResidual(cfg.residualRisk.formula, Number(riskVal||0), Number(rec?.risk?.controlScore||0), cfg.controlScore.scale);
               if (rvSelectedFields.includes('Project No')) row['Project No'] = code;
