@@ -772,7 +772,7 @@ export default function FieldworkDashboard() {
           </Popover>
 
           {/* Export */}
-          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+          <Button size="sm" className="flex items-center gap-2" onClick={async ()=>{
             const rowsSrc = displayedRows.slice();
             const passesFilter = (r:any) => {
               const between = (v:number, min?:number, max?:number) => {
