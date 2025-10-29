@@ -775,7 +775,6 @@ export default function FieldworkDashboard() {
               };
               if (fwFilters.activity && String(r.activity||'') !== fwFilters.activity) return false;
               if (fwFilters.risk && String(r.risk||'') !== fwFilters.risk) return false;
-              if (fwFilters.department && String((r as any).department||'') !== fwFilters.department) return false;
               if (fwFilters.controlOwner && String(r.controlOwner||'') !== fwFilters.controlOwner) return false;
               if (fwFilters.riskLevel && String(r.riskLevel||'') !== fwFilters.riskLevel) return false;
               if (fwFilters.testOfControl && String(r.testOfControl||'') !== fwFilters.testOfControl) return false;
