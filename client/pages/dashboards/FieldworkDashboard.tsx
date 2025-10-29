@@ -828,7 +828,6 @@ export default function FieldworkDashboard() {
             const getGroupKeys = (r:any, key:string): string[] => {
               switch (key) {
                 case 'none': return [''];
-                case 'Department': return [String((r as any).department||'(none)')];
                 case 'Activity': return [String(r.activity||'(none)')];
                 case 'Risk': return [String(r.risk||'(none)')];
                 case 'Risk Score': return [String(activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence))];
