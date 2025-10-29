@@ -567,12 +567,11 @@ export default function FieldworkDashboard() {
 
   // Export toolbar state
   const fwAllFields = [
-    'Department','Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
+    'Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
   ] as const;
   const [fwSelectedFields, setFwSelectedFields] = useState<string[]>([...fwAllFields]);
   const fwGroupOptions = [
     { key: 'none', label: 'No grouping' },
-    { key: 'Department', label: 'Department' },
     { key: 'Activity', label: 'Activity' },
     { key: 'Risk', label: 'Risk' },
     { key: 'Risk Score', label: 'Risk Score' },
@@ -589,7 +588,7 @@ export default function FieldworkDashboard() {
     { key: 'Observation Ranking', label: 'Observation Ranking' },
   ];
   const [fwGroupBy, setFwGroupBy] = useState<string>('none');
-  const [fwFilters, setFwFilters] = useState<{ activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number; department: string }>({ activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '', department: '' });
+  const [fwFilters, setFwFilters] = useState<{ activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
 
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
