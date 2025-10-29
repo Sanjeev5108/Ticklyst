@@ -565,6 +565,32 @@ export default function FieldworkDashboard() {
 
   const [projDetailsOpen, setProjDetailsOpen] = useState(false);
 
+  // Export toolbar state
+  const fwAllFields = [
+    'Department','Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
+  ] as const;
+  const [fwSelectedFields, setFwSelectedFields] = useState<string[]>([...fwAllFields]);
+  const fwGroupOptions = [
+    { key: 'none', label: 'No grouping' },
+    { key: 'Department', label: 'Department' },
+    { key: 'Activity', label: 'Activity' },
+    { key: 'Risk', label: 'Risk' },
+    { key: 'Risk Score', label: 'Risk Score' },
+    { key: 'Control Score', label: 'Control Score' },
+    { key: 'Residual Risk', label: 'Residual Risk' },
+    { key: 'Risk Level', label: 'Risk Level' },
+    { key: 'Control Owner', label: 'Control Owner' },
+    { key: 'Test of control', label: 'Test of control' },
+    { key: 'Substantive procedure', label: 'Substantive procedure' },
+    { key: 'Sampling applicability', label: 'Sampling applicability' },
+    { key: 'Control Effectiveness', label: 'Control Effectiveness' },
+    { key: 'Red flag', label: 'Red flag' },
+    { key: 'Reportable', label: 'Reportable' },
+    { key: 'Observation Ranking', label: 'Observation Ranking' },
+  ];
+  const [fwGroupBy, setFwGroupBy] = useState<string>('none');
+  const [fwFilters, setFwFilters] = useState<{ activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number; department: string }>({ activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '', department: '' });
+
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
 
