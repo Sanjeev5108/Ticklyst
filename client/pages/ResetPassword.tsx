@@ -41,7 +41,7 @@ export default function ResetPassword() {
     }
   };
 
-  if (ok) return <Navigate to="/login" replace />;
+  if (ok) return <Navigate to="/login?reset=1" replace />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
