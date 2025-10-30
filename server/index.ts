@@ -21,7 +21,7 @@ import {
   updateClient
 } from "./routes/auditing";
 import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEmployeeStatus } from "./routes/employees";
-import { login } from "./routes/auth";
+import { login, forgotPassword, resetPassword } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
 import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode } from "./routes/framework";
 import { getAllFieldwork, getFieldworkById, upsertFieldwork, bulkUpsertFieldwork } from "./routes/fieldwork";
