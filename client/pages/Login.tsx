@@ -112,6 +112,30 @@ export default function Login() {
               </Button>
             </form>
           </CardContent>
+
+          <div className="p-3 border-t">
+            {!showForgot ? (
+              <button className="text-sm text-blue-600 hover:underline" onClick={()=>setShowForgot(true)}>Forgot password?</button>
+            ) : (
+              <div className="space-y-2">
+                {forgotMsg ? (<div className="text-sm text-green-700">{forgotMsg}</div>) : null}
+                <div className="flex gap-2">
+                  <Input placeholder="Enter your email" value={forgotEmail} onChange={(e)=>setForgotEmail(e.target.value)} />
+                  <Button onClick={async ()=>{
+                    setForgotMsg('');
+                    try {
+                      const res = await fetch('/api/auth/forgot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail }) });
+                      if (res.ok) setForgotMsg('If the email exists, a reset link has been sent.');
+                      else setForgotMsg('Failed to request reset');
+                    } catch (e) { setForgotMsg('Network error'); }
+                  }}>Send</Button>
+                </div>
+                <div>
+                  <button className="text-xs text-gray-500 hover:underline" onClick={()=>{ setShowForgot(false); setForgotEmail(''); setForgotMsg(''); }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Test Credentials */}
