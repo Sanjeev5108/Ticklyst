@@ -528,7 +528,6 @@ export default function HRDashboard() {
                 else if (f === 'Role') row['Role'] = e.role;
                 else if (f === 'Division') row['Division'] = e.division;
                 else if (f === 'Status') row['Status'] = e.isActive ? 'Active' : 'Purged';
-                else if (f === 'Last Login') row['Last Login'] = e.lastLogin || '';
               }
               return row;
             });
