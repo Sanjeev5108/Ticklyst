@@ -1,5 +1,6 @@
 import { RequestHandler } from "express";
 import pg from "pg";
+import nodemailer from 'nodemailer';
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
