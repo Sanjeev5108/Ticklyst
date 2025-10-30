@@ -235,7 +235,7 @@ export default function FieldworkDashboard() {
   }, [controls]);
 
 
-  // Projects (loaded from API)
+  // Projects (loaded from API) with access filtering
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
   useEffect(() => {
     (async () => {
@@ -243,17 +243,31 @@ export default function FieldworkDashboard() {
         const res = await fetch('/api/projects');
         if (!res.ok) throw new Error('load_failed');
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({
-          id: r.id,
-          title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project',
-          raw: r
-        }));
-        setProjects(mapped);
+        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project', raw: r }));
+
+        // determine scope
+        const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
+        const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
+        const scope = (user?.id && userScopeMap[user.id]) ? userScopeMap[user.id] : (user?.role ? roleScopeMap[user.role] : 'all');
+        const normalizedRole = (user?.role || '').toLowerCase();
+        const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
+
+        const userName = user?.username || '';
+        const initials = userName.split(' ').map(s=>s[0]).join('');
+        const isOnProject = (prj: any) => {
+          const d = prj?.raw?.data || {};
+          const lists: string[][] = [d.divisionHeads||[], d.partners||[], d.teamLeaders||[], d.teamMembers||[]];
+          const flat = lists.flat().map((s:string)=>String(s||''));
+          return flat.includes(userName) || flat.includes(initials);
+        };
+
+        const filtered = (scope === 'own' && isTargetRole && user) ? mapped.filter(isOnProject) : mapped;
+        setProjects(filtered);
       } catch (e) {
         console.error('Failed to load projects', e);
       }
     })();
-  }, []);
+  }, [user]);
 
   const riskDisabled = useMemo(() => {
     if (!selectedProject) return false;
