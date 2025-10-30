@@ -8,16 +8,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, User, Shield } from 'lucide-react';
 
 export default function Login() {
+  // All hooks must be called unconditionally and before any early return
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { login, isAuthenticated } = useAuth();
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMsg, setForgotMsg] = useState('');
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const { login, isAuthenticated } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +36,10 @@ export default function Login() {
     }
   };
 
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotMsg, setForgotMsg] = useState('');
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const testCredentials = [
     { role: 'Admin', username: 'Admin', password: '12345' },
     { role: 'HR', username: 'HR', password: '12345' },
@@ -115,13 +116,13 @@ export default function Login() {
 
           <div className="p-3 border-t">
             {!showForgot ? (
-              <button className="text-sm text-blue-600 hover:underline" onClick={()=>setShowForgot(true)}>Forgot password?</button>
+              <button className="text-sm text-blue-600 hover:underline" onClick={() => setShowForgot(true)}>Forgot password?</button>
             ) : (
               <div className="space-y-2">
                 {forgotMsg ? (<div className="text-sm text-green-700">{forgotMsg}</div>) : null}
                 <div className="flex gap-2">
-                  <Input placeholder="Enter your email" value={forgotEmail} onChange={(e)=>setForgotEmail(e.target.value)} />
-                  <Button onClick={async ()=>{
+                  <Input placeholder="Enter your email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} />
+                  <Button onClick={async () => {
                     setForgotMsg('');
                     try {
                       const res = await fetch('/api/auth/forgot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail }) });
@@ -131,7 +132,7 @@ export default function Login() {
                   }}>Send</Button>
                 </div>
                 <div>
-                  <button className="text-xs text-gray-500 hover:underline" onClick={()=>{ setShowForgot(false); setForgotEmail(''); setForgotMsg(''); }}>Cancel</button>
+                  <button className="text-xs text-gray-500 hover:underline" onClick={() => { setShowForgot(false); setForgotEmail(''); setForgotMsg(''); }}>Cancel</button>
                 </div>
               </div>
             )}
