@@ -51,6 +51,8 @@ export function createServer() {
 
   // Auth
   app.post('/api/auth/login', login);
+  app.post('/api/auth/forgot', forgotPassword);
+  app.post('/api/auth/reset', resetPassword);
 
   // Settings persistence
   app.get('/api/settings/:key', getSetting);
