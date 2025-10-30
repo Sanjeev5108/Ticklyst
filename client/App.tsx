@@ -13,6 +13,7 @@ import { suppressResizeObserverWarnings, patchResizeObserverRAF } from "./utils/
 suppressResizeObserverWarnings();
 patchResizeObserverRAF();
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
