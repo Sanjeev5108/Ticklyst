@@ -40,15 +40,6 @@ export default function Login() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const testCredentials = [
-    { role: 'Admin', username: 'Admin', password: '12345' },
-    { role: 'HR', username: 'HR', password: '12345' },
-    { role: 'Division Partner', username: 'Division Partner', password: '12345' },
-    { role: 'Division Head', username: 'Division Head', password: '12345' },
-    { role: 'Team Leader', username: 'Team Leader', password: '12345' },
-    { role: 'Team Member', username: 'Team Member', password: '12345' }
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -139,20 +130,6 @@ export default function Login() {
           </div>
         </Card>
 
-        {/* Test Credentials */}
-        <Card className="shadow-md bg-gray-50">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-700">Test Credentials</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {testCredentials.map((cred, index) => (
-              <div key={index} className="flex justify-between text-xs">
-                <span className="font-medium text-gray-600">{cred.role}:</span>
-                <span className="text-gray-500">{cred.username} / {cred.password}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
