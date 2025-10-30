@@ -524,13 +524,13 @@ export const createProject: RequestHandler = async (req, res) => {
           const assignmentHtml = teamLists.filter((t:any)=> (t.names||[]).length).map((t:any)=>`<li><strong>${t.role}:</strong> ${(t.names||[]).join(', ')}</li>`).join('');
           const base = (process.env.BASE_URL || '').replace(/\/$/, '');
           const projectInfo = `<ul>
-            <li><strong>Project ID:</strong> ${id}</li>
+            <li><strong>Project Code:</strong> ${code}</li>
             <li><strong>Project Name:</strong> ${name}</li>
             <li><strong>Client Name:</strong> ${clientName || '-'}</li>
             <li><strong>${isNew ? 'Status' : 'Updated Status'}:</strong> ${isNew ? 'New Project Created' : statusLabel}</li>
           </ul>`;
           const html = `<div style="font-family:Arial,sans-serif;line-height:1.5"><h2>${heading}</h2>${projectInfo}${assignmentHtml ? `<h3>Team Assignment</h3><ul>${assignmentHtml}</ul>` : ''}${base ? `<p><a href='${base}'>Open Application</a></p>` : ''}</div>`;
-          const text = `${heading}\n\nProject ID: ${id}\nProject Name: ${name}\nClient Name: ${clientName || '-'}\n${isNew ? 'Status: New Project Created' : 'Updated Status: ' + statusLabel}\n\nTeam Assignment:\n${teamLists.map((t:any)=>`${t.role}: ${(t.names||[]).join(', ')}`).join('\n')}`;
+          const text = `${heading}\n\nProject Code: ${code}\nProject Name: ${name}\nClient Name: ${clientName || '-'}\n${isNew ? 'Status: New Project Created' : 'Updated Status: ' + statusLabel}\n\nTeam Assignment:\n${teamLists.map((t:any)=>`${t.role}: ${(t.names||[]).join(', ')}`).join('\n')}`;
           await transporter.sendMail({ from: process.env.FROM_EMAIL || process.env.SMTP_USER, to, bcc, subject, text, html });
         }
       }
