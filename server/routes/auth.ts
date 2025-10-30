@@ -1,10 +1,30 @@
 import { RequestHandler } from 'express';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
+
+// SMTP transporter (lazy init)
+let mailer: any = null;
+function getTransporter() {
+  if (!process.env.SMTP_HOST) return null;
+  if (mailer) return mailer;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const auth = user ? { user, pass } : undefined;
+  mailer = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure,
+    auth
+  });
+  return mailer;
+}
 
 // Ensure password_resets table exists
 (async function ensurePasswordResets() {
@@ -85,10 +105,21 @@ export const forgotPassword: RequestHandler = async (req, res) => {
     const base = process.env.BASE_URL || '';
     const resetUrl = base ? `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}` : `/reset-password?token=${encodeURIComponent(token)}`;
 
-    // Attempt to send email if SMTP is configured - otherwise log to console
-    if (process.env.SMTP_HOST) {
-      // prefer to send via an external service; nodemailer not included by default, so log for now
-      console.log('[forgot] SMTP configured but nodemailer not installed - token:', token, 'url:', resetUrl);
+    // Attempt to send email via SMTP if configured; otherwise log token/url
+    const transporter = getTransporter();
+    if (transporter) {
+      try {
+        const from = process.env.FROM_EMAIL || process.env.SMTP_USER || 'no-reply@example.com';
+        await transporter.sendMail({
+          from,
+          to: u.email,
+          subject: 'Reset your password',
+          text: `Hello ${u.name || ''},\n\nWe received a request to reset your password. Click the link below to set a new password. This link will expire in 1 hour.\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
+          html: `<p>Hello ${u.name || ''},</p><p>We received a request to reset your password. Click the button below to set a new password. This link will expire in 1 hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px">Reset Password</a></p><p>Or copy and paste this URL into your browser:<br/><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`
+        });
+      } catch (err) {
+        console.error('[forgot] failed to send reset email to', u.email, err);
+      }
     } else {
       console.log('[forgot] password reset token for', u.email, '->', resetUrl);
     }
