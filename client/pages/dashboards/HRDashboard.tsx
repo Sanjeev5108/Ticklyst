@@ -67,7 +67,7 @@ export default function HRDashboard() {
   const [filterStatus, setFilterStatus] = useState<'all'|'active'|'inactive'>('all');
   const [filterDivisions, setFilterDivisions] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<'none'|'role'|'status'|'division'>('none');
-  const allFields = ['Name','Email','Role','Division','Status','Last Login'] as const;
+  const allFields = ['Name','Email','Role','Division','Status'] as const;
   const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
 
   const roles: UserRole[] = ['Admin', 'HR', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'];
