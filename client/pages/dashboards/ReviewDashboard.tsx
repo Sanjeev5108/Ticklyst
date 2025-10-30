@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import * as XLSX from 'xlsx';
 import { computeResidual, computeRiskScore } from '@shared/risk';
-import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface ControlRow {
@@ -32,7 +31,6 @@ interface ControlRow {
 const FRAMEWORK_DATA_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
 
 export default function ReviewDashboard() {
-  const { user } = useAuth();
   const { user } = useAuth();
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [search, setSearch] = useState('');
