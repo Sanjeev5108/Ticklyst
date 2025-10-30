@@ -6,6 +6,25 @@ const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 
+// Ensure password_resets table exists
+(async function ensurePasswordResets() {
+  if (!connectionString) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+    `);
+  } catch (err) {
+    console.error('failed to ensure password_resets table', err);
+  }
+})();
+
 export const login: RequestHandler = async (req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   const { email, password } = req.body || {};
@@ -38,6 +57,67 @@ export const login: RequestHandler = async (req, res) => {
       allowedModules
     };
     res.json(user);
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+// POST /api/auth/forgot
+export const forgotPassword: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'email_required' });
+  try {
+    const q = await pool.query('SELECT id, email, name FROM employees WHERE email=$1 LIMIT 1', [email]);
+    if (!q.rows.length) {
+      // don't reveal whether email exists
+      console.log('[forgot] request for unknown email', email);
+      return res.json({ ok: true });
+    }
+    const u = q.rows[0];
+    const token = (globalThis as any).crypto?.randomUUID?.() || require('crypto').randomBytes(24).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const id = (globalThis as any).crypto?.randomUUID?.() || Date.now().toString();
+    await pool.query('INSERT INTO password_resets(id, user_id, token, expires_at, used) VALUES ($1,$2,$3,$4,$5)', [id, u.id, token, expires.toISOString(), false]);
+
+    // Build reset URL
+    const base = process.env.BASE_URL || '';
+    const resetUrl = base ? `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}` : `/reset-password?token=${encodeURIComponent(token)}`;
+
+    // Attempt to send email if SMTP is configured - otherwise log to console
+    if (process.env.SMTP_HOST) {
+      // prefer to send via an external service; nodemailer not included by default, so log for now
+      console.log('[forgot] SMTP configured but nodemailer not installed - token:', token, 'url:', resetUrl);
+    } else {
+      console.log('[forgot] password reset token for', u.email, '->', resetUrl);
+    }
+
+    res.json({ ok: true });
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+// POST /api/auth/reset
+export const resetPassword: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: 'token_and_password_required' });
+  if (typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'password_too_short' });
+  try {
+    const q = await pool.query('SELECT id, user_id, expires_at, used FROM password_resets WHERE token=$1 LIMIT 1', [token]);
+    if (!q.rows.length) return res.status(400).json({ error: 'invalid_token' });
+    const rec = q.rows[0];
+    if (rec.used) return res.status(400).json({ error: 'token_used' });
+    const exp = new Date(rec.expires_at);
+    if (isNaN(exp.getTime()) || exp.getTime() < Date.now()) return res.status(400).json({ error: 'token_expired' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('UPDATE employees SET password_hash=$1 WHERE id=$2', [hash, rec.user_id]);
+    await pool.query('UPDATE password_resets SET used=true WHERE id=$1', [rec.id]);
+    res.json({ ok: true });
   } catch (e:any) {
     console.error(e);
     res.status(500).json({ error: e.message || 'db_error' });
