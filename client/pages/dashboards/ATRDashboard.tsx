@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { FieldworkRecord } from '@shared/fieldwork';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuditTrackRow {
   id: string;
@@ -104,6 +105,7 @@ export default function ATRDashboard() {
   const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
   const [reportableProjectFilter, setReportableProjectFilter] = useState<string>('all');
+  const { user } = useAuth();
 
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll()));
@@ -121,16 +123,10 @@ export default function ATRDashboard() {
 
         const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
         const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
-        const { user } = require('@/contexts/AuthContext');
-        const u = (typeof user === 'function' ? undefined : undefined);
-        // Avoid require usage; instead fetch from window if available
-        const auth = (window as any)?.__auth_ctx as any;
-        const currentUser = auth?.user || null;
-
-        const scope = (currentUser?.id && userScopeMap[currentUser.id]) ? userScopeMap[currentUser.id] : (currentUser?.role ? roleScopeMap[currentUser.role] : 'all');
-        const normalizedRole = (currentUser?.role || '').toLowerCase();
+        const scope = (user?.id && userScopeMap[user.id]) ? userScopeMap[user.id] : (user?.role ? roleScopeMap[user.role] : 'all');
+        const normalizedRole = (user?.role || '').toLowerCase();
         const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
-        const userName = currentUser?.username || '';
+        const userName = user?.username || '';
         const initials = userName.split(' ').map((s:string)=>s[0]).join('');
         const isOnProject = (prj: any) => {
           const d = prj?.raw?.data || {};
@@ -138,11 +134,11 @@ export default function ATRDashboard() {
           const flat = lists.flat().map((s:string)=>String(s||''));
           return flat.includes(userName) || flat.includes(initials);
         };
-        const filtered = (scope === 'own' && isTargetRole && currentUser) ? mapped.filter(isOnProject) : mapped;
+        const filtered = (scope === 'own' && isTargetRole && user) ? mapped.filter(isOnProject) : mapped;
         setProjects(filtered);
       } catch {}
     })();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (controls.length) return;
