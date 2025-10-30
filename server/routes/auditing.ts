@@ -47,6 +47,14 @@ async function ensure() {
       updated_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS project_digest_log (
+      project_id TEXT NOT NULL,
+      period_key TEXT NOT NULL,
+      sent_at TIMESTAMPTZ DEFAULT now(),
+      PRIMARY KEY(project_id, period_key)
+    );
+  `);
   if (process.env.CLEAR_CLIENTS_ON_BOOT === 'true') {
     try { await pool.query('TRUNCATE TABLE clients'); } catch {}
   }
@@ -544,6 +552,166 @@ export const createProject: RequestHandler = async (req, res) => {
     res.status(500).json({ error: e.message || 'db_error' });
   }
 };
+
+function countTotalControlsFromTree(tree: any): number {
+  if (!tree || typeof tree !== 'object') return 0;
+  let total = 0;
+  try {
+    for (const proc of Object.values<any>(tree)) {
+      const subs = (proc && proc.subprocesses) || {};
+      for (const sub of Object.values<any>(subs)) {
+        const acts = (sub && sub.activities) || {};
+        for (const act of Object.values<any>(acts)) {
+          const risks = (act && act.risks) || {};
+          for (const r of Object.values<any>(risks)) {
+            const ctrls = Array.isArray((r as any).controls) ? (r as any).controls : [];
+            total += ctrls.length;
+          }
+        }
+      }
+    }
+  } catch {}
+  return total;
+}
+
+function getISOWeek(date: Date): { year: number; week: number } {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return { year: d.getUTCFullYear(), week: weekNo };
+}
+
+function computePeriodKey(freq: string, now: Date): { key: string; due: boolean } {
+  const f = (freq || '').toLowerCase();
+  const day = now.getDay(); // 0=Sun..6=Sat
+  const month = now.getMonth(); // 0=Jan
+  const year = now.getFullYear();
+  if (f === 'weekly') {
+    if (day !== 1) return { key: '', due: false }; // Monday only
+    const { year: wy, week } = getISOWeek(now);
+    return { key: `W${wy}-${String(week).padStart(2,'0')}`, due: true };
+  }
+  if (f === 'fortnightly') {
+    if (day !== 1) return { key: '', due: false };
+    const { year: wy, week } = getISOWeek(now);
+    const bi = Math.ceil(week / 2);
+    return { key: `F${wy}-${String(bi).padStart(2,'0')}`, due: week % 2 === 1 || week % 2 === 0 };
+  }
+  if (f === 'monthly') {
+    if (now.getDate() !== 1) return { key: '', due: false };
+    return { key: `M${year}-${String(month+1).padStart(2,'0')}`, due: true };
+  }
+  if (f === 'quarterly') {
+    if (now.getDate() !== 1) return { key: '', due: false };
+    const q = Math.floor(month / 3) + 1;
+    if (![1,4,7,10].includes(month+1)) return { key: '', due: false };
+    return { key: `Q${year}-Q${q}` , due: true };
+  }
+  return { key: '', due: false };
+}
+
+async function sendProgressDigestForProject(row: any) {
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const id = row.id;
+  const code = row.code;
+  const name = row.name;
+  const clientName = row.client_name;
+  const status = row.status;
+  const data = row.data || {};
+  const d: any = data;
+  const teamLists = [
+    { role: 'Division Head', names: Array.isArray(d.divisionHeads) ? d.divisionHeads : [] },
+    { role: 'Partner', names: Array.isArray(d.partners) ? d.partners : [] },
+    { role: 'Team Leader', names: Array.isArray(d.teamLeaders) ? d.teamLeaders : [] },
+    { role: 'Team Member', names: Array.isArray(d.teamMembers) ? d.teamMembers : [] },
+  ];
+  const allNames = Array.from(new Set(teamLists.flatMap(t => t.names).filter(Boolean)));
+  let recipients: { name: string; email: string; role?: string }[] = [];
+  if (allNames.length) {
+    try {
+      const uq = await pool.query('SELECT name, email, role FROM employees WHERE name = ANY($1) AND (is_active IS TRUE OR is_active IS NULL)', [allNames]);
+      const byName: Record<string, { email: string; role?: string }> = {};
+      for (const r of uq.rows) byName[r.name] = { email: r.email, role: r.role };
+      recipients = allNames.map(n => {
+        const f = byName[n];
+        if (!f || !f.email) return null as any;
+        const explicitRole = (teamLists as any[]).find(t => (t.names||[]).includes(n))?.role;
+        return { name: n, email: f.email, role: explicitRole || f.role };
+      }).filter(Boolean) as any[];
+    } catch {}
+  }
+  if (!recipients.length) return;
+  const emails = recipients.map(r => r.email);
+  const to = emails[0];
+  const bcc = emails.slice(1);
+
+  // compute progress
+  let totalControls = 0;
+  try { totalControls = countTotalControlsFromTree(d.selectedChecklistTree); } catch {}
+  let approved = 0;
+  try {
+    const like = `${id}|%`;
+    const aq = await pool.query(`SELECT COUNT(*)::int AS approved FROM fieldwork_records WHERE id LIKE $1 AND data->>'status' = 'approved'`, [like]);
+    approved = aq.rows[0]?.approved || 0;
+  } catch {}
+  const progress = totalControls > 0 ? Math.round((approved / totalControls) * 100) : 0;
+
+  const frequency = String(d.reportingFrequency || '').trim();
+  const statusLabel = String(status || '').replace(/-/g,' ').replace(/\b\w/g, (c)=>c.toUpperCase());
+  const subject = `${frequency || 'Progress'} Project Progress: ${name} – ${progress}%`;
+  const base = (process.env.BASE_URL || '').replace(/\/$/, '');
+  const projectInfo = `<ul>
+    <li><strong>Project Code:</strong> ${code || '-'}</li>
+    <li><strong>Project Name:</strong> ${name || '-'}</li>
+    <li><strong>Client Name:</strong> ${clientName || '-'}</li>
+    <li><strong>Project Status:</strong> ${statusLabel || '-'}</li>
+    <li><strong>Progress Percentage:</strong> ${progress}% (${approved}/${totalControls} controls)</li>
+  </ul>`;
+  const assignmentHtml = teamLists.filter(t => (t.names||[]).length).map(t => `<li><strong>${t.role}:</strong> ${(t.names||[]).join(', ')}</li>`).join('');
+  const html = `<div style="font-family:Arial,sans-serif;line-height:1.5"><h2>Project Progress Update</h2>${projectInfo}${assignmentHtml ? `<h3>Team Assignment</h3><ul>${assignmentHtml}</ul>` : ''}${base ? `<p><a href='${base}'>Open Application</a></p>` : ''}</div>`;
+  const text = `Project Progress Update\n\nProject Code: ${code || '-'}\nProject Name: ${name || '-'}\nClient Name: ${clientName || '-'}\nProject Status: ${statusLabel || '-'}\nProgress Percentage: ${progress}% (${approved}/${totalControls})\n\nTeam Assignment:\n${teamLists.map(t=>`${t.role}: ${(t.names||[]).join(', ')}`).join('\n')}`;
+
+  await transporter.sendMail({ from: process.env.FROM_EMAIL || process.env.SMTP_USER, to, bcc, subject, text, html });
+}
+
+async function processProgressDigestTick(now: Date) {
+  if (!connectionString) return;
+  try {
+    const q = await pool.query(`SELECT id, code, name, client_name, status, data, created_at FROM projects WHERE COALESCE((data->>'emailNotifications')::boolean, false) = true`);
+    for (const row of q.rows) {
+      const data = row.data || {};
+      const frequency = String(data.reportingFrequency || '').trim();
+      const { key, due } = computePeriodKey(frequency, now);
+      if (!due || !key) continue;
+      try {
+        const iq = await pool.query(`INSERT INTO project_digest_log(project_id, period_key, sent_at) VALUES ($1,$2,now()) ON CONFLICT (project_id, period_key) DO NOTHING`, [row.id, key]);
+        if (iq.rowCount && iq.rowCount > 0) {
+          await sendProgressDigestForProject(row);
+        }
+      } catch (e) {
+        // ignore duplicate errors
+      }
+    }
+  } catch (e) {
+    console.error('progress digest failed', e);
+  }
+}
+
+let digestTimer: NodeJS.Timeout | null = null;
+export function initProjectProgressScheduler() {
+  try {
+    // Run on startup and then every 15 minutes
+    const tick = () => processProgressDigestTick(new Date());
+    tick();
+    if (digestTimer) clearInterval(digestTimer);
+    digestTimer = setInterval(tick, 15 * 60 * 1000);
+  } catch (e) {
+    console.error('initProjectProgressScheduler failed', e);
+  }
+}
 
 export const deleteAllProjects: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
