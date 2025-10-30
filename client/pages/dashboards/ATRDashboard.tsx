@@ -118,7 +118,28 @@ export default function ATRDashboard() {
         if (!res.ok) return;
         const rows = await res.json();
         const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
-        setProjects(mapped);
+
+        const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
+        const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
+        const { user } = require('@/contexts/AuthContext');
+        const u = (typeof user === 'function' ? undefined : undefined);
+        // Avoid require usage; instead fetch from window if available
+        const auth = (window as any)?.__auth_ctx as any;
+        const currentUser = auth?.user || null;
+
+        const scope = (currentUser?.id && userScopeMap[currentUser.id]) ? userScopeMap[currentUser.id] : (currentUser?.role ? roleScopeMap[currentUser.role] : 'all');
+        const normalizedRole = (currentUser?.role || '').toLowerCase();
+        const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
+        const userName = currentUser?.username || '';
+        const initials = userName.split(' ').map((s:string)=>s[0]).join('');
+        const isOnProject = (prj: any) => {
+          const d = prj?.raw?.data || {};
+          const lists: string[][] = [d.divisionHeads||[], d.partners||[], d.teamLeaders||[], d.teamMembers||[]];
+          const flat = lists.flat().map((s:string)=>String(s||''));
+          return flat.includes(userName) || flat.includes(initials);
+        };
+        const filtered = (scope === 'own' && isTargetRole && currentUser) ? mapped.filter(isOnProject) : mapped;
+        setProjects(filtered);
       } catch {}
     })();
   }, []);
