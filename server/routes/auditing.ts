@@ -597,7 +597,7 @@ function computePeriodKey(freq: string, now: Date): { key: string; due: boolean 
     if (day !== 1) return { key: '', due: false };
     const { year: wy, week } = getISOWeek(now);
     const bi = Math.ceil(week / 2);
-    return { key: `F${wy}-${String(bi).padStart(2,'0')}`, due: week % 2 === 1 || week % 2 === 0 };
+    return { key: `F${wy}-${String(bi).padStart(2,'0')}`, due: (week % 2) === 1 };
   }
   if (f === 'monthly') {
     if (now.getDate() !== 1) return { key: '', due: false };
