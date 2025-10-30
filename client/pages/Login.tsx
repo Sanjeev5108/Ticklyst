@@ -36,6 +36,9 @@ export default function Login() {
     }
   };
 
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMsg, setForgotMsg] = useState('');
   const testCredentials = [
     { role: 'Admin', username: 'Admin', password: '12345' },
     { role: 'HR', username: 'HR', password: '12345' },
