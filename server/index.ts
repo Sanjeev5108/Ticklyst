@@ -24,6 +24,7 @@ import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEm
 import { login, forgotPassword, resetPassword } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
 import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode } from "./routes/framework";
+import { initProjectProgressScheduler } from "./routes/auditing";
 import { getAllFieldwork, getFieldworkById, upsertFieldwork, bulkUpsertFieldwork } from "./routes/fieldwork";
 
 export function createServer() {
@@ -99,6 +100,9 @@ export function createServer() {
 
   // Comments
   app.post("/api/projects/:projectId/checklist/:checklistItemId/comments", addComment);
+
+  // Background schedulers
+  initProjectProgressScheduler();
 
   return app;
 }
