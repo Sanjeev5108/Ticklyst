@@ -13,6 +13,7 @@ import { FileText, CheckCircle2, XCircle, Search, Save, Rows3, Columns2, Downloa
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
+import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import * as XLSX from 'xlsx';
 import { computeResidual, computeRiskScore } from '@shared/risk';
@@ -31,6 +32,7 @@ interface ControlRow {
 const FRAMEWORK_DATA_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
 
 export default function ReviewDashboard() {
+  const { user } = useAuth();
   const { user } = useAuth();
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [search, setSearch] = useState('');
@@ -140,10 +142,25 @@ export default function ReviewDashboard() {
         if (!res.ok) return;
         const rows = await res.json();
         const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
-        setProjects(mapped);
+
+        const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
+        const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
+        const scope = (user?.id && userScopeMap[user.id]) ? userScopeMap[user.id] : (user?.role ? roleScopeMap[user.role] : 'all');
+        const normalizedRole = (user?.role || '').toLowerCase();
+        const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
+        const userName = user?.username || '';
+        const initials = userName.split(' ').map((s:string)=>s[0]).join('');
+        const isOnProject = (prj: any) => {
+          const d = prj?.raw?.data || {};
+          const lists: string[][] = [d.divisionHeads||[], d.partners||[], d.teamLeaders||[], d.teamMembers||[]];
+          const flat = lists.flat().map((s:string)=>String(s||''));
+          return flat.includes(userName) || flat.includes(initials);
+        };
+        const filtered = (scope === 'own' && isTargetRole && user) ? mapped.filter(isOnProject) : mapped;
+        setProjects(filtered);
       } catch {}
     })();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (controls.length) return;
