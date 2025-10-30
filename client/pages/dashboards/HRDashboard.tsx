@@ -547,7 +547,6 @@ export default function HRDashboard() {
                 {selectedFields.includes('Role') && (<TableHead>Role</TableHead>)}
                 {selectedFields.includes('Division') && (<TableHead>Division</TableHead>)}
                 {selectedFields.includes('Status') && (<TableHead>Status</TableHead>)}
-                {selectedFields.includes('Last Login') && (<TableHead>Last Login</TableHead>)}
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
