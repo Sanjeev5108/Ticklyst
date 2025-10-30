@@ -507,7 +507,7 @@ export default function ProjectManagement() {
     setIsEditOpen(false);
   };
 
-  const updateProjectStatus = async (proj: Project, next: 'todo'|'in-progress'|'hold') => {
+  const updateProjectStatus = async (proj: Project, next: 'todo'|'in-progress'|'hold'|'completed') => {
     setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, status: next } : p));
     try {
       await fetch('/api/projects', {
@@ -599,7 +599,7 @@ export default function ProjectManagement() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Set status</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'todo')}>Completed</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'completed')}>Completed</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => updateProjectStatus(project, 'in-progress')}>In Progress</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => updateProjectStatus(project, 'hold')}>Hold</DropdownMenuItem>
                 </DropdownMenuContent>
