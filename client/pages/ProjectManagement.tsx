@@ -352,6 +352,7 @@ export default function ProjectManagement() {
   const todoProjects = filteredProjects.filter(p => p.status === 'todo');
   const inProgressProjects = filteredProjects.filter(p => p.status === 'in-progress');
   const holdProjects = filteredProjects.filter(p => p.status === 'hold');
+  const completedProjects = filteredProjects.filter(p => p.status === 'completed');
 
   const handleCreateProject = async (projectData: any) => {
     // Build payload and let server assign authoritative project code
@@ -945,8 +946,8 @@ export default function ProjectManagement() {
         <div className="flex gap-6 h-full">
           <Column
             title="Completed"
-            count={todoProjects.length}
-            projects={todoProjects}
+            count={completedProjects.length}
+            projects={completedProjects}
             icon={CheckCircle2}
             color="text-green-600"
           />
