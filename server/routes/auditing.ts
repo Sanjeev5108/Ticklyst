@@ -488,6 +488,56 @@ export const createProject: RequestHandler = async (req, res) => {
       [id, code, name, clientName, status, startDate, endDate, data, createdBy]
     );
 
+    // Send notifications on create or status change
+    try {
+      const transporter = getTransporter();
+      if (transporter) {
+        const d: any = data || {};
+        const teamLists = [
+          { role: 'Division Head', names: Array.isArray(d.divisionHeads) ? d.divisionHeads : [] },
+          { role: 'Partner', names: Array.isArray(d.partners) ? d.partners : [] },
+          { role: 'Team Leader', names: Array.isArray(d.teamLeaders) ? d.teamLeaders : [] },
+          { role: 'Team Member', names: Array.isArray(d.teamMembers) ? d.teamMembers : [] },
+        ];
+        const allNames = Array.from(new Set(teamLists.flatMap(t => t.names).filter(Boolean)));
+        let recipients: { name: string; email: string; role?: string }[] = [];
+        if (allNames.length) {
+          const uq = await pool.query('SELECT name, email, role FROM employees WHERE name = ANY($1) AND (is_active IS TRUE OR is_active IS NULL)', [allNames]);
+          const byName: Record<string, { email: string; role?: string }> = {};
+          for (const r of uq.rows) byName[r.name] = { email: r.email, role: r.role };
+          recipients = allNames.map(n => {
+            const f = byName[n];
+            if (!f || !f.email) return null as any;
+            const explicitRole = (teamLists as any[]).find(t => (t.names||[]).includes(n))?.role;
+            return { name: n, email: f.email, role: explicitRole || f.role };
+          }).filter(Boolean) as any[];
+        }
+        const emails = recipients.map(r => r.email);
+        const to = emails[0];
+        const bcc = emails.slice(1);
+        const statusLabel = String(status || '').replace(/-/g,' ').replace(/\b\w/g, (c)=>c.toUpperCase());
+        const isNew = !existing;
+        const statusChanged = !!(existing && existing.status !== status && ['in-progress','completed','hold'].includes(String(status||'')));
+        if ((isNew || statusChanged) && to) {
+          const subject = isNew ? `🆕 New Project Created: ${name}` : `📢 Project Status Updated: ${name} – ${statusLabel}`;
+          const heading = isNew ? 'New Project Created' : `Project Status Updated: ${statusLabel}`;
+          const assignmentHtml = teamLists.filter((t:any)=> (t.names||[]).length).map((t:any)=>`<li><strong>${t.role}:</strong> ${(t.names||[]).join(', ')}</li>`).join('');
+          const base = (process.env.BASE_URL || '').replace(/\/$/, '');
+          const projectInfo = `<ul>
+            <li><strong>Project ID:</strong> ${id}</li>
+            <li><strong>Project Name:</strong> ${name}</li>
+            <li><strong>Client Name:</strong> ${clientName || '-'}</li>
+            <li><strong>${isNew ? 'Status' : 'Updated Status'}:</strong> ${isNew ? 'New Project Created' : statusLabel}</li>
+          </ul>`;
+          const html = `<div style="font-family:Arial,sans-serif;line-height:1.5"><h2>${heading}</h2>${projectInfo}${assignmentHtml ? `<h3>Team Assignment</h3><ul>${assignmentHtml}</ul>` : ''}${base ? `<p><a href='${base}'>Open Application</a></p>` : ''}</div>`;
+          const text = `${heading}\n\nProject ID: ${id}\nProject Name: ${name}\nClient Name: ${clientName || '-'}\n${isNew ? 'Status: New Project Created' : 'Updated Status: ' + statusLabel}\n\nTeam Assignment:\n${teamLists.map((t:any)=>`${t.role}: ${(t.names||[]).join(', ')}`).join('\n')}`;
+          await transporter.sendMail({ from: process.env.FROM_EMAIL || process.env.SMTP_USER, to, bcc, subject, text, html });
+        }
+      }
+    } catch (err) {
+      console.error('project notification failed', err);
+    }
+
     res.status(201).json({ id, code, name, clientName, status, startDate, endDate, createdBy });
   } catch (e:any) {
     console.error(e);
