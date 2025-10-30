@@ -578,7 +578,6 @@ export default function HRDashboard() {
                         </Badge>
                       </TableCell>
                     )}
-                    {selectedFields.includes('Last Login') && (<TableCell>{employee.lastLogin || 'Never'}</TableCell>)}
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="outline" size="sm" title="Edit" aria-label="Edit" onClick={() => openEditEmployee(employee)}>
