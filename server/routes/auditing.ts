@@ -6,6 +6,20 @@ const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 
+// SMTP transporter (lazy init)
+let mailer: any = null;
+function getTransporter() {
+  if (!process.env.SMTP_HOST) return null;
+  if (mailer) return mailer;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const auth = user ? { user, pass } : undefined;
+  mailer = nodemailer.createTransport({ host: process.env.SMTP_HOST, port, secure, auth });
+  return mailer;
+}
+
 async function ensure() {
   if (!connectionString) return;
   await pool.query(`
