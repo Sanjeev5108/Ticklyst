@@ -23,7 +23,7 @@ import {
 import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEmployeeStatus } from "./routes/employees";
 import { login, forgotPassword, resetPassword } from "./routes/auth";
 import { getSetting, setSetting } from "./routes/settings";
-import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode } from "./routes/framework";
+import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode, downloadFrameworkTemplate, importFrameworkRows } from "./routes/framework";
 import { initProjectProgressScheduler } from "./routes/auditing";
 import { getAllFieldwork, getFieldworkById, upsertFieldwork, bulkUpsertFieldwork } from "./routes/fieldwork";
 
@@ -64,6 +64,8 @@ export function createServer() {
   app.post('/api/framework/nodes', createFrameworkNode);
   app.put('/api/framework/nodes/*', updateFrameworkNode);
   app.delete('/api/framework/nodes/*', deleteFrameworkNode);
+  app.get('/api/framework/template', downloadFrameworkTemplate);
+  app.post('/api/framework/import-rows', importFrameworkRows);
 
   // Fieldwork persistence
   app.get('/api/fieldwork', getAllFieldwork);
