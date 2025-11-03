@@ -135,43 +135,43 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     }
 
     const inst = wb.addWorksheet('Instructions');
-    const lines = [
-      'Instructions',
-      '',
-      'Use the Framework sheet to enter data. The hierarchy is Process → Subprocess → Activity → Risk → Control.',
-      'Columns:',
-      'Process (required) – Name of the business process',
-      'Process Description (optional) – Description for the process',
-      'Departments Involved (Process level) – select from dropdown; multi-select by typing comma-separated values',
-      'Subprocess (optional) – Name of subprocess under the process',
-      'Subprocess Description (optional)',
-      'Departments Involved (Subprocess level) – dropdown (comma-separated allowed)',
-      'Activity (optional) – Activity under the subprocess',
-      'Activity Description (optional)',
-      'Departments Involved (Activity level) – dropdown (comma-separated allowed)',
-      'Risk (optional) – Risk under activity',
-      'Risk Description (optional)',
-      'Risk Category – dropdown',
-      'Control (optional) – Control under risk',
-      'Control Type – dropdown',
-      'Reference – free text reference or owner',
-      '',
-      'Only the Framework sheet is read on import. The Instructions sheet is ignored.'
-    ];
-    lines.forEach((t, i) => { const row = inst.addRow([t]); if (i===0) row.font = { bold: true, size: 14 }; });
+    const add = (vals: (string)[]) => inst.addRow(vals);
 
-    const ex = wb.addWorksheet('Example');
-    ex.addRow(headers);
-    ex.getRow(1).font = { bold: true };
-    const R = (arr: any[]) => ex.addRow(arr);
-    R(['Purchase to Pay','','','','','','','','','','','','','','']);
-    R(['','','','Accounts','','','','','','','','','','','']);
-    R(['','','','','','','Invoice Processing','','','','Incorrect Invoice Entry','','Control 1','','']);
-    R(['','','','','','','','','','','Delayed Invoice Posting','','Control 2','','']);
-    R(['','','','Procurement','','','Vendor Selection','','','','Non-compliant Vendor','','Control 3','','']);
-    R(['Order to Cash','','','','','','','','','','','','','','']);
-    R(['','','','Sales','','','Dispatch','','','','Delivery Errors','','Control 1','','']);
-    R(['','','','','','','Billing','','','','Wrong Invoice','','Control 2','','']);
+    // Title and intro
+    inst.addRow(['Instructions']);
+    inst.getRow(1).font = { bold: true, size: 14 };
+    add(['Use the Framework sheet to enter data.']);
+    add(['The hierarchy follows this structure: Process → Subprocess → Activity → Risk → Control']);
+    add(['']);
+    add(['Each row represents a complete chain. If multiple Activities, Risks, or Controls exist under the same Process/Subprocess, repeat the higher-level data in the next rows.']);
+    add(['']);
+    add(['Example:']);
+    add(['Process','Subprocess','Activity','Risk','Control']);
+    inst.getRow(inst.rowCount).font = { bold: true };
+    add(['Indent to Pay','Accounts','Activity 1','Risk 1','Control 1']);
+    add(['Indent to Pay','Accounts','Activity 1','Risk 2','Control 2']);
+    add(['Indent to Pay','Accounts','Activity 2','Risk 1','Control 1']);
+    add(['Order to Cash','Sales and Marketing','Activity 1','Risk 1','Control 1']);
+    add(['Order to Cash','Sales and Marketing','Activity 1','Risk 2','Control 2']);
+    add(['']);
+    add(['Columns:']);
+    add(['- Process (required): Name of the main business process']);
+    add(['- Process Description (optional)']);
+    add(['- Departments Involved (Process level): Select from dropdown (comma-separated allowed)']);
+    add(['- Subprocess (optional)']);
+    add(['- Subprocess Description (optional)']);
+    add(['- Departments Involved (Subprocess level): Select from dropdown (comma-separated allowed)']);
+    add(['- Activity (optional)']);
+    add(['- Activity Description (optional)']);
+    add(['- Departments Involved (Activity level): Select from dropdown (comma-separated allowed)']);
+    add(['- Risk (optional)']);
+    add(['- Risk Description (optional)']);
+    add(['- Risk Category: Dropdown']);
+    add(['- Control (optional)']);
+    add(['- Control Type: Dropdown']);
+    add(['- Reference: Optional free-text field']);
+    add(['']);
+    add(['Only the Framework sheet is imported. The Instructions sheet is ignored during import.']);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="framework-template.xlsx"');
