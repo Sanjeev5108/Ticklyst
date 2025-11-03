@@ -102,7 +102,10 @@ export const forgotPassword: RequestHandler = async (req, res) => {
     await pool.query('INSERT INTO password_resets(id, user_id, token, expires_at, used) VALUES ($1,$2,$3,$4,$5)', [id, u.id, token, expires.toISOString(), false]);
 
     // Build reset URL
-    const base = process.env.BASE_URL || '';
+    const proto = (req.headers['x-forwarded-proto'] as string) || (req.protocol || 'https');
+    const host = (req.headers['x-forwarded-host'] as string) || (req.headers.host as string) || '';
+    const origin = host ? `${proto}://${host}` : (process.env.BASE_URL || '');
+    const base = origin || '';
     const resetUrl = base ? `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}` : `/reset-password?token=${encodeURIComponent(token)}`;
 
     // Attempt to send email via SMTP if configured; otherwise log token/url
