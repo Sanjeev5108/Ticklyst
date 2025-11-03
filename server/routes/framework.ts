@@ -1,5 +1,7 @@
 import { RequestHandler } from "express";
 import pg from "pg";
+import type { RequestHandler } from 'express';
+import ExcelJS from 'exceljs';
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
