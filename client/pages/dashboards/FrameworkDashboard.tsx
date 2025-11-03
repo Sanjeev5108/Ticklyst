@@ -945,7 +945,12 @@ export default function FrameworkDashboard() {
               const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
               const res = await fetch('/api/framework/import-rows', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows }) });
               if (!res.ok) throw new Error('import_failed');
-              toast({ title: 'Import completed' });
+              const result = await res.json();
+              const errCount = Array.isArray(result?.errors) ? result.errors.length : 0;
+              toast({ title: 'Import completed', description: errCount ? `${errCount} row(s) had issues` : 'All rows imported' });
+              if (errCount) {
+                console.warn('Import errors', result.errors);
+              }
               // refresh tree
               try {
                 const r = await fetch('/api/framework/tree');
