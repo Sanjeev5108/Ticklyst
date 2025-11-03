@@ -158,6 +158,19 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     ];
     lines.forEach((t, i) => { const row = inst.addRow([t]); if (i===0) row.font = { bold: true, size: 14 }; });
 
+    const ex = wb.addWorksheet('Example');
+    ex.addRow(headers);
+    ex.getRow(1).font = { bold: true };
+    const R = (arr: any[]) => ex.addRow(arr);
+    R(['Purchase to Pay','','','','','','','','','','','','','','']);
+    R(['','','','Accounts','','','','','','','','','','','']);
+    R(['','','','','','','Invoice Processing','','','','Incorrect Invoice Entry','','Control 1','','']);
+    R(['','','','','','','','','','','Delayed Invoice Posting','','Control 2','','']);
+    R(['','','','Procurement','','','Vendor Selection','','','','Non-compliant Vendor','','Control 3','','']);
+    R(['Order to Cash','','','','','','','','','','','','','','']);
+    R(['','','','Sales','','','Dispatch','','','','Delivery Errors','','Control 1','','']);
+    R(['','','','','','','Billing','','','','Wrong Invoice','','Control 2','','']);
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="framework-template.xlsx"');
     await wb.xlsx.write(res);
