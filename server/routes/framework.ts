@@ -124,11 +124,12 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     ws.columns = headers.map(h => ({ header: h, width: Math.max(18, Math.min(40, h.length + 6)) }));
 
     for (let r = 2; r <= 1000; r++) {
-      ws.getCell(`C${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
-      ws.getCell(`F${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
-      ws.getCell(`I${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
-      ws.getCell(`L${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=RiskCategories'] } as any;
-      ws.getCell(`N${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=ControlTypes'] } as any;
+      const listOpts:any = { type: 'list', allowBlank: true, showErrorMessage: false };
+      ws.getCell(`C${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
+      ws.getCell(`F${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
+      ws.getCell(`I${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
+      ws.getCell(`L${r}`).dataValidation = { ...listOpts, formulae: ['=RiskCategories'] } as any;
+      ws.getCell(`N${r}`).dataValidation = { ...listOpts, formulae: ['=ControlTypes'] } as any;
     }
 
     const inst = wb.addWorksheet('Instructions');
