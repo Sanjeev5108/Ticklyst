@@ -96,7 +96,7 @@ export const deleteFrameworkNode: RequestHandler = async (req, res) => {
 };
 
 function normalizeString(v: any): string { return (v != null ? String(v) : '').trim(); }
-function toArray(v: any): string[] { if (!v) return []; if (Array.isArray(v)) return v.map(x=>String(x)); const s = String(v).trim(); if (!s) return []; return s.split(/,|;|\|\//).map(x=>x.trim()).filter(Boolean); }
+function toArray(v: any): string[] { if (!v) return []; if (Array.isArray(v)) return v.map(x=>String(x)); const s = String(v).trim(); if (!s) return []; return s.split(/,|;|\||\//).map(x=>x.trim()).filter(Boolean); }
 
 export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
   try {
