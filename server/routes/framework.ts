@@ -103,6 +103,19 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Framework Module';
 
+    const headers = [
+      'Process','Process Description','Departments Involved (Process level)',
+      'Subprocess','Subprocess Description','Departments Involved (Subprocess level)',
+      'Activity','Activity Description','Departments Involved (Activity level)',
+      'Risk','Risk Description','Risk Category','Control','Control Type','Reference'
+    ];
+    // Create Framework first so it is the first visible sheet
+    const ws = wb.addWorksheet('Framework', { views:[{ state:'frozen', ySplit:1 }] });
+    ws.addRow(headers);
+    ws.getRow(1).font = { bold: true };
+    ws.columns = headers.map(h => ({ header: h, width: Math.max(18, Math.min(40, h.length + 6)) }));
+
+    // Lists sheet with named ranges for dropdowns
     const listWs = wb.addWorksheet('Lists');
     listWs.state = 'hidden';
     listWs.getColumn(1).values = ["Departments", ...DEPARTMENTS];
@@ -111,17 +124,6 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     wb.definedNames.add('Departments', 'Lists!$A$2:$A$' + (DEPARTMENTS.length + 1));
     wb.definedNames.add('RiskCategories', 'Lists!$B$2:$B$' + (RISK_CATEGORIES.length + 1));
     wb.definedNames.add('ControlTypes', 'Lists!$C$2:$C$' + (CONTROL_TYPES.length + 1));
-
-    const headers = [
-      'Process','Process Description','Departments Involved (Process level)',
-      'Subprocess','Subprocess Description','Departments Involved (Subprocess level)',
-      'Activity','Activity Description','Departments Involved (Activity level)',
-      'Risk','Risk Description','Risk Category','Control','Control Type','Reference'
-    ];
-    const ws = wb.addWorksheet('Framework', { views:[{ state:'frozen', ySplit:1 }] });
-    ws.addRow(headers);
-    ws.getRow(1).font = { bold: true };
-    ws.columns = headers.map(h => ({ header: h, width: Math.max(18, Math.min(40, h.length + 6)) }));
 
     for (let r = 2; r <= 1000; r++) {
       const listOpts:any = { type: 'list', allowBlank: true, showErrorMessage: false };
