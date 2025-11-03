@@ -104,7 +104,7 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     wb.creator = 'Framework Module';
 
     const listWs = wb.addWorksheet('Lists');
-    listWs.state = 'veryHidden';
+    listWs.state = 'hidden';
     listWs.getColumn(1).values = ["Departments", ...DEPARTMENTS];
     listWs.getColumn(2).values = ["Risk Categories", ...RISK_CATEGORIES];
     listWs.getColumn(3).values = ["Control Types", ...CONTROL_TYPES];
