@@ -359,13 +359,11 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
           }
         }
       } catch (e:any) {
-        // collect row-level error
-        // eslint-disable-next-line no-console
-        console.warn('Row import error', e);
+        result.errors.push({ row: rowNum, error: e?.message || 'row_error' });
       }
     }
 
-    res.json({ ok: true });
+    res.json(result);
   } catch (e:any) {
     console.error(e);
     res.status(500).json({ error: e?.message || 'import_error' });
