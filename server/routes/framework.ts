@@ -285,6 +285,11 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
     let rowNum = 1;
     const result: { created:number; updated:number; errors:{row:number; error:string}[] } = { created: 0, updated: 0, errors: [] };
 
+    let curProc: any = null;
+    let curSub: any = null;
+    let curAct: any = null;
+    let curRisk: any = null;
+
     for (const row of rows) {
       rowNum++;
       try {
@@ -304,10 +309,13 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         const ctrlType = normalizeString(getVal(row, ['Control Type']));
         const reference = normalizeString(getVal(row, ['Reference']));
 
-        if (!processName) continue;
-        const proc = await ensureNode('process', processName, null);
+        if (processName) { curProc = await ensureNode('process', processName, null); curSub = null; curAct = null; curRisk = null; }
+        if (!curProc) continue;
+        const proc = curProc;
         if (processDesc || procDeps.length) {
-          const patch = { process_name: processName, process_description: processDesc, departments_involved: procDeps.filter(Boolean) };
+          const bad = procDeps.filter(d => d && !DEPARTMENTS.includes(d));
+          if (bad.length) result.errors.push({ row: rowNum, error: `Invalid department(s) at process: ${bad.join(', ')}` });
+          const patch = { process_name: processName || proc.name, process_description: processDesc, departments_involved: procDeps.filter(d=>DEPARTMENTS.includes(d)) };
           const next = mergeDetails(proc.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(proc.details)) {
             await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [proc.id, next]);
@@ -318,7 +326,9 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         let sub: any = null;
         if (subName) {
           sub = await ensureNode('subprocess', subName, proc.id);
-          const patch = { sub_process_name: subName, sub_process_description: subDesc, linked_process_id: proc.id, departments_involved: subDeps.filter(Boolean) };
+          const bad = subDeps.filter(d => d && !DEPARTMENTS.includes(d));
+          if (bad.length) result.errors.push({ row: rowNum, error: `Invalid department(s) at subprocess: ${bad.join(', ')}` });
+          const patch = { sub_process_name: subName, sub_process_description: subDesc, linked_process_id: proc.id, departments_involved: subDeps.filter(d=>DEPARTMENTS.includes(d)) };
           const next = mergeDetails(sub.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(sub.details)) {
             await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [sub.id, next]);
@@ -331,7 +341,9 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         let act: any = null;
         if (actName) {
           act = await ensureNode('activity', actName, sub!.id);
-          const patch = { activity_name: actName, activity_description: actDesc, linked_process_id: proc.id, linked_sub_process_id: sub!.id, departments_involved: actDeps.filter(Boolean) };
+          const bad = actDeps.filter(d => d && !DEPARTMENTS.includes(d));
+          if (bad.length) result.errors.push({ row: rowNum, error: `Invalid department(s) at activity: ${bad.join(', ')}` });
+          const patch = { activity_name: actName, activity_description: actDesc, linked_process_id: proc.id, linked_sub_process_id: sub!.id, departments_involved: actDeps.filter(d=>DEPARTMENTS.includes(d)) };
           const next = mergeDetails(act.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(act.details)) {
             await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [act.id, next]);
@@ -344,7 +356,9 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         let risk: any = null;
         if (riskName) {
           risk = await ensureNode('risk', riskName, act!.id);
-          const rcat = RISK_CATEGORIES.includes(riskCat) ? riskCat : (riskCat || 'Operational');
+          const validCat = riskCat ? (RISK_CATEGORIES.includes(riskCat) ? riskCat : null) : null;
+          if (riskCat && !validCat) result.errors.push({ row: rowNum, error: `Invalid risk category: ${riskCat}` });
+          const rcat = validCat || risk.details?.risk_category || 'Operational';
           const patch = { risk_name: riskName, risk_description: riskDesc, risk_category: rcat };
           const next = mergeDetails(risk.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(risk.details)) {
@@ -357,7 +371,9 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
 
         if (ctrlName || ctrlType || reference) {
           const ctrl = await ensureNode('control', ctrlName || 'Control', risk!.id);
-          const ctype = CONTROL_TYPES.includes(ctrlType) ? ctrlType : (ctrlType || 'Preventive');
+          const validType = ctrlType ? (CONTROL_TYPES.includes(ctrlType) ? ctrlType : null) : null;
+          if (ctrlType && !validType) result.errors.push({ row: rowNum, error: `Invalid control type: ${ctrlType}` });
+          const ctype = validType || ctrl.details?.control_type || 'Preventive';
           const patch = { control_description: ctrlName || 'Control', control_type: ctype, control_owner: reference };
           const next = mergeDetails(ctrl.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(ctrl.details)) {
