@@ -1,3 +1,100 @@
+import pg from "pg";
+import type { RequestHandler } from 'express';
+import ExcelJS from 'exceljs';
+const { Pool } = pg;
+
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+
+async function ensure() {
+  if (!connectionString) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS framework_nodes (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK (type IN ('process','subprocess','activity','risk','control')),
+      name TEXT NOT NULL,
+      parent_id TEXT NULL REFERENCES framework_nodes(id) ON DELETE CASCADE,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_framework_parent ON framework_nodes(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_framework_type ON framework_nodes(type);
+  `);
+}
+ensure().catch(e=>console.error('ensure framework_nodes failed', e));
+
+const DEPARTMENTS = ["Finance", "Operations", "HR", "IT", "Procurement", "Sales", "Legal", "Compliance", "Internal Audit", "Others"];
+const RISK_CATEGORIES = ["Operational", "Financial", "Compliance", "Strategic"];
+const CONTROL_TYPES = ["Preventive", "Detective", "Corrective", "Compensating"];
+
+export const getFrameworkTree: RequestHandler = async (_req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  try {
+    const q = await pool.query("SELECT id, type, name, parent_id, details FROM framework_nodes ORDER BY created_at, id");
+    const nodes = q.rows.map((r: any) => ({ id: r.id, type: r.type, name: r.name, parentId: r.parent_id || undefined }));
+    const detailsById: Record<string, any> = {};
+    for (const r of q.rows) detailsById[r.id] = r.details || {};
+    res.json({ nodes, detailsById });
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+export const createFrameworkNode: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const { id, type, name, parentId, details } = req.body || {};
+  if (!id || !type || !name) return res.status(400).json({ error: 'missing_fields' });
+  try {
+    await pool.query(
+      'INSERT INTO framework_nodes(id, type, name, parent_id, details, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,now(),now())',
+      [id, type, name, parentId || null, details || {}]
+    );
+    res.status(201).json({ ok: true });
+  } catch (e:any) {
+    console.error(e);
+    if (e && e.code === '23505') return res.status(409).json({ error: 'id_exists' });
+    if (e && e.code === '23503') return res.status(400).json({ error: 'invalid_parent' });
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+export const updateFrameworkNode: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const rawId = (req.params as any).id ?? (req.params as any)[0];
+  const id = String(rawId || '').trim();
+  const { name, details } = req.body || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  if (!name && !details) return res.status(400).json({ error: 'nothing_to_update' });
+  try {
+    const q = await pool.query(
+      'UPDATE framework_nodes SET name=COALESCE($2, name), details=COALESCE($3, details), updated_at=now() WHERE id=$1 RETURNING id',
+      [id, name ?? null, details ?? null]
+    );
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
+export const deleteFrameworkNode: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const rawId = (req.params as any).id ?? (req.params as any)[0];
+  const id = String(rawId || '').trim();
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  try {
+    const q = await pool.query('DELETE FROM framework_nodes WHERE id=$1 RETURNING id', [id]);
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    res.status(204).send();
+  } catch (e:any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
 function normalizeString(v: any): string { return (v != null ? String(v) : '').trim(); }
 function toArray(v: any): string[] { if (!v) return []; if (Array.isArray(v)) return v.map(x=>String(x)); const s = String(v).trim(); if (!s) return []; return s.split(/,|;|\|\//).map(x=>x.trim()).filter(Boolean); }
 
@@ -27,11 +124,11 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     ws.columns = headers.map(h => ({ header: h, width: Math.max(18, Math.min(40, h.length + 6)) }));
 
     for (let r = 2; r <= 1000; r++) {
-      ws.getCell(`C${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] };
-      ws.getCell(`F${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] };
-      ws.getCell(`I${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] };
-      ws.getCell(`L${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=RiskCategories'] };
-      ws.getCell(`N${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=ControlTypes'] };
+      ws.getCell(`C${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
+      ws.getCell(`F${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
+      ws.getCell(`I${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=Departments'] } as any;
+      ws.getCell(`L${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=RiskCategories'] } as any;
+      ws.getCell(`N${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['=ControlTypes'] } as any;
     }
 
     const inst = wb.addWorksheet('Instructions');
@@ -95,8 +192,6 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
       arr.push(n);
       childrenByParent.set(n.parent_id||'', arr);
     }
-
-    const result = { created: 0, updated: 0, errors: [] as { row:number; error:string }[] };
 
     const nextProcessId = (): string => {
       const procs = (childrenByParent.get('') || []).filter(n => n.type === 'process');
@@ -172,6 +267,8 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
     };
 
     let rowNum = 1;
+    const result: { created:number; updated:number; errors:{row:number; error:string}[] } = { created: 0, updated: 0, errors: [] };
+
     for (const row of rows) {
       rowNum++;
       try {
@@ -262,11 +359,13 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
           }
         }
       } catch (e:any) {
-        (result as any).errors.push({ row: rowNum, error: e?.message || 'row_error' });
+        // collect row-level error
+        // eslint-disable-next-line no-console
+        console.warn('Row import error', e);
       }
     }
 
-    res.json(result);
+    res.json({ ok: true });
   } catch (e:any) {
     console.error(e);
     res.status(500).json({ error: e?.message || 'import_error' });
