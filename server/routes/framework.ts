@@ -25,6 +25,10 @@ async function ensure() {
 }
 ensure().catch(e=>console.error('ensure framework_nodes failed', e));
 
+const DEPARTMENTS = ["Finance", "Operations", "HR", "IT", "Procurement", "Sales", "Legal", "Compliance", "Internal Audit", "Others"];
+const RISK_CATEGORIES = ["Operational", "Financial", "Compliance", "Strategic"];
+const CONTROL_TYPES = ["Preventive", "Detective", "Corrective", "Compensating"];
+
 export const getFrameworkTree: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   try {
