@@ -934,6 +934,46 @@ export default function FrameworkDashboard() {
               </div>
             </PopoverContent>
           </Popover>
+          <input id="fw-import-input" type="file" accept=".xlsx,.xls" className="hidden" onChange={async (e)=>{
+            const file = e.currentTarget.files?.[0];
+            if (!file) return;
+            try {
+              const data = await file.arrayBuffer();
+              const wb = XLSX.read(data, { type: 'array' });
+              const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes('framework')) || wb.SheetNames[0];
+              const ws = wb.Sheets[sheetName];
+              const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+              const res = await fetch('/api/framework/import-rows', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows }) });
+              if (!res.ok) throw new Error('import_failed');
+              toast({ title: 'Import completed' });
+              // refresh tree
+              try {
+                const r = await fetch('/api/framework/tree');
+                if (r.ok) {
+                  const data = await r.json();
+                  const fetched = ((data.nodes || []) as any[]).slice().sort((a: any,b: any)=>compareHier(a.id,b.id));
+                  setNodes(fetched as any[]);
+                  setDetailsById((data.detailsById || {}) as any);
+                }
+              } catch {}
+            } catch (e) {
+              toast({ title: 'Import failed' });
+            } finally {
+              e.currentTarget.value = '';
+            }
+          }} />
+          <Button size="sm" variant="outline" onClick={()=> document.getElementById('fw-import-input')?.click()}>Import XLSX</Button>
+          <Button size="sm" variant="outline" onClick={async ()=>{
+            try {
+              const res = await fetch('/api/framework/template');
+              if (!res.ok) throw new Error('template_failed');
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'framework-template.xlsx'; a.click();
+              URL.revokeObjectURL(url);
+            } catch { toast({ title: 'Template download failed' }); }
+          }}>Download Template</Button>
           <Button size="sm" className="flex items-center gap-2" onClick={()=>{
             // collect nodes within scope (selected process or all)
             const baseIds = !selectedProcessId
