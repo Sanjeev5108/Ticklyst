@@ -285,11 +285,6 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
     let rowNum = 1;
     const result: { created:number; updated:number; errors:{row:number; error:string}[] } = { created: 0, updated: 0, errors: [] };
 
-    let curProc: any = null;
-    let curSub: any = null;
-    let curAct: any = null;
-    let curRisk: any = null;
-
     for (const row of rows) {
       rowNum++;
       try {
@@ -309,14 +304,10 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         const ctrlType = normalizeString(getVal(row, ['Control Type']));
         const reference = normalizeString(getVal(row, ['Reference']));
 
-        if (processName) {
-          curProc = await ensureNode('process', processName, null);
-          curSub = null; curAct = null; curRisk = null;
-        }
-        if (!curProc) continue;
-        const proc = curProc;
+        if (!processName) continue;
+        const proc = await ensureNode('process', processName, null);
         if (processDesc || procDeps.length) {
-          const patch = { process_name: proc.name, process_description: processDesc, departments_involved: procDeps.filter(Boolean) };
+          const patch = { process_name: processName, process_description: processDesc, departments_involved: procDeps.filter(Boolean) };
           const next = mergeDetails(proc.details, patch);
           if (JSON.stringify(next) !== JSON.stringify(proc.details)) {
             await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [proc.id, next]);
@@ -324,61 +315,48 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
           }
         }
 
+        let sub: any = null;
         if (subName) {
-          curSub = await ensureNode('subprocess', subName, proc.id);
-          curAct = null; curRisk = null;
+          sub = await ensureNode('subprocess', subName, proc.id);
           const patch = { sub_process_name: subName, sub_process_description: subDesc, linked_process_id: proc.id, departments_involved: subDeps.filter(Boolean) };
-          const next = mergeDetails(curSub.details, patch);
-          if (JSON.stringify(next) !== JSON.stringify(curSub.details)) {
-            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [curSub.id, next]);
-            curSub.details = next;
+          const next = mergeDetails(sub.details, patch);
+          if (JSON.stringify(next) !== JSON.stringify(sub.details)) {
+            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [sub.id, next]);
+            sub.details = next;
           }
+        } else if (actName || riskName || ctrlName) {
+          sub = await ensureNode('subprocess', 'General', proc.id);
         }
 
+        let act: any = null;
         if (actName) {
-          if (!curSub) curSub = await ensureNode('subprocess', 'General', proc.id);
-          curAct = await ensureNode('activity', actName, curSub.id);
-          curRisk = null;
-          const patch = { activity_name: actName, activity_description: actDesc, linked_process_id: proc.id, linked_sub_process_id: curSub.id, departments_involved: actDeps.filter(Boolean) };
-          const next = mergeDetails(curAct.details, patch);
-          if (JSON.stringify(next) !== JSON.stringify(curAct.details)) {
-            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [curAct.id, next]);
-            curAct.details = next;
+          act = await ensureNode('activity', actName, sub!.id);
+          const patch = { activity_name: actName, activity_description: actDesc, linked_process_id: proc.id, linked_sub_process_id: sub!.id, departments_involved: actDeps.filter(Boolean) };
+          const next = mergeDetails(act.details, patch);
+          if (JSON.stringify(next) !== JSON.stringify(act.details)) {
+            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [act.id, next]);
+            act.details = next;
           }
+        } else if (riskName || ctrlName) {
+          act = await ensureNode('activity', 'General', sub!.id);
         }
 
+        let risk: any = null;
         if (riskName) {
-          if (!curAct) {
-            if (!curSub) curSub = await ensureNode('subprocess', 'General', proc.id);
-            curAct = await ensureNode('activity', 'General', curSub.id);
-          }
-          curRisk = await ensureNode('risk', riskName, curAct.id);
+          risk = await ensureNode('risk', riskName, act!.id);
           const rcat = RISK_CATEGORIES.includes(riskCat) ? riskCat : (riskCat || 'Operational');
           const patch = { risk_name: riskName, risk_description: riskDesc, risk_category: rcat };
-          const next = mergeDetails(curRisk.details, patch);
-          if (JSON.stringify(next) !== JSON.stringify(curRisk.details)) {
-            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [curRisk.id, next]);
-            curRisk.details = next;
+          const next = mergeDetails(risk.details, patch);
+          if (JSON.stringify(next) !== JSON.stringify(risk.details)) {
+            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [risk.id, next]);
+            risk.details = next;
           }
-        } else if ((riskDesc || riskCat) && curRisk) {
-          const rcat = RISK_CATEGORIES.includes(riskCat) ? riskCat : (riskCat || curRisk.details?.risk_category || 'Operational');
-          const patch = { risk_description: riskDesc || curRisk.details?.risk_description || '', risk_category: rcat };
-          const next = mergeDetails(curRisk.details, patch);
-          if (JSON.stringify(next) !== JSON.stringify(curRisk.details)) {
-            await pool.query('UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1', [curRisk.id, next]);
-            curRisk.details = next;
-          }
+        } else if (ctrlName) {
+          risk = await ensureNode('risk', 'General', act!.id);
         }
 
         if (ctrlName || ctrlType || reference) {
-          if (!curRisk) {
-            if (!curAct) {
-              if (!curSub) curSub = await ensureNode('subprocess', 'General', proc.id);
-              curAct = await ensureNode('activity', 'General', curSub.id);
-            }
-            curRisk = await ensureNode('risk', 'General', curAct.id);
-          }
-          const ctrl = await ensureNode('control', ctrlName || 'Control', curRisk.id);
+          const ctrl = await ensureNode('control', ctrlName || 'Control', risk!.id);
           const ctype = CONTROL_TYPES.includes(ctrlType) ? ctrlType : (ctrlType || 'Preventive');
           const patch = { control_description: ctrlName || 'Control', control_type: ctype, control_owner: reference };
           const next = mergeDetails(ctrl.details, patch);
