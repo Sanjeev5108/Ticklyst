@@ -624,7 +624,7 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={reportableProjectFilter} onValueChange={setReportableProjectFilter}>
+                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v==='all'?'':v); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="All projects" />
                       </SelectTrigger>
@@ -719,7 +719,7 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={reportableProjectFilter} onValueChange={setReportableProjectFilter}>
+                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v==='all'?'':v); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="All projects" />
                       </SelectTrigger>
