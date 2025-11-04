@@ -11,6 +11,7 @@ import { FieldworkRecord } from '@shared/fieldwork';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
@@ -1136,7 +1137,7 @@ export default function ProjectManagement() {
                     'Calculation Mode': rc?.riskScore?.mode || '',
                     'Likelihood Scale': like ? `${like.min}–${like.max}` : '',
                     'Consequence Scale': cons ? `${cons.min}–${cons.max}` : '',
-                    'Risk Scale': rscale ? `${rscale.min}–${rscale.max}` : '',
+                    'Risk Scale': rscale ? `${rscale.min}��${rscale.max}` : '',
                     'Control Scale': cscale ? `${cscale.min}–${cscale.max}` : '',
                     'Residual Parameter': rc?.residualRisk?.parameter || 'residualRisk',
                     'Residual Formula': rc?.residualRisk?.formula || '',
