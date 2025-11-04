@@ -390,19 +390,20 @@ export default function ProjectManagement() {
 
     // Apply advanced filters
     if (filterProject !== 'all' && project.id !== filterProject) return false;
-    if (filterProjectNo !== 'all' && (project.projectCode||'') !== filterProjectNo) return false;
-    if (filterClient !== 'all' && (project.client||'') !== filterClient) return false;
-    if (filterDivision !== 'all' && ((project.details?.division||'') !== filterDivision)) return false;
-    if (filterAssignmentType !== 'all' && ((project.details?.auditType || project.category || '') !== filterAssignmentType)) return false;
-    if (filterStatus !== 'all' && (project.status||'') !== filterStatus) return false;
-    if (filterPartner !== 'all' && !((project.details?.partners||[]).includes(filterPartner))) return false;
-    if (filterDivisionHead !== 'all' && !((project.details?.divisionHeads||[]).includes(filterDivisionHead))) return false;
-    if (filterTeamLeader !== 'all' && !((project.details?.teamLeaders||[]).includes(filterTeamLeader))) return false;
-    if (filterMember !== 'all' && !((project.details?.teamMembers||[]).includes(filterMember))) return false;
-    if (filterProcess !== 'all') {
+    if (filterProjectNo.length && !filterProjectNo.includes(project.projectCode || '')) return false;
+    if (filterClient.length && !filterClient.includes(project.client || '')) return false;
+    if (filterDivision.length && !filterDivision.includes(project.details?.division || '')) return false;
+    if (filterAssignmentType.length && !filterAssignmentType.includes(project.details?.auditType || project.category || '')) return false;
+    if (filterStatus.length && !filterStatus.includes(project.status || '')) return false;
+    if (filterPartner.length && !(project.details?.partners || []).some(v => filterPartner.includes(v))) return false;
+    if (filterDivisionHead.length && !(project.details?.divisionHeads || []).some(v => filterDivisionHead.includes(v))) return false;
+    if (filterTeamLeader.length && !(project.details?.teamLeaders || []).some(v => filterTeamLeader.includes(v))) return false;
+    if (filterMember.length && !(project.details?.teamMembers || []).some(v => filterMember.includes(v))) return false;
+    if (filterProcess.length) {
       try {
         const tree = (project as any).details?.selectedChecklistTree || {};
-        if (!Object.prototype.hasOwnProperty.call(tree, filterProcess)) return false;
+        const keys = Object.keys(tree || {});
+        if (!keys.some(k => filterProcess.includes(k))) return false;
       } catch { return false; }
     }
     if (filterStartFrom && new Date(project.startDate) < new Date(filterStartFrom)) return false;
