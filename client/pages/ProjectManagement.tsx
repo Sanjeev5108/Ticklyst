@@ -824,13 +824,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Division</Label>
-                  <Select value={filterDivision} onValueChange={setFilterDivision}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      <SelectItem value="all">All</SelectItem>
-                      {divisions.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={divisions} value={filterDivision} onChange={setFilterDivision} placeholder="All" />
                 </div>
 
                 <div>
