@@ -113,6 +113,47 @@ const controlFrequencies = ["Daily", "Weekly", "Monthly", "Quarterly", "Annually
 const UNASSIGNED_DEPT = 'UNASSIGNED';
 const DEFAULT_DEPT_OPTIONS = ["Finance", "Operations", "HR", "IT", "Procurement", "Sales", "Legal", "Compliance", "Internal Audit", "Other"];
 
+const MultiSelect = ({ options, value, onChange, placeholder }: { options: string[]; value: string[]; onChange: (v:string[])=>void; placeholder?: string }) => {
+  const [open, setOpen] = React.useState(false);
+  const display = value && value.length ? (value.length<=2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : (placeholder || 'Select');
+  const toggle = (opt: string) => {
+    let next = Array.isArray(value) ? [...value] : [];
+    const has = next.includes(opt);
+    if (has) next = next.filter(x=>x!==opt); else next.push(opt);
+    onChange(next);
+  };
+  const stop = (e:any) => { e.stopPropagation(); };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="truncate">{display}</span>
+          <span className="ml-2 text-xs text-muted-foreground">Select</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="z-[80] w-72 p-0" data-popover-content>
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>No results.</CommandEmpty>
+          <CommandList className="max-h-60 overflow-y-auto">
+            <CommandGroup>
+              {options.map(opt => (
+                <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
+                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        <div className="border-t p-2 flex justify-between">
+          <Button size="sm" variant="ghost" onClick={()=>onChange([])}>Clear</Button>
+          <Button size="sm" onClick={()=>onChange([...options])}>Select All</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
   const [open, setOpen] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>(() => {
@@ -858,6 +899,43 @@ export default function FrameworkDashboard() {
   ];
   const [fwSelectedFields, setFwSelectedFields] = useState<string[]>(['Process','Subprocess','Activity','Risk','Control','Risk Category','Control type','Reference']);
 
+  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
+  const fwProcessOptions = React.useMemo(()=>uniq(nodes.filter(n=>n.type==='process').map(n=>n.name)),[nodes]);
+  const fwSubprocessOptions = React.useMemo(()=>uniq(nodes.filter(n=>n.type==='subprocess').map(n=>n.name)),[nodes]);
+  const fwActivityOptions = React.useMemo(()=>uniq(nodes.filter(n=>n.type==='activity').map(n=>n.name)),[nodes]);
+  const fwRiskOptions = React.useMemo(()=>uniq(nodes.filter(n=>n.type==='risk').map(n=>n.name)),[nodes]);
+  const fwControlOptions = React.useMemo(()=>uniq(nodes.filter(n=>n.type==='control').map(n=>n.name)),[nodes]);
+
+  const [fwSelProcesses, setFwSelProcesses] = useState<string[]>([]);
+  const [fwSelSubprocesses, setFwSelSubprocesses] = useState<string[]>([]);
+  const [fwSelActivities, setFwSelActivities] = useState<string[]>([]);
+  const [fwSelRisks, setFwSelRisks] = useState<string[]>([]);
+  const [fwSelControls, setFwSelControls] = useState<string[]>([]);
+
+  const getPathNames = React.useCallback((n: FrameworkNode) => {
+    let cur: FrameworkNode | undefined = n;
+    let pName=''; let sName=''; let aName=''; let rName=''; let cName='';
+    while (cur) {
+      if (cur.type==='process') pName = cur.name;
+      else if (cur.type==='subprocess') sName = cur.name;
+      else if (cur.type==='activity') aName = cur.name;
+      else if (cur.type==='risk') rName = rName || cur.name;
+      else if (cur.type==='control') cName = cName || cur.name;
+      cur = cur.parentId ? nodes.find(x=>x.id===cur!.parentId) : undefined;
+    }
+    return { pName, sName, aName, rName, cName };
+  }, [nodes]);
+
+  const matchesNameSelections = React.useCallback((n: FrameworkNode) => {
+    const { pName, sName, aName, rName, cName } = getPathNames(n);
+    if (fwSelProcesses.length && !fwSelProcesses.includes(pName)) return false;
+    if (fwSelSubprocesses.length && !fwSelSubprocesses.includes(sName)) return false;
+    if (fwSelActivities.length && !fwSelActivities.includes(aName)) return false;
+    if (fwSelRisks.length && !fwSelRisks.includes(rName)) return false;
+    if (fwSelControls.length && !fwSelControls.includes(cName)) return false;
+    return true;
+  }, [getPathNames, fwSelProcesses, fwSelSubprocesses, fwSelActivities, fwSelRisks, fwSelControls]);
+
   const renderFrameworkEditor = () => {
     const isReadOnly = false;
 
@@ -886,17 +964,31 @@ export default function FrameworkDashboard() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 z-[60]">
-              <div className="grid gap-2">
-                {([
-                  {key:'all', label:'All'},
-                  {key:'process', label:'Process'},
-                  {key:'subprocess', label:'Subprocess'},
-                  {key:'activity', label:'Activity'},
-                  {key:'risk_related', label:'Risk related'}
-                ] as {key:any,label:string}[]).map(({key,label})=> (
-                  <Button key={key} variant={fwFilter===key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setFwFilter(key)}>{label}</Button>
-                ))}
+            <PopoverContent className="w-[720px] z-[60]" data-popover-content>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Process</Label>
+                  <MultiSelect options={fwProcessOptions} value={fwSelProcesses} onChange={setFwSelProcesses} placeholder="All" />
+                </div>
+                <div>
+                  <Label className="text-xs">Subprocess</Label>
+                  <MultiSelect options={fwSubprocessOptions} value={fwSelSubprocesses} onChange={setFwSelSubprocesses} placeholder="All" />
+                </div>
+                <div>
+                  <Label className="text-xs">Activity</Label>
+                  <MultiSelect options={fwActivityOptions} value={fwSelActivities} onChange={setFwSelActivities} placeholder="All" />
+                </div>
+                <div>
+                  <Label className="text-xs">Risk</Label>
+                  <MultiSelect options={fwRiskOptions} value={fwSelRisks} onChange={setFwSelRisks} placeholder="All" />
+                </div>
+                <div>
+                  <Label className="text-xs">Control</Label>
+                  <MultiSelect options={fwControlOptions} value={fwSelControls} onChange={setFwSelControls} placeholder="All" />
+                </div>
+                <div className="flex items-end">
+                  <Button size="sm" variant="outline" onClick={()=>{ setFwSelProcesses([]); setFwSelSubprocesses([]); setFwSelActivities([]); setFwSelRisks([]); setFwSelControls([]); }}>Reset</Button>
+                </div>
               </div>
             </PopoverContent>
           </Popover>
@@ -985,14 +1077,16 @@ export default function FrameworkDashboard() {
               ? nodes.map(n=>n.id)
               : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
             const allowed = nodes.filter(n => baseIds.includes(n.id));
-            const filterOk = (n:FrameworkNode) => {
-              if (fwFilter==='all') return true;
-              if (fwFilter==='process') return n.type==='process';
-              if (fwFilter==='subprocess') return n.type==='subprocess';
-              if (fwFilter==='activity') return n.type==='activity';
-              return n.type==='risk' || n.type==='control';
-            };
-            const list = allowed.filter(filterOk);
+            let list = allowed;
+            // Apply name-based selections to export as well
+            if (fwSelProcesses.length || fwSelSubprocesses.length || fwSelActivities.length || fwSelRisks.length || fwSelControls.length) {
+              const matchIds = new Set(list.filter(matchesNameSelections).map(n=>n.id));
+              const includeIds = new Set<string>(matchIds);
+              for (const id of Array.from(matchIds)) {
+                for (const a of getAncestorIds(id)) includeIds.add(a);
+              }
+              list = list.filter(n => includeIds.has(n.id));
+            }
 
             const rowsBase = list.map(n => {
               // climb ancestors to resolve names
@@ -1103,6 +1197,15 @@ export default function FrameworkDashboard() {
                       : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
                     const allowed = visibleNodes.filter(n => baseIds.includes(n.id) && passesTypeFilters(n));
                     let list = allowed;
+                    // Apply name-based selections
+                    if (fwSelProcesses.length || fwSelSubprocesses.length || fwSelActivities.length || fwSelRisks.length || fwSelControls.length) {
+                      const matchIds = new Set(list.filter(matchesNameSelections).map(n=>n.id));
+                      const includeIds = new Set<string>(matchIds);
+                      for (const id of Array.from(matchIds)) {
+                        for (const a of getAncestorIds(id)) includeIds.add(a);
+                      }
+                      list = list.filter(n => includeIds.has(n.id));
+                    }
                     if (!selectedProcessId && universalSearch.trim()) {
                       const q = universalSearch.trim().toLowerCase();
                       list = allowed.filter(n => n.type === 'process' && (n.name.toLowerCase().includes(q) || String((detailsById[n.id] as any)?.process_description || '').toLowerCase().includes(q)));
