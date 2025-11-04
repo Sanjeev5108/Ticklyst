@@ -859,13 +859,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Process</Label>
-                  <Select value={filterProcess} onValueChange={setFilterProcess}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      <SelectItem value="all">All</SelectItem>
-                      {processes.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={processes} value={filterProcess} onChange={setFilterProcess} placeholder="All" />
                 </div>
 
                 <div>
