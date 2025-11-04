@@ -819,13 +819,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Client</Label>
-                  <Select value={filterClient} onValueChange={setFilterClient}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      <SelectItem value="all">All</SelectItem>
-                      {clients.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={clients} value={filterClient} onChange={setFilterClient} placeholder="All" />
                 </div>
 
                 <div>
