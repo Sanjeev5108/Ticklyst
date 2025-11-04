@@ -52,6 +52,7 @@ const statuses = ["Open", "In Progress", "Closed", "Overdue"];
 
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [newComment, setNewComment] = useState('');
   const [commentType, setCommentType] = useState<'note' | 'issue' | 'resolution'>('note');
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
