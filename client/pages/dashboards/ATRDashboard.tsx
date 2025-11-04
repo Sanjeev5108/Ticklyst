@@ -522,6 +522,79 @@ export default function ATRDashboard() {
     return ids.map(id => ({ id, title: projects.find(p => p.id === id)?.title || id }));
   }, [reportableRows, projects]);
 
+  // ATR Access data per project/control
+  const [atrByControl, setAtrByControl] = useState<Record<string, AuditTrackRow>>({});
+  const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : '';
+  useEffect(()=>{
+    (async()=>{
+      if (!selectedProjectId) { setAtrByControl({}); return; }
+      try {
+        const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data==='object') setAtrByControl(data as Record<string, AuditTrackRow>);
+        }
+      } catch {}
+      const ctrls = reportableRows.filter(r=>r.projectId===selectedProjectId);
+      setAtrByControl(prev=>{
+        const next = { ...prev } as Record<string, AuditTrackRow>;
+        for (const c of ctrls) {
+          if (!next[c.id]) next[c.id] = { id: c.id, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+        }
+        return next;
+      });
+    })();
+  }, [selectedProjectId, atrKey, reportableRows]);
+
+  const updateAtrField = (controlId: string, field: keyof AuditTrackRow, value: string) => {
+    setAtrByControl(prev => {
+      const row = prev[controlId] || { id: controlId, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+      const next: AuditTrackRow = { ...row } as any;
+      if (field === 'dueDate') {
+        const prevDate = row.dueDate;
+        if (prevDate && prevDate !== value) next.previousDueDates = [prevDate, ...(row.previousDueDates||[])];
+        next.dueDate = value;
+      } else {
+        (next as any)[field] = value;
+      }
+      return { ...prev, [controlId]: next };
+    });
+  };
+
+  const saveAtr = async () => {
+    if (!selectedProjectId) return;
+    try {
+      await fetch(`/api/settings/${encodeURIComponent(atrKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(atrByControl) });
+    } catch {}
+  };
+
+  // Toolbar: filters, fields, export
+  const atrAllFields = ['Control ID','Control','Process','Subprocess','Activity','Risk','Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'] as const;
+  const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([...atrAllFields]);
+  const [atrStatusFilter, setAtrStatusFilter] = useState<string>('all');
+  const [atrDueFrom, setAtrDueFrom] = useState<string>('');
+  const [atrDueTo, setAtrDueTo] = useState<string>('');
+  const [atrSearch, setAtrSearch] = useState<string>('');
+
+  const atrRowsForProject = useMemo(()=>{
+    const rows = reportableRows.filter(r => selectedProjectId ? r.projectId===selectedProjectId : true);
+    return rows;
+  }, [reportableRows, selectedProjectId]);
+
+  const atrRowsFiltered = useMemo(()=>{
+    const rows = atrRowsForProject.filter(r=>{
+      const a = atrByControl[r.id];
+      if (atrStatusFilter!=='all' && (a?.status||'')!==atrStatusFilter) return false;
+      if (atrDueFrom && (a?.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
+      if (atrDueTo && (a?.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
+      const q = atrSearch.trim().toLowerCase();
+      if (!q) return true;
+      const hay = [r.id, r.control, r.process, r.subprocess, r.activity, r.risk, a?.auditObservation, a?.actionPlan, a?.responsibility, a?.designation, a?.status].filter(Boolean).map(s=>String(s).toLowerCase());
+      return hay.some(s=>s.includes(q));
+    });
+    return rows;
+  }, [atrRowsForProject, atrByControl, atrStatusFilter, atrDueFrom, atrDueTo, atrSearch]);
+
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
     const client = selectedClient ? clients.find(c => c.id === selectedClient) : undefined;
