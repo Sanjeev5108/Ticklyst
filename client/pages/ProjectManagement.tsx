@@ -890,16 +890,16 @@ export default function ProjectManagement() {
                 <div className="col-span-3 flex justify-between pt-1">
                   <Button size="sm" variant="outline" onClick={()=>{
                     setFilterProject('all');
-                    setFilterProjectNo('all');
-                    setFilterClient('all');
-                    setFilterDivision('all');
-                    setFilterAssignmentType('all');
-                    setFilterStatus('all');
-                    setFilterPartner('all');
-                    setFilterDivisionHead('all');
-                    setFilterTeamLeader('all');
-                    setFilterMember('all');
-                    setFilterProcess('all');
+                    setFilterProjectNo([]);
+                    setFilterClient([]);
+                    setFilterDivision([]);
+                    setFilterAssignmentType([]);
+                    setFilterStatus([]);
+                    setFilterPartner([]);
+                    setFilterDivisionHead([]);
+                    setFilterTeamLeader([]);
+                    setFilterMember([]);
+                    setFilterProcess([]);
                     setFilterStartFrom('');
                     setFilterStartTo('');
                     setFilterPeriodFrom('');
