@@ -311,8 +311,6 @@ export default function ProjectManagement() {
   const [filterProcess, setFilterProcess] = useState<string[]>([]);
   const [filterStartFrom, setFilterStartFrom] = useState<string>('');
   const [filterStartTo, setFilterStartTo] = useState<string>('');
-  const [filterPeriodFrom, setFilterPeriodFrom] = useState<string>('');
-  const [filterPeriodTo, setFilterPeriodTo] = useState<string>('');
   const [filterCompletionMin, setFilterCompletionMin] = useState<number>(0);
 
   const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
@@ -339,7 +337,6 @@ export default function ProjectManagement() {
     { key: 'Client', label: 'Client' },
     { key: 'Division', label: 'Division' },
     { key: 'Assignment type', label: 'Assignment type' },
-    { key: 'Audit Period', label: 'Audit Period' },
     { key: 'Project start Date', label: 'Project start Date' },
     { key: 'Project status', label: 'Project status' },
     { key: 'Partner', label: 'Partner' },
@@ -350,7 +347,7 @@ export default function ProjectManagement() {
     { key: '% of completion', label: '% of completion' },
   ];
   const allFields = [
-    'Project No','Client','Division','Assignment type','Audit Period','Project start Date','Project status','Partner','Division Head','Team Leader','Member','Process','% of completion'
+    'Project No','Client','Division','Assignment type','Project start Date','Project status','Partner','Division Head','Team Leader','Member','Process','% of completion'
   ];
   const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
 
@@ -449,14 +446,6 @@ export default function ProjectManagement() {
     }
     if (filterStartFrom && new Date(project.startDate) < new Date(filterStartFrom)) return false;
     if (filterStartTo && new Date(project.startDate) > new Date(filterStartTo)) return false;
-    if (filterPeriodFrom || filterPeriodTo) {
-      const s = project.startDate ? new Date(project.startDate).getTime() : 0;
-      const e = project.endDate ? new Date(project.endDate).getTime() : s;
-      const pf = filterPeriodFrom ? new Date(filterPeriodFrom).getTime() : -Infinity;
-      const pt = filterPeriodTo ? new Date(filterPeriodTo).getTime() : Infinity;
-      // require overlap
-      if (e < pf || s > pt) return false;
-    }
     if (project.progress < filterCompletionMin) return false;
 
     return true;
@@ -912,14 +901,6 @@ export default function ProjectManagement() {
                   <Input type="date" value={filterStartTo} onChange={(e)=>setFilterStartTo(e.target.value)} className="mt-1" />
                 </div>
 
-                <div>
-                  <Label className="text-xs">Audit Period (from)</Label>
-                  <Input type="date" value={filterPeriodFrom} onChange={(e)=>setFilterPeriodFrom(e.target.value)} className="mt-1" />
-                </div>
-                <div>
-                  <Label className="text-xs">Audit Period (to)</Label>
-                  <Input type="date" value={filterPeriodTo} onChange={(e)=>setFilterPeriodTo(e.target.value)} className="mt-1" />
-                </div>
 
                 <div className="col-span-3">
                   <Label className="text-xs">% of completion (min)</Label>
@@ -943,8 +924,6 @@ export default function ProjectManagement() {
                     setFilterProcess([]);
                     setFilterStartFrom('');
                     setFilterStartTo('');
-                    setFilterPeriodFrom('');
-                    setFilterPeriodTo('');
                     setFilterCompletionMin(0);
                   }}>Reset</Button>
                 </div>
