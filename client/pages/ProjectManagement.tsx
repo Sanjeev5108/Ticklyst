@@ -283,6 +283,7 @@ export default function ProjectManagement() {
   const divisionHeads = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.divisionHeads||[])),[projects]);
   const teamLeaders = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamLeaders||[])),[projects]);
   const members = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamMembers||[])),[projects]);
+  const statuses = React.useMemo(()=>uniq(projects.map(p=>String(p.status))),[projects]);
   const processes = React.useMemo(()=>{
     const keys = new Set<string>();
     for (const p of projects) {
