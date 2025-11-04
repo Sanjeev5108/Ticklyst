@@ -258,16 +258,16 @@ export default function ProjectManagement() {
   const [groupBy, setGroupBy] = useState<string>('none');
 
   // Advanced filters
-  const [filterProjectNo, setFilterProjectNo] = useState<string>('all');
-  const [filterClient, setFilterClient] = useState<string>('all');
-  const [filterDivision, setFilterDivision] = useState<string>('all');
-  const [filterAssignmentType, setFilterAssignmentType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterPartner, setFilterPartner] = useState<string>('all');
-  const [filterDivisionHead, setFilterDivisionHead] = useState<string>('all');
-  const [filterTeamLeader, setFilterTeamLeader] = useState<string>('all');
-  const [filterMember, setFilterMember] = useState<string>('all');
-  const [filterProcess, setFilterProcess] = useState<string>('all');
+  const [filterProjectNo, setFilterProjectNo] = useState<string[]>([]);
+  const [filterClient, setFilterClient] = useState<string[]>([]);
+  const [filterDivision, setFilterDivision] = useState<string[]>([]);
+  const [filterAssignmentType, setFilterAssignmentType] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterPartner, setFilterPartner] = useState<string[]>([]);
+  const [filterDivisionHead, setFilterDivisionHead] = useState<string[]>([]);
+  const [filterTeamLeader, setFilterTeamLeader] = useState<string[]>([]);
+  const [filterMember, setFilterMember] = useState<string[]>([]);
+  const [filterProcess, setFilterProcess] = useState<string[]>([]);
   const [filterStartFrom, setFilterStartFrom] = useState<string>('');
   const [filterStartTo, setFilterStartTo] = useState<string>('');
   const [filterPeriodFrom, setFilterPeriodFrom] = useState<string>('');
@@ -1137,7 +1137,7 @@ export default function ProjectManagement() {
                     'Calculation Mode': rc?.riskScore?.mode || '',
                     'Likelihood Scale': like ? `${like.min}–${like.max}` : '',
                     'Consequence Scale': cons ? `${cons.min}–${cons.max}` : '',
-                    'Risk Scale': rscale ? `${rscale.min}��${rscale.max}` : '',
+                    'Risk Scale': rscale ? `${rscale.min}–${rscale.max}` : '',
                     'Control Scale': cscale ? `${cscale.min}–${cscale.max}` : '',
                     'Residual Parameter': rc?.residualRisk?.parameter || 'residualRisk',
                     'Residual Formula': rc?.residualRisk?.formula || '',
