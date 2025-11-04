@@ -106,7 +106,8 @@ export const forgotPassword: RequestHandler = async (req, res) => {
     const host = (req.headers['x-forwarded-host'] as string) || (req.headers.host as string) || '';
     const origin = host ? `${proto}://${host}` : '';
     const isLocalHost = /^(localhost|127\.0\.0\.1)(:|$)/i.test(host || '');
-    const base = isLocalHost ? (process.env.BASE_URL || origin || '') : (origin || process.env.BASE_URL || '');
+    const preferEnv = (process.env.BASE_URL && process.env.BASE_URL.trim().length > 0);
+    const base = preferEnv ? process.env.BASE_URL! : (isLocalHost ? (process.env.BASE_URL || origin || '') : (origin || process.env.BASE_URL || ''));
     const resetUrl = base ? `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}` : `/reset-password?token=${encodeURIComponent(token)}`;
 
     // Attempt to send email via SMTP if configured; otherwise log token/url
