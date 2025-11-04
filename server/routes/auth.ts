@@ -105,7 +105,7 @@ export const forgotPassword: RequestHandler = async (req, res) => {
     const proto = (req.headers['x-forwarded-proto'] as string) || (req.protocol || 'https');
     const host = (req.headers['x-forwarded-host'] as string) || (req.headers.host as string) || '';
     const origin = host ? `${proto}://${host}` : '';
-    const base = (process.env.BASE_URL || origin || '');
+    const base = (origin || process.env.BASE_URL || '');
     const resetUrl = base ? `${base.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}` : `/reset-password?token=${encodeURIComponent(token)}`;
 
     // Attempt to send email via SMTP if configured; otherwise log token/url
