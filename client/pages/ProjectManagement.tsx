@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Columns2, Rows3, Download } from 'lucide-react';
@@ -254,6 +255,41 @@ export default function ProjectManagement() {
   // Export toolbar state
   const [filterProject, setFilterProject] = useState<string>('all');
   const [groupBy, setGroupBy] = useState<string>('none');
+
+  // Advanced filters
+  const [filterProjectNo, setFilterProjectNo] = useState<string>('all');
+  const [filterClient, setFilterClient] = useState<string>('all');
+  const [filterDivision, setFilterDivision] = useState<string>('all');
+  const [filterAssignmentType, setFilterAssignmentType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPartner, setFilterPartner] = useState<string>('all');
+  const [filterDivisionHead, setFilterDivisionHead] = useState<string>('all');
+  const [filterTeamLeader, setFilterTeamLeader] = useState<string>('all');
+  const [filterMember, setFilterMember] = useState<string>('all');
+  const [filterProcess, setFilterProcess] = useState<string>('all');
+  const [filterStartFrom, setFilterStartFrom] = useState<string>('');
+  const [filterStartTo, setFilterStartTo] = useState<string>('');
+  const [filterPeriodFrom, setFilterPeriodFrom] = useState<string>('');
+  const [filterPeriodTo, setFilterPeriodTo] = useState<string>('');
+  const [filterCompletionMin, setFilterCompletionMin] = useState<number>(0);
+
+  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
+  const projectNos = React.useMemo(()=>uniq(projects.map(p=>p.projectCode)),[projects]);
+  const clients = React.useMemo(()=>uniq(projects.map(p=>p.client)),[projects]);
+  const divisions = React.useMemo(()=>uniq(projects.map(p=>p.details?.division)),[projects]);
+  const assignmentTypes = React.useMemo(()=>uniq(projects.map(p=>p.details?.auditType || p.category)),[projects]);
+  const partners = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.partners||[])),[projects]);
+  const divisionHeads = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.divisionHeads||[])),[projects]);
+  const teamLeaders = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamLeaders||[])),[projects]);
+  const members = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamMembers||[])),[projects]);
+  const processes = React.useMemo(()=>{
+    const keys = new Set<string>();
+    for (const p of projects) {
+      try { Object.keys((p as any).details?.selectedChecklistTree||{}).forEach(k=>keys.add(k)); } catch {}
+    }
+    return Array.from(keys).sort((a,b)=>a.localeCompare(b));
+  },[projects]);
+
   const groupOptions: { key: string; label: string }[] = [
     { key: 'none', label: 'No grouping' },
     { key: 'Project No', label: 'Project No' },
@@ -344,8 +380,41 @@ export default function ProjectManagement() {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
     const scope = getRoleProjectScope(user?.role);
-    if (!scope || scope === 'all') return true;
-    if (scope === 'own') return isUserOnProject(project);
+    if (!scope || scope === 'all') {
+      // continue
+    } else if (scope === 'own') {
+      if (!isUserOnProject(project)) return false;
+    }
+
+    // Apply advanced filters
+    if (filterProject !== 'all' && project.id !== filterProject) return false;
+    if (filterProjectNo !== 'all' && (project.projectCode||'') !== filterProjectNo) return false;
+    if (filterClient !== 'all' && (project.client||'') !== filterClient) return false;
+    if (filterDivision !== 'all' && ((project.details?.division||'') !== filterDivision)) return false;
+    if (filterAssignmentType !== 'all' && ((project.details?.auditType || project.category || '') !== filterAssignmentType)) return false;
+    if (filterStatus !== 'all' && (project.status||'') !== filterStatus) return false;
+    if (filterPartner !== 'all' && !((project.details?.partners||[]).includes(filterPartner))) return false;
+    if (filterDivisionHead !== 'all' && !((project.details?.divisionHeads||[]).includes(filterDivisionHead))) return false;
+    if (filterTeamLeader !== 'all' && !((project.details?.teamLeaders||[]).includes(filterTeamLeader))) return false;
+    if (filterMember !== 'all' && !((project.details?.teamMembers||[]).includes(filterMember))) return false;
+    if (filterProcess !== 'all') {
+      try {
+        const tree = (project as any).details?.selectedChecklistTree || {};
+        if (!Object.prototype.hasOwnProperty.call(tree, filterProcess)) return false;
+      } catch { return false; }
+    }
+    if (filterStartFrom && new Date(project.startDate) < new Date(filterStartFrom)) return false;
+    if (filterStartTo && new Date(project.startDate) > new Date(filterStartTo)) return false;
+    if (filterPeriodFrom || filterPeriodTo) {
+      const s = project.startDate ? new Date(project.startDate).getTime() : 0;
+      const e = project.endDate ? new Date(project.endDate).getTime() : s;
+      const pf = filterPeriodFrom ? new Date(filterPeriodFrom).getTime() : -Infinity;
+      const pt = filterPeriodTo ? new Date(filterPeriodTo).getTime() : Infinity;
+      // require overlap
+      if (e < pf || s > pt) return false;
+    }
+    if (project.progress < filterCompletionMin) return false;
+
     return true;
   });
 
@@ -727,16 +796,178 @@ export default function ProjectManagement() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 z-[60]">
-              <Label className="text-xs">Project</Label>
-              <Select value={filterProject} onValueChange={(v:any)=>setFilterProject(v)}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                <SelectContent className="z-[70] max-h-64">
-                  <SelectItem value="all">All</SelectItem>
-                  {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.projectCode || p.title}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <div className="flex justify-end pt-2"><Button size="sm" variant="outline" onClick={()=>setFilterProject('all')}>Reset</Button></div>
+            <PopoverContent className="w-[720px] z-[60]">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Project</Label>
+                  <Select value={filterProject} onValueChange={(v:any)=>setFilterProject(v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="z-[70] max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.projectCode || p.title}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Project No</Label>
+                  <Select value={filterProjectNo} onValueChange={setFilterProjectNo}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {projectNos.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Client</Label>
+                  <Select value={filterClient} onValueChange={setFilterClient}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {clients.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Division</Label>
+                  <Select value={filterDivision} onValueChange={setFilterDivision}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {divisions.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Assignment type</Label>
+                  <Select value={filterAssignmentType} onValueChange={setFilterAssignmentType}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {assignmentTypes.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Project status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="todo">Todo</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="hold">Hold</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Partner</Label>
+                  <Select value={filterPartner} onValueChange={setFilterPartner}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {partners.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Division Head</Label>
+                  <Select value={filterDivisionHead} onValueChange={setFilterDivisionHead}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {divisionHeads.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Team Leader</Label>
+                  <Select value={filterTeamLeader} onValueChange={setFilterTeamLeader}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {teamLeaders.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Member</Label>
+                  <Select value={filterMember} onValueChange={setFilterMember}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {members.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Process</Label>
+                  <Select value={filterProcess} onValueChange={setFilterProcess}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="all">All</SelectItem>
+                      {processes.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Project start (from)</Label>
+                  <Input type="date" value={filterStartFrom} onChange={(e)=>setFilterStartFrom(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs">Project start (to)</Label>
+                  <Input type="date" value={filterStartTo} onChange={(e)=>setFilterStartTo(e.target.value)} className="mt-1" />
+                </div>
+
+                <div>
+                  <Label className="text-xs">Audit Period (from)</Label>
+                  <Input type="date" value={filterPeriodFrom} onChange={(e)=>setFilterPeriodFrom(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs">Audit Period (to)</Label>
+                  <Input type="date" value={filterPeriodTo} onChange={(e)=>setFilterPeriodTo(e.target.value)} className="mt-1" />
+                </div>
+
+                <div className="col-span-3">
+                  <Label className="text-xs">% of completion (min)</Label>
+                  <div className="px-1 py-2">
+                    <Slider value={[filterCompletionMin]} min={0} max={100} step={1} onValueChange={(v:any)=> setFilterCompletionMin(Array.isArray(v)?Number(v[0]||0):Number(v||0))} />
+                  </div>
+                </div>
+
+                <div className="col-span-3 flex justify-between pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>{
+                    setFilterProject('all');
+                    setFilterProjectNo('all');
+                    setFilterClient('all');
+                    setFilterDivision('all');
+                    setFilterAssignmentType('all');
+                    setFilterStatus('all');
+                    setFilterPartner('all');
+                    setFilterDivisionHead('all');
+                    setFilterTeamLeader('all');
+                    setFilterMember('all');
+                    setFilterProcess('all');
+                    setFilterStartFrom('');
+                    setFilterStartTo('');
+                    setFilterPeriodFrom('');
+                    setFilterPeriodTo('');
+                    setFilterCompletionMin(0);
+                  }}>Reset</Button>
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
 
