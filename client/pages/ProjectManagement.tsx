@@ -814,13 +814,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Project No</Label>
-                  <Select value={filterProjectNo} onValueChange={setFilterProjectNo}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      <SelectItem value="all">All</SelectItem>
-                      {projectNos.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={projectNos} value={filterProjectNo} onChange={setFilterProjectNo} placeholder="All" />
                 </div>
 
                 <div>
