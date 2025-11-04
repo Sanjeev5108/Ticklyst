@@ -829,13 +829,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Assignment type</Label>
-                  <Select value={filterAssignmentType} onValueChange={setFilterAssignmentType}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      <SelectItem value="all">All</SelectItem>
-                      {assignmentTypes.map(v=> (<SelectItem key={v} value={v}>{v}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={assignmentTypes} value={filterAssignmentType} onChange={setFilterAssignmentType} placeholder="All" />
                 </div>
 
                 <div>
