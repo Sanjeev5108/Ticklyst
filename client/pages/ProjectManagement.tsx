@@ -834,16 +834,7 @@ export default function ProjectManagement() {
 
                 <div>
                   <Label className="text-xs">Project status</Label>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="todo">Todo</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="hold">Hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect options={statuses} value={filterStatus} onChange={setFilterStatus} placeholder="All" />
                 </div>
 
                 <div>
