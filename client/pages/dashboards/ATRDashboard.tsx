@@ -675,7 +675,169 @@ export default function ATRDashboard() {
           </TabsContent>
           <TabsContent value="access">
             <div className="space-y-4 mt-4">
-              {renderATREditor()}
+              {/* Toolbar */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                  <Label>Project</Label>
+                  <Select value={selectedProjectId || 'all'} onValueChange={(v)=> setSelectedProjectId(v==='all'?'':v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All projects</SelectItem>
+                      {reportableProjectOptions.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2 md:col-span-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 z-[60]">
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs">Status</Label>
+                          <Select value={atrStatusFilter} onValueChange={setAtrStatusFilter}>
+                            <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Due from</Label>
+                            <Input type="date" value={atrDueFrom} onChange={(e)=>setAtrDueFrom(e.target.value)} className="mt-1" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Due to</Label>
+                            <Input type="date" value={atrDueTo} onChange={(e)=>setAtrDueTo(e.target.value)} className="mt-1" />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Search</Label>
+                          <Input value={atrSearch} onChange={(e)=>setAtrSearch(e.target.value)} placeholder="Search..." className="mt-1" />
+                        </div>
+                        <div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>{ setAtrStatusFilter('all'); setAtrDueFrom(''); setAtrDueTo(''); setAtrSearch(''); }}>Reset</Button></div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72">
+                      <div className="grid gap-2">
+                        {atrAllFields.map(f => (
+                          <label key={f} className="flex items-center gap-2 text-sm">
+                            <input type="checkbox" checked={atrSelectedFields.includes(f)} onChange={(e)=> setAtrSelectedFields(prev => e.target.checked ? [...prev, f] : prev.filter(x=>x!==f))} />
+                            <span>{f}</span>
+                          </label>
+                        ))}
+                        <div className="flex gap-2 pt-1">
+                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([...atrAllFields])}>All</Button>
+                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields(['Control ID','Control','Process','Subprocess','Activity','Risk','Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'])}>Default</Button>
+                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([])}>None</Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+                    const wb = XLSX.utils.book_new();
+                    const rows = atrRowsFiltered.map(r=>{
+                      const a = atrByControl[r.id] || {} as AuditTrackRow;
+                      const row: Record<string, any> = {};
+                      const add = (k:string, v:any) => { if (atrSelectedFields.includes(k)) row[k] = v; };
+                      add('Control ID', r.id);
+                      add('Control', r.control || '');
+                      add('Process', r.process || '');
+                      add('Subprocess', r.subprocess || '');
+                      add('Activity', r.activity || '');
+                      add('Risk', r.risk || '');
+                      add('Audit Observation', a.auditObservation || '');
+                      add('Action Plan', a.actionPlan || '');
+                      add('Responsibility', a.responsibility || '');
+                      add('Designation', a.designation || '');
+                      add('Due date', a.dueDate || '');
+                      add('Status', a.status || '');
+                      return row;
+                    });
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    XLSX.utils.book_append_sheet(wb, ws, 'ATR');
+                    XLSX.writeFile(wb, 'atr.xlsx');
+                  }}><Download className="h-4 w-4"/> Export XLSX</Button>
+                  <Button size="sm" onClick={saveAtr}>Save</Button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left p-3 w-40">Control ID</th>
+                      <th className="text-left p-3">Control</th>
+                      <th className="text-left p-3 w-40">Process</th>
+                      <th className="text-left p-3 w-48">Subprocess</th>
+                      <th className="text-left p-3 w-40">Activity</th>
+                      <th className="text-left p-3 w-48">Risk</th>
+                      <th className="text-left p-3 w-48">Audit Observation</th>
+                      <th className="text-left p-3 w-48">Action Plan</th>
+                      <th className="text-left p-3 w-40">Responsibility</th>
+                      <th className="text-left p-3 w-40">Designation</th>
+                      <th className="text-left p-3 w-40">Due date</th>
+                      <th className="text-left p-3 w-32">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {atrRowsFiltered.map(r=>{
+                      const a = atrByControl[r.id] || { id: r.id, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+                      return (
+                        <tr key={`${selectedProjectId||'ALL'}|${r.id}`} className="border-t">
+                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
+                          <td className="p-3">{r.control || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
+                          <td className="p-3 border-l">
+                            <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id,'auditObservation',e.target.value)} />
+                          </td>
+                          <td className="p-3">
+                            <Input value={a.actionPlan} onChange={(e)=>updateAtrField(r.id,'actionPlan',e.target.value)} />
+                          </td>
+                          <td className="p-3">
+                            <Input value={a.responsibility} onChange={(e)=>updateAtrField(r.id,'responsibility',e.target.value)} />
+                          </td>
+                          <td className="p-3">
+                            <Input value={a.designation} onChange={(e)=>updateAtrField(r.id,'designation',e.target.value)} />
+                          </td>
+                          <td className="p-3">
+                            <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(r.id,'dueDate',e.target.value)} />
+                            {a.previousDueDates && a.previousDueDates.length>0 && (
+                              <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <Select value={a.status} onValueChange={(v)=>updateAtrField(r.id,'status',v)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
