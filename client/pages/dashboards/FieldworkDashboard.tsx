@@ -16,6 +16,7 @@ import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { computeResidual, computeRiskScore, resolveLevel } from '@shared/risk';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
