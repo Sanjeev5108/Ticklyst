@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Filter as FilterIcon, Columns2, Download } from 'lucide-react';
@@ -49,6 +51,47 @@ interface Comment {
 }
 
 const statuses = ["Open", "In Progress", "Closed", "Overdue"];
+
+const MultiSelectSimple = ({ options, value, onChange, placeholder }: { options: string[]; value: string[]; onChange: (v:string[])=>void; placeholder?: string }) => {
+  const [open, setOpen] = React.useState(false);
+  const display = value && value.length ? (value.length<=2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : (placeholder || 'Select');
+  const toggle = (opt: string) => {
+    let next = Array.isArray(value) ? [...value] : [];
+    const has = next.includes(opt);
+    if (has) next = next.filter(x=>x!==opt); else next.push(opt);
+    onChange(next);
+  };
+  const stop = (e:any) => { e.stopPropagation(); };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="truncate">{display}</span>
+          <span className="ml-2 text-xs text-muted-foreground">Select</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0 z-[80]">
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>No results.</CommandEmpty>
+          <CommandList className="max-h-60 overflow-y-auto">
+            <CommandGroup>
+              {options.map(opt => (
+                <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
+                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        <div className="border-t p-2 flex justify-between">
+          <Button size="sm" variant="ghost" onClick={()=>onChange([])}>Clear</Button>
+          <Button size="sm" onClick={()=>onChange([...options])}>Select All</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -575,6 +618,13 @@ export default function ATRDashboard() {
   const [atrDueFrom, setAtrDueFrom] = useState<string>('');
   const [atrDueTo, setAtrDueTo] = useState<string>('');
   const [atrSearch, setAtrSearch] = useState<string>('');
+  const [atrRespFilter, setAtrRespFilter] = useState<string[]>([]);
+  const [atrDeptFilter, setAtrDeptFilter] = useState<string[]>([]);
+  const [atrGroupBy, setAtrGroupBy] = useState<'none'|'status'|'due'|'department'|'person'>('none');
+
+  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
+  const atrRespOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.responsibility||'')).concat(Object.values(atrByControl).map(a=>a.responsibility))), [atrRowsForProject, atrByControl]);
+  const atrDeptOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.designation||'')).concat(Object.values(atrByControl).map(a=>a.designation))), [atrRowsForProject, atrByControl]);
 
   const atrRowsForProject = useMemo(()=>{
     const rows = reportableRows.filter(r => selectedProjectId ? r.projectId===selectedProjectId : true);
@@ -587,13 +637,15 @@ export default function ATRDashboard() {
       if (atrStatusFilter!=='all' && (a?.status||'')!==atrStatusFilter) return false;
       if (atrDueFrom && (a?.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
       if (atrDueTo && (a?.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
+      if (atrRespFilter.length && !atrRespFilter.includes(a?.responsibility||'')) return false;
+      if (atrDeptFilter.length && !atrDeptFilter.includes(a?.designation||'')) return false;
       const q = atrSearch.trim().toLowerCase();
       if (!q) return true;
       const hay = [r.id, r.control, r.process, r.subprocess, r.activity, r.risk, a?.auditObservation, a?.actionPlan, a?.responsibility, a?.designation, a?.status].filter(Boolean).map(s=>String(s).toLowerCase());
       return hay.some(s=>s.includes(q));
     });
     return rows;
-  }, [atrRowsForProject, atrByControl, atrStatusFilter, atrDueFrom, atrDueTo, atrSearch]);
+  }, [atrRowsForProject, atrByControl, atrStatusFilter, atrDueFrom, atrDueTo, atrRespFilter, atrDeptFilter, atrSearch]);
 
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
@@ -696,8 +748,8 @@ export default function ATRDashboard() {
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-72 z-[60]">
-                      <div className="space-y-3">
+                    <PopoverContent className="w-[720px] z-[60]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs">Status</Label>
                           <Select value={atrStatusFilter} onValueChange={setAtrStatusFilter}>
@@ -719,10 +771,32 @@ export default function ATRDashboard() {
                           </div>
                         </div>
                         <div>
+                          <Label className="text-xs">Person responsible</Label>
+                          <MultiSelectSimple options={atrRespOptions} value={atrRespFilter} onChange={setAtrRespFilter} placeholder="All" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Department</Label>
+                          <MultiSelectSimple options={atrDeptOptions} value={atrDeptFilter} onChange={setAtrDeptFilter} placeholder="All" />
+                        </div>
+                        <div className="sm:col-span-2">
                           <Label className="text-xs">Search</Label>
                           <Input value={atrSearch} onChange={(e)=>setAtrSearch(e.target.value)} placeholder="Search..." className="mt-1" />
                         </div>
-                        <div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>{ setAtrStatusFilter('all'); setAtrDueFrom(''); setAtrDueTo(''); setAtrSearch(''); }}>Reset</Button></div>
+                        <div className="flex justify-end sm:col-span-2"><Button size="sm" variant="outline" onClick={()=>{ setAtrStatusFilter('all'); setAtrDueFrom(''); setAtrDueTo(''); setAtrSearch(''); setAtrRespFilter([]); setAtrDeptFilter([]); }}>Reset</Button></div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56">
+                      <div className="grid gap-2">
+                        {(['none','status','due','department','person'] as const).map(opt => (
+                          <Button key={opt} variant={atrGroupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setAtrGroupBy(opt)}>
+                            {opt==='none' ? 'None' : opt==='due' ? 'Due date' : opt==='person' ? 'Person responsible' : opt==='department' ? 'Department' : 'Implementation status'}
+                          </Button>
+                        ))}
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -748,7 +822,7 @@ export default function ATRDashboard() {
                   </Popover>
                   <Button size="sm" className="flex items-center gap-2" onClick={()=>{
                     const wb = XLSX.utils.book_new();
-                    const rows = atrRowsFiltered.map(r=>{
+                    const build = (r:any) => {
                       const a = atrByControl[r.id] || {} as AuditTrackRow;
                       const row: Record<string, any> = {};
                       const add = (k:string, v:any) => { if (atrSelectedFields.includes(k)) row[k] = v; };
@@ -765,7 +839,26 @@ export default function ATRDashboard() {
                       add('Due date', a.dueDate || '');
                       add('Status', a.status || '');
                       return row;
-                    });
+                    };
+                    let rows:any[] = [];
+                    if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
+                    else {
+                      const groups: Record<string, any[]> = {};
+                      const keyOf = (r:any) => {
+                        const a = atrByControl[r.id] || {} as AuditTrackRow;
+                        if (atrGroupBy==='status') return a.status || '';
+                        if (atrGroupBy==='due') return a.dueDate || '';
+                        if (atrGroupBy==='department') return a.designation || '';
+                        return a.responsibility || '';
+                      };
+                      atrRowsFiltered.forEach(r => {
+                        const k = keyOf(r);
+                        if (!groups[k]) groups[k] = [];
+                        groups[k].push(build(r));
+                      });
+                      const keys = Object.keys(groups).sort();
+                      for (const k of keys) { rows.push({ Group: k }); rows.push(...groups[k]); rows.push({}); }
+                    }
                     const ws = XLSX.utils.json_to_sheet(rows);
                     XLSX.utils.book_append_sheet(wb, ws, 'ATR');
                     XLSX.writeFile(wb, 'atr.xlsx');
