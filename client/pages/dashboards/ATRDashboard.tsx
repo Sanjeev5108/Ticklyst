@@ -11,7 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Filter as FilterIcon, Columns2, Download } from 'lucide-react';
+import { Filter as FilterIcon, Columns2, Rows3, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   Plus,
