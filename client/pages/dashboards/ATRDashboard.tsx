@@ -710,12 +710,7 @@ export default function ATRDashboard() {
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
                         <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                          <td className="p-3">{r.control || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
+
 
                         </tr>
                       ))}
@@ -825,7 +820,7 @@ export default function ATRDashboard() {
                     const build = (r:any) => {
                       const a = atrByControl[r.id] || {} as AuditTrackRow;
                       const row: Record<string, any> = {};
-                      const add = (k:string, v:any) => { if (atrSelectedFields.includes(k)) row[k] = v; };
+                      const add = (k:string, v:any) => { row[k] = v; };
                       add('Control ID', r.id);
                       add('Control', r.control || '');
                       add('Process', r.process || '');
@@ -872,12 +867,6 @@ export default function ATRDashboard() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="text-left p-3 w-40">Control ID</th>
-                      <th className="text-left p-3">Control</th>
-                      <th className="text-left p-3 w-40">Process</th>
-                      <th className="text-left p-3 w-48">Subprocess</th>
-                      <th className="text-left p-3 w-40">Activity</th>
-                      <th className="text-left p-3 w-48">Risk</th>
                       <th className="text-left p-3 w-48">Audit Observation</th>
                       <th className="text-left p-3 w-48">Action Plan</th>
                       <th className="text-left p-3 w-40">Responsibility</th>
@@ -891,12 +880,7 @@ export default function ATRDashboard() {
                       const a = atrByControl[r.id] || { id: r.id, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
                       return (
                         <tr key={`${selectedProjectId||'ALL'}|${r.id}`} className="border-t">
-                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                          <td className="p-3">{r.control || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
+
                           <td className="p-3 border-l">
                             <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id,'auditObservation',e.target.value)} />
                           </td>
@@ -1008,12 +992,7 @@ export default function ATRDashboard() {
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
                         <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                          <td className="p-3">{r.control || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
+
 
                         </tr>
                       ))}
@@ -1124,7 +1103,7 @@ export default function ATRDashboard() {
                   const build = (r:any) => {
                     const a = atrByControl[r.id] || {} as AuditTrackRow;
                     const row: Record<string, any> = {};
-                    const add = (k:string, v:any) => { if (atrSelectedFields.includes(k)) row[k] = v; };
+                    const add = (k:string, v:any) => { row[k] = v; };
                     add('Control ID', r.id);
                     add('Control', r.control || '');
                     add('Process', r.process || '');
