@@ -622,14 +622,14 @@ export default function ATRDashboard() {
   const [atrDeptFilter, setAtrDeptFilter] = useState<string[]>([]);
   const [atrGroupBy, setAtrGroupBy] = useState<'none'|'status'|'due'|'department'|'person'>('none');
 
-  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
-  const atrRespOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.responsibility||'')).concat(Object.values(atrByControl).map(a=>a.responsibility))), [atrRowsForProject, atrByControl]);
-  const atrDeptOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.designation||'')).concat(Object.values(atrByControl).map(a=>a.designation))), [atrRowsForProject, atrByControl]);
-
   const atrRowsForProject = useMemo(()=>{
     const rows = reportableRows.filter(r => selectedProjectId ? r.projectId===selectedProjectId : true);
     return rows;
   }, [reportableRows, selectedProjectId]);
+
+  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
+  const atrRespOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.responsibility||'')).concat(Object.values(atrByControl).map(a=>a.responsibility))), [atrRowsForProject, atrByControl]);
+  const atrDeptOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.designation||'')).concat(Object.values(atrByControl).map(a=>a.designation))), [atrRowsForProject, atrByControl]);
 
   const atrRowsFiltered = useMemo(()=>{
     const rows = atrRowsForProject.filter(r=>{
