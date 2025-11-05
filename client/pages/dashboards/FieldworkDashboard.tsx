@@ -1016,7 +1016,46 @@ export default function FieldworkDashboard() {
               }
             }
 
-            XLSX.writeFile(wb, 'fieldwork.xlsx');
+            // Convert to ArrayBuffer and restyle HM sheets with ExcelJS (for cell fills)
+            const arrayBuf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+            const wbStyled = new ExcelJS.Workbook();
+            await wbStyled.xlsx.load(arrayBuf as ArrayBuffer);
+            const hexToARGB = (hex: string) => { const s = (hex||'').replace('#',''); return (s.length===6 ? `FF${s}` : s).toUpperCase(); };
+            const styleBorder = { style: 'thin', color: { argb: 'FFCCCCCC' } } as const;
+            wbStyled.worksheets.forEach(ws => {
+              if (!ws.name.startsWith('HM ')) return;
+              const colCount = ws.columnCount;
+              const rowCount = ws.rowCount;
+              for (let r = 2; r <= rowCount; r++) {
+                const lVal = ws.getCell(r, 1).value as any;
+                const l = Number.parseInt(String((lVal && (lVal.text || lVal.richText ? ws.getCell(r,1).text : lVal))));
+                for (let c = 2; c <= colCount; c++) {
+                  const iVal = ws.getCell(1, c).value as any;
+                  const impact = Number.parseInt(String((iVal && (iVal.text || iVal.richText ? ws.getCell(1,c).text : iVal))));
+                  if (!Number.isFinite(l) || !Number.isFinite(impact)) continue;
+                  const riskVal = l * impact;
+                  const lvl = resolveLevel(riskVal, activeCfg.residualRisk.thresholds);
+                  const color = lvl?.color || '';
+                  const cell = ws.getCell(r, c);
+                  if (color) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToARGB(color) } } as any;
+                  }
+                  cell.alignment = { horizontal: 'center', vertical: 'middle' } as any;
+                  cell.font = { bold: true, color: { argb: 'FF000000' } } as any;
+                  cell.border = { top: styleBorder, left: styleBorder, right: styleBorder, bottom: styleBorder } as any;
+                }
+              }
+              for (let c = 1; c <= colCount; c++) ws.getColumn(c).width = c===1 ? 14 : 6;
+              for (let r = 1; r <= rowCount; r++) ws.getRow(r).height = 22;
+              ws.getRow(1).eachCell(cell => { cell.font = { ...(cell.font||{}), bold: true } as any; cell.alignment = { horizontal: 'center', vertical: 'middle' } as any; });
+              for (let r=2; r<=rowCount; r++) { const cell = ws.getCell(r,1); cell.font = { ...(cell.font||{}), bold: true } as any; cell.alignment = { horizontal: 'center', vertical: 'middle' } as any; }
+            });
+            const buf = await wbStyled.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'fieldwork.xlsx'; a.click();
+            URL.revokeObjectURL(url);
           }}><Download className="h-4 w-4"/> Export XLSX</Button>
         </div>
       </div>
