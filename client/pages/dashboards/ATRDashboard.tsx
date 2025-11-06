@@ -568,6 +568,23 @@ export default function ATRDashboard() {
   // ATR Access data per project/control
   const [atrByControl, setAtrByControl] = useState<Record<string, AuditTrackRow[]>>({});
   const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : '';
+  const makeEmptyAtrRow = (controlId: string): AuditTrackRow => ({
+    id: `${controlId}#${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    auditObservation: '',
+    actionPlan: '',
+    responsibility: '',
+    designation: '',
+    dueDate: '',
+    previousDueDates: [],
+    status: ''
+  });
+  const addAtrRow = (controlId: string) => {
+    setAtrByControl(prev => {
+      const arr = prev[controlId] ? [...prev[controlId]] : [];
+      arr.push(makeEmptyAtrRow(controlId));
+      return { ...prev, [controlId]: arr };
+    });
+  };
   useEffect(()=>{
     (async()=>{
       if (!selectedProjectId) { setAtrByControl({}); return; }
