@@ -1205,36 +1205,30 @@ export default function ATRDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {atrRowsFiltered.map(r=>{
-                    const a = atrByControl[r.id] || { id: r.id, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+                  {atrItemsFiltered.map(({ r, a, idx })=>{
+                    const isLast = (atrByControl[r.id]?.length || 0) - 1 === idx;
                     return (
-                      <tr key={`${selectedProjectId||'ALL'}|${r.id}`} className="border-t">
-                        <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                        <td className="p-3">{r.control || '-'}</td>
-                        <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                        <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                        <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                        <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
+                      <tr key={`${selectedProjectId||'ALL'}|${r.id}|${a.id}`} className="border-t">
                         <td className="p-3 border-l">
-                          <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id,'auditObservation',e.target.value)} />
+                          <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id, idx,'auditObservation',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.actionPlan} onChange={(e)=>updateAtrField(r.id,'actionPlan',e.target.value)} />
+                          <Input value={a.actionPlan} onChange={(e)=>updateAtrField(r.id, idx,'actionPlan',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.responsibility} onChange={(e)=>updateAtrField(r.id,'responsibility',e.target.value)} />
+                          <Input value={a.responsibility} onChange={(e)=>updateAtrField(r.id, idx,'responsibility',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.designation} onChange={(e)=>updateAtrField(r.id,'designation',e.target.value)} />
+                          <Input value={a.designation} onChange={(e)=>updateAtrField(r.id, idx,'designation',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(r.id,'dueDate',e.target.value)} />
+                          <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(r.id, idx,'dueDate',e.target.value)} />
                           {a.previousDueDates && a.previousDueDates.length>0 && (
                             <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
                           )}
                         </td>
-                        <td className="p-3">
-                          <Select value={a.status} onValueChange={(v)=>updateAtrField(r.id,'status',v)}>
+                        <td className="p-3 flex items-center gap-2">
+                          <Select value={a.status} onValueChange={(v)=>updateAtrField(r.id, idx,'status',v)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
@@ -1242,6 +1236,9 @@ export default function ATRDashboard() {
                               {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                             </SelectContent>
                           </Select>
+                          {isLast && (
+                            <Button variant="ghost" size="sm" onClick={()=>addAtrRow(r.id)}>Add Row</Button>
+                          )}
                         </td>
                       </tr>
                     );
