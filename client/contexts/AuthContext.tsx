@@ -124,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
+    try { window.dispatchEvent(new CustomEvent('auth:logout')); } catch {}
   };
 
   const hasPermission = (permission: string): boolean => {
