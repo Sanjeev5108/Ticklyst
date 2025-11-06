@@ -655,8 +655,20 @@ export default function ATRDashboard() {
   }, [reportableRows, selectedProjectId]);
 
   const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
-  const atrRespOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.responsibility||'')).concat(Object.values(atrByControl).map(a=>a.responsibility))), [atrRowsForProject, atrByControl]);
-  const atrDeptOptions = useMemo(()=> uniq(atrRowsForProject.map(r => (atrByControl[r.id]?.designation||'')).concat(Object.values(atrByControl).map(a=>a.designation))), [atrRowsForProject, atrByControl]);
+  const atrRespOptions = useMemo(()=> {
+    const list = [
+      ...atrRowsForProject.flatMap(r => (atrByControl[r.id]||[]).map(a=>a.responsibility)),
+      ...Object.values(atrByControl).flatMap(arr => arr.map(a=>a.responsibility))
+    ];
+    return uniq(list);
+  }, [atrRowsForProject, atrByControl]);
+  const atrDeptOptions = useMemo(()=> {
+    const list = [
+      ...atrRowsForProject.flatMap(r => (atrByControl[r.id]||[]).map(a=>a.designation)),
+      ...Object.values(atrByControl).flatMap(arr => arr.map(a=>a.designation))
+    ];
+    return uniq(list);
+  }, [atrRowsForProject, atrByControl]);
 
   const atrRowsFiltered = useMemo(()=>{
     const rows = atrRowsForProject.filter(r=>{
