@@ -42,7 +42,7 @@ export const modules: Module[] = [
     icon: Users,
     description: "Employee management and role assignments",
     roles: ["Admin", "HR"],
-    component: HRDashboard,
+    route: "/employee",
   },
   {
     id: "projects",
