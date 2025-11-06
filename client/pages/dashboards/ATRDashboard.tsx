@@ -754,8 +754,12 @@ export default function ATRDashboard() {
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
                         <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-
-
+                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
+                          <td className="p-3">{r.control || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1038,8 +1042,12 @@ export default function ATRDashboard() {
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
                       }).map(r=> (
                         <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-
-
+                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
+                          <td className="p-3">{r.control || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
+                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
