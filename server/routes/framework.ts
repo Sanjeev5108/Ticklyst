@@ -115,30 +115,15 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     ws.getRow(1).font = { bold: true };
     ws.columns = headers.map(h => ({ header: h, width: Math.max(18, Math.min(40, h.length + 6)) }));
 
-    // Lists sheet with named ranges for dropdowns
-    const listWs = wb.addWorksheet('Lists');
-    listWs.state = 'hidden';
-    listWs.getColumn(1).values = ["Departments", ...DEPARTMENTS];
-    listWs.getColumn(2).values = ["Risk Categories", ...RISK_CATEGORIES];
-    listWs.getColumn(3).values = ["Control Types", ...CONTROL_TYPES];
-    wb.definedNames.add('Departments', 'Lists!$A$2:$A$' + (DEPARTMENTS.length + 1));
-    wb.definedNames.add('RiskCategories', 'Lists!$B$2:$B$' + (RISK_CATEGORIES.length + 1));
-    wb.definedNames.add('ControlTypes', 'Lists!$C$2:$C$' + (CONTROL_TYPES.length + 1));
+    // We will place source lists in the visible Instructions sheet and reference them directly
 
     for (let r = 2; r <= 1000; r++) {
-      // Departments: allow comma-separated multi-entry by not enforcing errors, but still show the dropdown arrow and an input prompt
-      const deptOpts:any = { type: 'list', allowBlank: true, showErrorMessage: false, showInputMessage: true, promptTitle: 'Tip', prompt: 'You can type multiple values separated by commas', showDropDown: false };
-      ws.getCell(`C${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
-      ws.getCell(`F${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
-      ws.getCell(`I${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
-
-      // Risk Category: single-select enforced from list
-      const catOpts:any = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false };
-      ws.getCell(`L${r}`).dataValidation = { ...catOpts, formulae: ['=RiskCategories'] } as any;
-
-      // Control Type: single-select enforced from list
-      const ctrlOpts:any = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false };
-      ws.getCell(`N${r}`).dataValidation = { ...ctrlOpts, formulae: ['=ControlTypes'] } as any;
+      // Placeholder; real ranges are patched after the Instructions sheet is created
+      ws.getCell(`C${r}`).dataValidation = { type: 'list', allowBlank: true, showErrorMessage: false, showInputMessage: true, promptTitle: 'Tip', prompt: 'You can type multiple values separated by commas', showDropDown: false, formulae: ['=""'] } as any;
+      ws.getCell(`F${r}`).dataValidation = { type: 'list', allowBlank: true, showErrorMessage: false, showInputMessage: true, promptTitle: 'Tip', prompt: 'You can type multiple values separated by commas', showDropDown: false, formulae: ['=""'] } as any;
+      ws.getCell(`I${r}`).dataValidation = { type: 'list', allowBlank: true, showErrorMessage: false, showInputMessage: true, promptTitle: 'Tip', prompt: 'You can type multiple values separated by commas', showDropDown: false, formulae: ['=""'] } as any;
+      ws.getCell(`L${r}`).dataValidation = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false, formulae: ['=""'] } as any;
+      ws.getCell(`N${r}`).dataValidation = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false, formulae: ['=""'] } as any;
     }
 
     const inst = wb.addWorksheet('Instructions');
