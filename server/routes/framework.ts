@@ -164,6 +164,35 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     add(['- Reference: Optional free-text field']);
     add(['']);
     add(['Only the Framework sheet is imported. The Instructions sheet is ignored during import.']);
+    add(['']);
+    add(['Source Lists']);
+    inst.getRow(inst.rowCount).font = { bold: true };
+    const listsHeaderRow = inst.rowCount + 1;
+    inst.getRow(listsHeaderRow).values = ['Departments', 'Risk Categories', 'Control Types'];
+
+    const deptStart = listsHeaderRow + 1;
+    for (let i = 0; i < DEPARTMENTS.length; i++) inst.getCell(`A${deptStart + i}`).value = DEPARTMENTS[i];
+    const catStart = listsHeaderRow + 1;
+    for (let i = 0; i < RISK_CATEGORIES.length; i++) inst.getCell(`B${catStart + i}`).value = RISK_CATEGORIES[i];
+    const ctrlStart = listsHeaderRow + 1;
+    for (let i = 0; i < CONTROL_TYPES.length; i++) inst.getCell(`C${ctrlStart + i}`).value = CONTROL_TYPES[i];
+
+    const deptEnd = deptStart + DEPARTMENTS.length - 1;
+    const catEnd = catStart + RISK_CATEGORIES.length - 1;
+    const ctrlEnd = ctrlStart + CONTROL_TYPES.length - 1;
+
+    // Now wire Framework sheet validations to these visible lists on Instructions
+    for (let r = 2; r <= 1000; r++) {
+      const deptRange = `=Instructions!$A$${deptStart}:$A$${deptEnd}`;
+      const catRange = `=Instructions!$B$${catStart}:$B$${catEnd}`;
+      const ctrlRange = `=Instructions!$C$${ctrlStart}:$C$${ctrlEnd}`;
+
+      ws.getCell(`C${r}`).dataValidation = { type:'list', allowBlank:true, showErrorMessage:false, showInputMessage:true, promptTitle:'Tip', prompt:'You can type multiple values separated by commas', showDropDown:false, formulae:[deptRange] } as any;
+      ws.getCell(`F${r}`).dataValidation = { type:'list', allowBlank:true, showErrorMessage:false, showInputMessage:true, promptTitle:'Tip', prompt:'You can type multiple values separated by commas', showDropDown:false, formulae:[deptRange] } as any;
+      ws.getCell(`I${r}`).dataValidation = { type:'list', allowBlank:true, showErrorMessage:false, showInputMessage:true, promptTitle:'Tip', prompt:'You can type multiple values separated by commas', showDropDown:false, formulae:[deptRange] } as any;
+      ws.getCell(`L${r}`).dataValidation = { type:'list', allowBlank:true, showErrorMessage:true, errorTitle:'Invalid choice', error:'Select a value from the dropdown', showDropDown:false, formulae:[catRange] } as any;
+      ws.getCell(`N${r}`).dataValidation = { type:'list', allowBlank:true, showErrorMessage:true, errorTitle:'Invalid choice', error:'Select a value from the dropdown', showDropDown:false, formulae:[ctrlRange] } as any;
+    }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="framework-template.xlsx"');
