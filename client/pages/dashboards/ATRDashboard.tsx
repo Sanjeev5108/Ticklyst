@@ -11,7 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Filter as FilterIcon, Columns2, Rows3, Download } from 'lucide-react';
+import { Filter as FilterIcon, Columns2, Rows3, Download, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   Plus,
@@ -585,6 +585,15 @@ export default function ATRDashboard() {
       return { ...prev, [controlId]: arr };
     });
   };
+  const deleteAtrRow = (controlId: string, index: number) => {
+    setAtrByControl(prev => {
+      const arr = prev[controlId] ? [...prev[controlId]] : [];
+      if (arr.length === 0) return prev;
+      arr.splice(index, 1);
+      if (arr.length === 0) arr.push(makeEmptyAtrRow(controlId));
+      return { ...prev, [controlId]: arr };
+    });
+  };
   useEffect(()=>{
     (async()=>{
       if (!selectedProjectId) { setAtrByControl({}); return; }
@@ -958,6 +967,9 @@ export default function ATRDashboard() {
                             {isLast && (
                               <Button variant="ghost" size="sm" onClick={()=>addAtrRow(r.id)}>Add Row</Button>
                             )}
+                            <Button variant="ghost" size="sm" onClick={()=>deleteAtrRow(r.id, idx)} title="Delete row">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </td>
                         </tr>
                       );
