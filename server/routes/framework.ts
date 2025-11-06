@@ -377,14 +377,8 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
       'attachment; filename="framework-template.xlsx"',
     );
     res.setHeader("Cache-Control", "no-store");
-    try {
-      res.setHeader(
-        "Content-Length",
-        String(
-          (buffer as any).byteLength || (buffer as ArrayBuffer).byteLength,
-        ),
-      );
-    } catch {}
+    // Do not set Content-Length in serverless environments to avoid mismatch after base64 encoding
+    res.setHeader("Content-Transfer-Encoding", "binary");
     res.end(Buffer.from(buffer as any));
   } catch (e: any) {
     console.error(e);
