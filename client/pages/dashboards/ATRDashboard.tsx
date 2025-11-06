@@ -861,8 +861,8 @@ export default function ATRDashboard() {
                   </Popover>
                   <Button size="sm" className="flex items-center gap-2" onClick={()=>{
                     const wb = XLSX.utils.book_new();
-                    const build = (r:any) => {
-                      const a = atrByControl[r.id] || {} as AuditTrackRow;
+                    const build = (it:any) => {
+                      const { r, a } = it;
                       const row: Record<string, any> = {};
                       const add = (k:string, v:any) => { row[k] = v; };
                       add('Control ID', r.id);
@@ -880,20 +880,20 @@ export default function ATRDashboard() {
                       return row;
                     };
                     let rows:any[] = [];
-                    if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
+                    if (atrGroupBy==='none') rows = atrItemsFiltered.map(build);
                     else {
                       const groups: Record<string, any[]> = {};
-                      const keyOf = (r:any) => {
-                        const a = atrByControl[r.id] || {} as AuditTrackRow;
+                      const keyOf = (it:any) => {
+                        const { a } = it;
                         if (atrGroupBy==='status') return a.status || '';
                         if (atrGroupBy==='due') return a.dueDate || '';
                         if (atrGroupBy==='department') return a.designation || '';
                         return a.responsibility || '';
                       };
-                      atrRowsFiltered.forEach(r => {
-                        const k = keyOf(r);
+                      atrItemsFiltered.forEach(it => {
+                        const k = keyOf(it);
                         if (!groups[k]) groups[k] = [];
-                        groups[k].push(build(r));
+                        groups[k].push(build(it));
                       });
                       const keys = Object.keys(groups).sort();
                       for (const k of keys) { rows.push({ Group: k }); rows.push(...groups[k]); rows.push({}); }
