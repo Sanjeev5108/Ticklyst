@@ -592,14 +592,22 @@ export default function ATRDashboard() {
         const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data && typeof data==='object') setAtrByControl(data as Record<string, AuditTrackRow>);
+          if (data && typeof data==='object') {
+            const next: Record<string, AuditTrackRow[]> = {};
+            for (const [k,v] of Object.entries(data)) {
+              if (Array.isArray(v)) next[k] = v as AuditTrackRow[];
+              else if (v && typeof v === 'object') next[k] = [v as AuditTrackRow];
+              else next[k] = [];
+            }
+            setAtrByControl(next);
+          }
         }
       } catch {}
       const ctrls = reportableRows.filter(r=>r.projectId===selectedProjectId);
       setAtrByControl(prev=>{
-        const next = { ...prev } as Record<string, AuditTrackRow>;
+        const next: Record<string, AuditTrackRow[]> = { ...prev };
         for (const c of ctrls) {
-          if (!next[c.id]) next[c.id] = { id: c.id, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+          if (!next[c.id] || next[c.id].length === 0) next[c.id] = [makeEmptyAtrRow(c.id)];
         }
         return next;
       });
