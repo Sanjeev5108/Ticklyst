@@ -126,12 +126,19 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     wb.definedNames.add('ControlTypes', 'Lists!$C$2:$C$' + (CONTROL_TYPES.length + 1));
 
     for (let r = 2; r <= 1000; r++) {
-      const listOpts:any = { type: 'list', allowBlank: true, showErrorMessage: false };
-      ws.getCell(`C${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
-      ws.getCell(`F${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
-      ws.getCell(`I${r}`).dataValidation = { ...listOpts, formulae: ['=Departments'] } as any;
-      ws.getCell(`L${r}`).dataValidation = { ...listOpts, formulae: ['=RiskCategories'] } as any;
-      ws.getCell(`N${r}`).dataValidation = { ...listOpts, formulae: ['=ControlTypes'] } as any;
+      // Departments: allow comma-separated multi-entry by not enforcing errors, but still show the dropdown arrow and an input prompt
+      const deptOpts:any = { type: 'list', allowBlank: true, showErrorMessage: false, showInputMessage: true, promptTitle: 'Tip', prompt: 'You can type multiple values separated by commas', showDropDown: false };
+      ws.getCell(`C${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
+      ws.getCell(`F${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
+      ws.getCell(`I${r}`).dataValidation = { ...deptOpts, formulae: ['=Departments'] } as any;
+
+      // Risk Category: single-select enforced from list
+      const catOpts:any = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false };
+      ws.getCell(`L${r}`).dataValidation = { ...catOpts, formulae: ['=RiskCategories'] } as any;
+
+      // Control Type: single-select enforced from list
+      const ctrlOpts:any = { type: 'list', allowBlank: true, showErrorMessage: true, errorTitle: 'Invalid choice', error: 'Select a value from the dropdown', showDropDown: false };
+      ws.getCell(`N${r}`).dataValidation = { ...ctrlOpts, formulae: ['=ControlTypes'] } as any;
     }
 
     const inst = wb.addWorksheet('Instructions');
