@@ -566,7 +566,7 @@ export default function ATRDashboard() {
   }, [reportableRows, projects]);
 
   // ATR Access data per project/control
-  const [atrByControl, setAtrByControl] = useState<Record<string, AuditTrackRow>>({});
+  const [atrByControl, setAtrByControl] = useState<Record<string, AuditTrackRow[]>>({});
   const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : '';
   useEffect(()=>{
     (async()=>{
