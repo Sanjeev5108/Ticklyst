@@ -12,7 +12,12 @@ class RiskStore {
 
   constructor() {
     this.loadLocal();
-    this.syncFromServer();
+    const hasUser = !!localStorage.getItem('currentUser');
+    if (hasUser) this.syncFromServer();
+    // Defer syncing until after login to avoid failed fetches on public pages or cold starts
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth:login', () => this.syncFromServer());
+    }
   }
 
   private loadLocal() {
@@ -31,11 +36,16 @@ class RiskStore {
 
   private async persistServer() {
     try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 8000);
       await fetch(`/api/settings/${SETTINGS_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.configs)
-      });
+        body: JSON.stringify(this.configs),
+        signal: controller.signal,
+        cache: 'no-store',
+      }).catch(()=>{});
+      clearTimeout(t);
     } catch {}
   }
 
@@ -51,11 +61,14 @@ class RiskStore {
     return out;
   }
 
-  private async syncFromServer() {
+  public async syncFromServer() {
     if (this.syncing) return; this.syncing = true;
     try {
-      const res = await fetch(`/api/settings/${SETTINGS_KEY}`);
-      if (res.ok) {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`/api/settings/${SETTINGS_KEY}`, { signal: controller.signal, cache: 'no-store' }).catch(()=>undefined as any);
+      clearTimeout(t);
+      if (res && res.ok) {
         const data = await res.json();
         const incoming = this.normalize(data);
         const merged: Record<string, RiskAssessmentConfig> = { ...incoming, ...this.configs };
