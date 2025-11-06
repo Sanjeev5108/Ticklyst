@@ -55,15 +55,27 @@ const App = () => {
                 <Route path="/employee" element={<HRDashboard />} />
                 <Route path="/projects" element={<ProjectManagement />} />
                 <Route path="/framework" element={<FrameworkDashboard />} />
-                <Route path="/risk-assessment" element={<RiskAssessmentDashboard />} />
+                <Route
+                  path="/risk-assessment"
+                  element={<RiskAssessmentDashboard />}
+                />
                 <Route path="/fieldwork" element={<FieldworkDashboard />} />
                 <Route path="/review" element={<ReviewDashboard />} />
                 <Route path="/atr" element={<ATRDashboard />} />
-                <Route path="/statement-of-applicability" element={<StatementOfApplicability />} />
+                <Route
+                  path="/statement-of-applicability"
+                  element={<StatementOfApplicability />}
+                />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/audit-demo" element={<Index />} />
-                <Route path="/client/:clientName" element={<ClientChecklist />} />
-                <Route path="/client/:clientName/project/:projectId" element={<ProjectDetail />} />
+                <Route
+                  path="/client/:clientName"
+                  element={<ClientChecklist />}
+                />
+                <Route
+                  path="/client/:clientName/project/:projectId"
+                  element={<ProjectDetail />}
+                />
               </Route>
 
               <Route path="*" element={<NotFound />} />
@@ -78,7 +90,9 @@ const App = () => {
 const container = document.getElementById("root")!;
 // Reuse existing root in HMR/iframe environments to avoid duplicate createRoot warnings
 // Cache on the container to survive module reloads
-let root = (container as any).__reactRoot as ReturnType<typeof createRoot> | undefined;
+let root = (container as any).__reactRoot as
+  | ReturnType<typeof createRoot>
+  | undefined;
 if (!root) {
   root = createRoot(container);
   (container as any).__reactRoot = root;
