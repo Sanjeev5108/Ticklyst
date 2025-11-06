@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(userObj);
       localStorage.setItem('currentUser', JSON.stringify(userObj));
+      try { window.dispatchEvent(new CustomEvent('auth:login')); } catch {}
       return true;
     } catch {
       return false;
