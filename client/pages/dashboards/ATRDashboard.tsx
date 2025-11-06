@@ -1196,12 +1196,6 @@ export default function ATRDashboard() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="text-left p-3 w-40">Control ID</th>
-                    <th className="text-left p-3">Control</th>
-                    <th className="text-left p-3 w-40">Process</th>
-                    <th className="text-left p-3 w-48">Subprocess</th>
-                    <th className="text-left p-3 w-40">Activity</th>
-                    <th className="text-left p-3 w-48">Risk</th>
                     <th className="text-left p-3 w-48">Audit Observation</th>
                     <th className="text-left p-3 w-48">Action Plan</th>
                     <th className="text-left p-3 w-40">Responsibility</th>
