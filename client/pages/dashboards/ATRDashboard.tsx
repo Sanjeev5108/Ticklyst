@@ -670,20 +670,25 @@ export default function ATRDashboard() {
     return uniq(list);
   }, [atrRowsForProject, atrByControl]);
 
-  const atrRowsFiltered = useMemo(()=>{
-    const rows = atrRowsForProject.filter(r=>{
-      const a = atrByControl[r.id];
-      if (atrStatusFilter!=='all' && (a?.status||'')!==atrStatusFilter) return false;
-      if (atrDueFrom && (a?.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
-      if (atrDueTo && (a?.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
-      if (atrRespFilter.length && !atrRespFilter.includes(a?.responsibility||'')) return false;
-      if (atrDeptFilter.length && !atrDeptFilter.includes(a?.designation||'')) return false;
+  const atrItemsFiltered = useMemo(()=>{
+    const items: { r: { id:string; control:string; process?:string; subprocess?:string; activity?:string; risk?:string; projectId?:string }, a: AuditTrackRow; idx: number }[] = [];
+    for (const r of atrRowsForProject) {
+      const arr = atrByControl[r.id] || [];
+      if (!arr.length) items.push({ r, a: makeEmptyAtrRow(r.id), idx: 0 });
+      else arr.forEach((a, idx)=> items.push({ r, a, idx }));
+    }
+    const filtered = items.filter(({ r, a }) => {
+      if (atrStatusFilter!=='all' && (a.status||'')!==atrStatusFilter) return false;
+      if (atrDueFrom && (a.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
+      if (atrDueTo && (a.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
+      if (atrRespFilter.length && !atrRespFilter.includes(a.responsibility||'')) return false;
+      if (atrDeptFilter.length && !atrDeptFilter.includes(a.designation||'')) return false;
       const q = atrSearch.trim().toLowerCase();
       if (!q) return true;
-      const hay = [r.id, r.control, r.process, r.subprocess, r.activity, r.risk, a?.auditObservation, a?.actionPlan, a?.responsibility, a?.designation, a?.status].filter(Boolean).map(s=>String(s).toLowerCase());
+      const hay = [r.id, r.control, r.process, r.subprocess, r.activity, r.risk, a.auditObservation, a.actionPlan, a.responsibility, a.designation, a.status].filter(Boolean).map(s=>String(s).toLowerCase());
       return hay.some(s=>s.includes(q));
     });
-    return rows;
+    return filtered;
   }, [atrRowsForProject, atrByControl, atrStatusFilter, atrDueFrom, atrDueTo, atrRespFilter, atrDeptFilter, atrSearch]);
 
   if (selectedClient || selectedControl) {
