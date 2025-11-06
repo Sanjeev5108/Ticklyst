@@ -7,5 +7,6 @@ export const handler = serverless(createServer(), {
   binary: [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/octet-stream",
+    "application/zip",
   ],
 });
