@@ -24,7 +24,7 @@ interface Module {
   icon: React.ComponentType<any>;
   description: string;
   roles: string[];
-  component?: React.ComponentType;
+  route: string;
 }
 
 export const modules: Module[] = [
@@ -34,7 +34,7 @@ export const modules: Module[] = [
     icon: Briefcase,
     description: "Manage client information and relationships",
     roles: ["Admin", "Division Partner", "Division Head"],
-    component: ClientManagement,
+    route: "/client",
   },
   {
     id: "employee",
