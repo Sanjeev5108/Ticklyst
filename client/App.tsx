@@ -54,4 +54,12 @@ const App = () => {
   );
 };
 
-createRoot(document.getElementById("root")!).render(<App />);
+const container = document.getElementById("root")!;
+// Reuse existing root in HMR/iframe environments to avoid duplicate createRoot warnings
+// Cache on the container to survive module reloads
+let root = (container as any).__reactRoot as ReturnType<typeof createRoot> | undefined;
+if (!root) {
+  root = createRoot(container);
+  (container as any).__reactRoot = root;
+}
+root.render(<App />);
