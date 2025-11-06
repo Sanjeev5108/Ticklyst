@@ -614,9 +614,10 @@ export default function ATRDashboard() {
     })();
   }, [selectedProjectId, atrKey, reportableRows]);
 
-  const updateAtrField = (controlId: string, field: keyof AuditTrackRow, value: string) => {
+  const updateAtrField = (controlId: string, index: number, field: keyof AuditTrackRow, value: string) => {
     setAtrByControl(prev => {
-      const row = prev[controlId] || { id: controlId, auditObservation:'', actionPlan:'', responsibility:'', designation:'', dueDate:'', previousDueDates:[], status:'' };
+      const arr = prev[controlId] ? [...prev[controlId]] : [makeEmptyAtrRow(controlId)];
+      const row = arr[index] || makeEmptyAtrRow(controlId);
       const next: AuditTrackRow = { ...row } as any;
       if (field === 'dueDate') {
         const prevDate = row.dueDate;
@@ -625,7 +626,8 @@ export default function ATRDashboard() {
       } else {
         (next as any)[field] = value;
       }
-      return { ...prev, [controlId]: next };
+      arr[index] = next;
+      return { ...prev, [controlId]: arr };
     });
   };
 
