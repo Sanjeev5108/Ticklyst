@@ -48,14 +48,24 @@ const App = () => {
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/audit-demo" element={<Index />} />
-              <Route path="/client/:clientName" element={<ClientChecklist />} />
-              <Route
-                path="/client/:clientName/project/:projectId"
-                element={<ProjectDetail />}
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/client" element={<ClientManagement />} />
+                <Route path="/employee" element={<HRDashboard />} />
+                <Route path="/projects" element={<ProjectManagement />} />
+                <Route path="/framework" element={<FrameworkDashboard />} />
+                <Route path="/risk-assessment" element={<RiskAssessmentDashboard />} />
+                <Route path="/fieldwork" element={<FieldworkDashboard />} />
+                <Route path="/review" element={<ReviewDashboard />} />
+                <Route path="/atr" element={<ATRDashboard />} />
+                <Route path="/statement-of-applicability" element={<StatementOfApplicability />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/audit-demo" element={<Index />} />
+                <Route path="/client/:clientName" element={<ClientChecklist />} />
+                <Route path="/client/:clientName/project/:projectId" element={<ProjectDetail />} />
+              </Route>
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
