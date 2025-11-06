@@ -22,6 +22,17 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientChecklist from "./pages/ClientChecklist";
 import ProjectDetail from "./pages/ProjectDetail";
+import MainLayout from "./pages/MainLayout";
+import ClientManagement from "./pages/ClientManagement";
+import ProjectManagement from "./pages/ProjectManagement";
+import FrameworkDashboard from "./pages/dashboards/FrameworkDashboard";
+import RiskAssessmentDashboard from "./pages/dashboards/RiskAssessmentDashboard";
+import FieldworkDashboard from "./pages/dashboards/FieldworkDashboard";
+import ReviewDashboard from "./pages/dashboards/ReviewDashboard";
+import ATRDashboard from "./pages/dashboards/ATRDashboard";
+import StatementOfApplicability from "./pages/dashboards/StatementOfApplicability";
+import Settings from "./pages/Settings";
+import HRDashboard from "./pages/dashboards/HRDashboard";
 
 const queryClient = new QueryClient();
 
