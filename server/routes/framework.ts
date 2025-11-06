@@ -378,8 +378,12 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
     );
     res.setHeader("Cache-Control", "no-store");
     // Do not set Content-Length in serverless environments to avoid mismatch after base64 encoding
-    res.setHeader("Content-Transfer-Encoding", "binary");
-    res.end(Buffer.from(buffer as any));
+    const buf: Buffer = Buffer.isBuffer(buffer)
+      ? (buffer as Buffer)
+      : Buffer.from(buffer as ArrayBuffer);
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.status(200).send(buf);
   } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: e?.message || "template_error" });
