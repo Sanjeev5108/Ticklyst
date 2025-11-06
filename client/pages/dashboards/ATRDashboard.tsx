@@ -151,7 +151,7 @@ export default function ATRDashboard() {
   const [selectedControl, setSelectedControl] = useState<string | null>(null);
   const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
   const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
-  const [reportableProjectFilter, setReportableProjectFilter] = useState<string>('all');
+  const [reportableProjectFilter, setReportableProjectFilter] = useState<string>('');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -565,11 +565,11 @@ export default function ATRDashboard() {
     return ids.map(id => ({ id, title: projects.find(p => p.id === id)?.title || id }));
   }, [reportableRows, projects]);
 
-  // ATR Access data per project/control
-  const [atrByControl, setAtrByControl] = useState<Record<string, AuditTrackRow[]>>({});
+  // ATR Access data per project (not linked to controls)
+  const [atrRows, setAtrRows] = useState<AuditTrackRow[]>([]);
   const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : '';
-  const makeEmptyAtrRow = (controlId: string): AuditTrackRow => ({
-    id: `${controlId}#${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+  const makeEmptyAtrRow = (): AuditTrackRow => ({
+    id: `row_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
     auditObservation: '',
     actionPlan: '',
     responsibility: '',
@@ -578,55 +578,40 @@ export default function ATRDashboard() {
     previousDueDates: [],
     status: ''
   });
-  const addAtrRow = (controlId: string) => {
-    setAtrByControl(prev => {
-      const arr = prev[controlId] ? [...prev[controlId]] : [];
-      arr.push(makeEmptyAtrRow(controlId));
-      return { ...prev, [controlId]: arr };
-    });
+  const addAtrRow = () => {
+    setAtrRows(prev => [...prev, makeEmptyAtrRow()]);
   };
-  const deleteAtrRow = (controlId: string, index: number) => {
-    setAtrByControl(prev => {
-      const arr = prev[controlId] ? [...prev[controlId]] : [];
+  const deleteAtrRow = (index: number) => {
+    setAtrRows(prev => {
+      const arr = [...prev];
       if (arr.length === 0) return prev;
       arr.splice(index, 1);
-      if (arr.length === 0) arr.push(makeEmptyAtrRow(controlId));
-      return { ...prev, [controlId]: arr };
+      if (arr.length === 0) arr.push(makeEmptyAtrRow());
+      return arr;
     });
   };
   useEffect(()=>{
     (async()=>{
-      if (!selectedProjectId) { setAtrByControl({}); return; }
+      if (!selectedProjectId) { setAtrRows([]); return; }
       try {
         const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data && typeof data==='object') {
-            const next: Record<string, AuditTrackRow[]> = {};
-            for (const [k,v] of Object.entries(data)) {
-              if (Array.isArray(v)) next[k] = v as AuditTrackRow[];
-              else if (v && typeof v === 'object') next[k] = [v as AuditTrackRow];
-              else next[k] = [];
-            }
-            setAtrByControl(next);
+          if (Array.isArray(data)) setAtrRows(data as AuditTrackRow[]);
+          else if (data && typeof data==='object') {
+            const flat = (Object.values(data as any).flat() as AuditTrackRow[]);
+            setAtrRows(flat);
           }
         }
       } catch {}
-      const ctrls = reportableRows.filter(r=>r.projectId===selectedProjectId);
-      setAtrByControl(prev=>{
-        const next: Record<string, AuditTrackRow[]> = { ...prev };
-        for (const c of ctrls) {
-          if (!next[c.id] || next[c.id].length === 0) next[c.id] = [makeEmptyAtrRow(c.id)];
-        }
-        return next;
-      });
+      setAtrRows(prev => prev.length ? prev : [makeEmptyAtrRow()]);
     })();
   }, [selectedProjectId, atrKey, reportableRows]);
 
-  const updateAtrField = (controlId: string, index: number, field: keyof AuditTrackRow, value: string) => {
-    setAtrByControl(prev => {
-      const arr = prev[controlId] ? [...prev[controlId]] : [makeEmptyAtrRow(controlId)];
-      const row = arr[index] || makeEmptyAtrRow(controlId);
+  const updateAtrField = (index: number, field: keyof AuditTrackRow, value: string) => {
+    setAtrRows(prev => {
+      const arr = [...prev];
+      const row = arr[index] || makeEmptyAtrRow();
       const next: AuditTrackRow = { ...row } as any;
       if (field === 'dueDate') {
         const prevDate = row.dueDate;
@@ -636,19 +621,19 @@ export default function ATRDashboard() {
         (next as any)[field] = value;
       }
       arr[index] = next;
-      return { ...prev, [controlId]: arr };
+      return arr;
     });
   };
 
   const saveAtr = async () => {
     if (!selectedProjectId) return;
     try {
-      await fetch(`/api/settings/${encodeURIComponent(atrKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(atrByControl) });
+      await fetch(`/api/settings/${encodeURIComponent(atrKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(atrRows) });
     } catch {}
   };
 
   // Toolbar: filters, fields, export
-  const atrAllFields = ['Control ID','Control','Process','Subprocess','Activity','Risk','Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'] as const;
+  const atrAllFields = ['Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'] as const;
   const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([...atrAllFields]);
   const [atrStatusFilter, setAtrStatusFilter] = useState<string>('all');
   const [atrDueFrom, setAtrDueFrom] = useState<string>('');
@@ -665,28 +650,18 @@ export default function ATRDashboard() {
 
   const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
   const atrRespOptions = useMemo(()=> {
-    const list = [
-      ...atrRowsForProject.flatMap(r => (atrByControl[r.id]||[]).map(a=>a.responsibility)),
-      ...Object.values(atrByControl).flatMap(arr => arr.map(a=>a.responsibility))
-    ];
+    const list = atrRows.map(a=>a.responsibility);
     return uniq(list);
-  }, [atrRowsForProject, atrByControl]);
+  }, [atrRows]);
   const atrDeptOptions = useMemo(()=> {
-    const list = [
-      ...atrRowsForProject.flatMap(r => (atrByControl[r.id]||[]).map(a=>a.designation)),
-      ...Object.values(atrByControl).flatMap(arr => arr.map(a=>a.designation))
-    ];
+    const list = atrRows.map(a=>a.designation);
     return uniq(list);
-  }, [atrRowsForProject, atrByControl]);
+  }, [atrRows]);
 
-  const atrItemsFiltered = useMemo(()=>{
-    const items: { r: { id:string; control:string; process?:string; subprocess?:string; activity?:string; risk?:string; projectId?:string }, a: AuditTrackRow; idx: number }[] = [];
-    for (const r of atrRowsForProject) {
-      const arr = atrByControl[r.id] || [];
-      if (!arr.length) items.push({ r, a: makeEmptyAtrRow(r.id), idx: 0 });
-      else arr.forEach((a, idx)=> items.push({ r, a, idx }));
-    }
-    const filtered = items.filter(({ r, a }) => {
+  const atrRowsFiltered = useMemo(()=>{
+    const filtered = atrRows
+      .map((a, idx) => ({ a, idx }))
+      .filter(({ a }) => {
       if (atrStatusFilter!=='all' && (a.status||'')!==atrStatusFilter) return false;
       if (atrDueFrom && (a.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
       if (atrDueTo && (a.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
@@ -694,11 +669,11 @@ export default function ATRDashboard() {
       if (atrDeptFilter.length && !atrDeptFilter.includes(a.designation||'')) return false;
       const q = atrSearch.trim().toLowerCase();
       if (!q) return true;
-      const hay = [r.id, r.control, r.process, r.subprocess, r.activity, r.risk, a.auditObservation, a.actionPlan, a.responsibility, a.designation, a.status].filter(Boolean).map(s=>String(s).toLowerCase());
+      const hay = [a.auditObservation, a.actionPlan, a.responsibility, a.designation, a.status, a.dueDate].filter(Boolean).map(s=>String(s).toLowerCase());
       return hay.some(s=>s.includes(q));
     });
     return filtered;
-  }, [atrRowsForProject, atrByControl, atrStatusFilter, atrDueFrom, atrDueTo, atrRespFilter, atrDeptFilter, atrSearch]);
+  }, [atrRows, atrStatusFilter, atrDueFrom, atrDueTo, atrRespFilter, atrDeptFilter, atrSearch]);
 
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
@@ -729,12 +704,11 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v==='all'?'':v); }}>
+                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v); }}>
                       <SelectTrigger>
-                        <SelectValue placeholder="All projects" />
+                        <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All projects</SelectItem>
                         {reportableProjectOptions.map(opt => (
                           <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
                         ))}
@@ -757,7 +731,7 @@ export default function ATRDashboard() {
                     </thead>
                     <tbody>
                       {reportableRows.filter(r=>{
-                        if (reportableProjectFilter !== 'all' && r.projectId !== reportableProjectFilter) return false;
+                        if (reportableProjectFilter && r.projectId !== reportableProjectFilter) return false;
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
@@ -783,12 +757,11 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label>Project</Label>
-                  <Select value={selectedProjectId || 'all'} onValueChange={(v)=> setSelectedProjectId(v==='all'?'':v)}>
+                  <Select value={selectedProjectId || ''} onValueChange={(v)=> setSelectedProjectId(v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All projects</SelectItem>
                       {reportableProjectOptions.map(opt => (
                         <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
                       ))}
@@ -875,15 +848,10 @@ export default function ATRDashboard() {
                   <Button size="sm" className="flex items-center gap-2" onClick={()=>{
                     const wb = XLSX.utils.book_new();
                     const build = (it:any) => {
-                      const { r, a } = it;
+                      const { a } = it;
                       const row: Record<string, any> = {};
                       const add = (k:string, v:any) => { row[k] = v; };
-                      add('Control ID', r.id);
-                      add('Control', r.control || '');
-                      add('Process', r.process || '');
-                      add('Subprocess', r.subprocess || '');
-                      add('Activity', r.activity || '');
-                      add('Risk', r.risk || '');
+                      
                       add('Audit Observation', a.auditObservation || '');
                       add('Action Plan', a.actionPlan || '');
                       add('Responsibility', a.responsibility || '');
@@ -893,7 +861,7 @@ export default function ATRDashboard() {
                       return row;
                     };
                     let rows:any[] = [];
-                    if (atrGroupBy==='none') rows = atrItemsFiltered.map(build);
+                    if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
                     else {
                       const groups: Record<string, any[]> = {};
                       const keyOf = (it:any) => {
@@ -903,7 +871,7 @@ export default function ATRDashboard() {
                         if (atrGroupBy==='department') return a.designation || '';
                         return a.responsibility || '';
                       };
-                      atrItemsFiltered.forEach(it => {
+                      atrRowsFiltered.forEach(it => {
                         const k = keyOf(it);
                         if (!groups[k]) groups[k] = [];
                         groups[k].push(build(it));
@@ -933,30 +901,30 @@ export default function ATRDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {atrItemsFiltered.map(({ r, a, idx })=>{
-                      const isLast = (atrByControl[r.id]?.length || 0) - 1 === idx;
+                    {atrRowsFiltered.map(({ a, idx })=>{
+                      const isLast = (atrRows.length - 1) === idx;
                       return (
-                        <tr key={`${selectedProjectId||'ALL'}|${r.id}|${a.id}`} className="border-t">
+                        <tr key={`${selectedProjectId||'ALL'}|${a.id}`} className="border-t">
                           <td className="p-3 border-l">
-                            <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id, idx,'auditObservation',e.target.value)} />
+                            <Input value={a.auditObservation} onChange={(e)=>updateAtrField(idx,'auditObservation',e.target.value)} />
                           </td>
                           <td className="p-3">
-                            <Input value={a.actionPlan} onChange={(e)=>updateAtrField(r.id, idx,'actionPlan',e.target.value)} />
+                            <Input value={a.actionPlan} onChange={(e)=>updateAtrField(idx,'actionPlan',e.target.value)} />
                           </td>
                           <td className="p-3">
-                            <Input value={a.responsibility} onChange={(e)=>updateAtrField(r.id, idx,'responsibility',e.target.value)} />
+                            <Input value={a.responsibility} onChange={(e)=>updateAtrField(idx,'responsibility',e.target.value)} />
                           </td>
                           <td className="p-3">
-                            <Input value={a.designation} onChange={(e)=>updateAtrField(r.id, idx,'designation',e.target.value)} />
+                            <Input value={a.designation} onChange={(e)=>updateAtrField(idx,'designation',e.target.value)} />
                           </td>
                           <td className="p-3">
-                            <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(r.id, idx,'dueDate',e.target.value)} />
+                            <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(idx,'dueDate',e.target.value)} />
                             {a.previousDueDates && a.previousDueDates.length>0 && (
                               <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
                             )}
                           </td>
                           <td className="p-3 flex items-center gap-2">
-                            <Select value={a.status} onValueChange={(v)=>updateAtrField(r.id, idx,'status',v)}>
+                            <Select value={a.status} onValueChange={(v)=>updateAtrField(idx,'status',v)}>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select status" />
                               </SelectTrigger>
@@ -965,9 +933,9 @@ export default function ATRDashboard() {
                               </SelectContent>
                             </Select>
                             {isLast && (
-                              <Button variant="ghost" size="sm" onClick={()=>addAtrRow(r.id)}>Add Row</Button>
+                              <Button variant="ghost" size="sm" onClick={()=>addAtrRow()}>Add Row</Button>
                             )}
-                            <Button variant="ghost" size="sm" onClick={()=>deleteAtrRow(r.id, idx)} title="Delete row">
+                            <Button variant="ghost" size="sm" onClick={()=>deleteAtrRow(idx)} title="Delete row">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </td>
@@ -1020,12 +988,11 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v==='all'?'':v); }}>
+                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v); }}>
                       <SelectTrigger>
-                        <SelectValue placeholder="All projects" />
+                        <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All projects</SelectItem>
                         {reportableProjectOptions.map(opt => (
                           <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
                         ))}
@@ -1048,7 +1015,7 @@ export default function ATRDashboard() {
                     </thead>
                     <tbody>
                       {reportableRows.filter(r=>{
-                        if (reportableProjectFilter !== 'all' && r.projectId !== reportableProjectFilter) return false;
+                        if (reportableProjectFilter && r.projectId !== reportableProjectFilter) return false;
                         const q = controlsSearch.trim().toLowerCase();
                         if (!q) return true;
                         return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
@@ -1075,12 +1042,11 @@ export default function ATRDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div>
                 <Label>Project</Label>
-                <Select value={selectedProjectId || 'all'} onValueChange={(v)=> setSelectedProjectId(v==='all'?'':v)}>
+                <Select value={selectedProjectId || ''} onValueChange={(v)=> setSelectedProjectId(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All projects</SelectItem>
                     {reportableProjectOptions.map(opt => (
                       <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
                     ))}
@@ -1167,15 +1133,10 @@ export default function ATRDashboard() {
                 <Button size="sm" className="flex items-center gap-2" onClick={()=>{
                   const wb = XLSX.utils.book_new();
                   const build = (it:any) => {
-                    const { r, a } = it;
+                      const { a } = it;
                     const row: Record<string, any> = {};
                     const add = (k:string, v:any) => { row[k] = v; };
-                    add('Control ID', r.id);
-                    add('Control', r.control || '');
-                    add('Process', r.process || '');
-                    add('Subprocess', r.subprocess || '');
-                    add('Activity', r.activity || '');
-                    add('Risk', r.risk || '');
+                    
                     add('Audit Observation', a.auditObservation || '');
                     add('Action Plan', a.actionPlan || '');
                     add('Responsibility', a.responsibility || '');
@@ -1185,7 +1146,7 @@ export default function ATRDashboard() {
                     return row;
                   };
                   let rows:any[] = [];
-                  if (atrGroupBy==='none') rows = atrItemsFiltered.map(build);
+                  if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
                   else {
                     const groups: Record<string, any[]> = {};
                     const keyOf = (it:any) => {
@@ -1195,7 +1156,7 @@ export default function ATRDashboard() {
                       if (atrGroupBy==='department') return a.designation || '';
                       return a.responsibility || '';
                     };
-                    atrItemsFiltered.forEach(it => {
+                    atrRowsFiltered.forEach(it => {
                       const k = keyOf(it);
                       if (!groups[k]) groups[k] = [];
                       groups[k].push(build(it));
@@ -1225,30 +1186,30 @@ export default function ATRDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {atrItemsFiltered.map(({ r, a, idx })=>{
-                    const isLast = (atrByControl[r.id]?.length || 0) - 1 === idx;
+                  {atrRowsFiltered.map(({ a, idx })=>{
+                    const isLast = (atrRows.length - 1) === idx;
                     return (
-                      <tr key={`${selectedProjectId||'ALL'}|${r.id}|${a.id}`} className="border-t">
+                      <tr key={`${selectedProjectId||'ALL'}|${a.id}`} className="border-t">
                         <td className="p-3 border-l">
-                          <Input value={a.auditObservation} onChange={(e)=>updateAtrField(r.id, idx,'auditObservation',e.target.value)} />
+                          <Input value={a.auditObservation} onChange={(e)=>updateAtrField(idx,'auditObservation',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.actionPlan} onChange={(e)=>updateAtrField(r.id, idx,'actionPlan',e.target.value)} />
+                          <Input value={a.actionPlan} onChange={(e)=>updateAtrField(idx,'actionPlan',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.responsibility} onChange={(e)=>updateAtrField(r.id, idx,'responsibility',e.target.value)} />
+                          <Input value={a.responsibility} onChange={(e)=>updateAtrField(idx,'responsibility',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input value={a.designation} onChange={(e)=>updateAtrField(r.id, idx,'designation',e.target.value)} />
+                          <Input value={a.designation} onChange={(e)=>updateAtrField(idx,'designation',e.target.value)} />
                         </td>
                         <td className="p-3">
-                          <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(r.id, idx,'dueDate',e.target.value)} />
+                          <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(idx,'dueDate',e.target.value)} />
                           {a.previousDueDates && a.previousDueDates.length>0 && (
                             <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
                           )}
                         </td>
                         <td className="p-3 flex items-center gap-2">
-                          <Select value={a.status} onValueChange={(v)=>updateAtrField(r.id, idx,'status',v)}>
+                          <Select value={a.status} onValueChange={(v)=>updateAtrField(idx,'status',v)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
@@ -1257,7 +1218,7 @@ export default function ATRDashboard() {
                             </SelectContent>
                           </Select>
                           {isLast && (
-                            <Button variant="ghost" size="sm" onClick={()=>addAtrRow(r.id)}>Add Row</Button>
+                            <Button variant="ghost" size="sm" onClick={()=>addAtrRow()}>Add Row</Button>
                           )}
                         </td>
                       </tr>
