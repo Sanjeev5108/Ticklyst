@@ -376,8 +376,15 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
       "Content-Disposition",
       'attachment; filename="framework-template.xlsx"',
     );
-    res.setHeader('Cache-Control', 'no-store');
-    try { res.setHeader('Content-Length', String((buffer as any).byteLength || (buffer as ArrayBuffer).byteLength)); } catch {}
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      res.setHeader(
+        "Content-Length",
+        String(
+          (buffer as any).byteLength || (buffer as ArrayBuffer).byteLength,
+        ),
+      );
+    } catch {}
     res.end(Buffer.from(buffer as any));
   } catch (e: any) {
     console.error(e);
