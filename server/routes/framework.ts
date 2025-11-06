@@ -367,6 +367,7 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
       } as any;
     }
 
+    const buffer = await wb.xlsx.writeBuffer();
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -375,8 +376,9 @@ export const downloadFrameworkTemplate: RequestHandler = async (_req, res) => {
       "Content-Disposition",
       'attachment; filename="framework-template.xlsx"',
     );
-    await wb.xlsx.write(res);
-    res.end();
+    res.setHeader('Cache-Control', 'no-store');
+    try { res.setHeader('Content-Length', String((buffer as any).byteLength || (buffer as ArrayBuffer).byteLength)); } catch {}
+    res.end(Buffer.from(buffer as any));
   } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: e?.message || "template_error" });
