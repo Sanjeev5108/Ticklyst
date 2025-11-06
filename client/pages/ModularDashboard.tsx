@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   Users,
@@ -16,20 +17,6 @@ import {
   Calendar,
   TrendingUp,
 } from "lucide-react";
-import HRDashboard from "./dashboards/HRDashboard";
-import AdminDashboard from "./dashboards/AdminDashboard";
-import Settings from "./Settings";
-import DivisionPartnerDashboard from "./dashboards/DivisionPartnerDashboard";
-import DivisionHeadDashboard from "./dashboards/DivisionHeadDashboard";
-import TeamMemberDashboard from "./dashboards/TeamMemberDashboard";
-import FrameworkDashboard from "./dashboards/FrameworkDashboard";
-import FieldworkDashboard from "./dashboards/FieldworkDashboard";
-import ATRDashboard from "./dashboards/ATRDashboard";
-import RiskAssessmentDashboard from "./dashboards/RiskAssessmentDashboard";
-import ReviewDashboard from "./dashboards/ReviewDashboard";
-import StatementOfApplicability from "./dashboards/StatementOfApplicability";
-import ClientManagement from "./ClientManagement";
-import ProjectManagement from "./ProjectManagement";
 
 interface Module {
   id: string;
