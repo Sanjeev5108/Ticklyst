@@ -56,7 +56,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: ProjectManagement,
+    route: "/projects",
   },
   {
     id: "framework",
@@ -70,7 +70,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: FrameworkDashboard,
+    route: "/framework",
   },
   {
     id: "risk-assessment",
@@ -78,7 +78,7 @@ export const modules: Module[] = [
     icon: TrendingUp,
     description: "Configure risk models, scales, and thresholds",
     roles: ["Admin"],
-    component: RiskAssessmentDashboard,
+    route: "/risk-assessment",
   },
   {
     id: "fieldwork",
@@ -92,7 +92,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: FieldworkDashboard,
+    route: "/fieldwork",
   },
   {
     id: "review",
@@ -106,7 +106,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: ReviewDashboard,
+    route: "/review",
   },
   {
     id: "atr",
@@ -120,7 +120,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: ATRDashboard,
+    route: "/atr",
   },
   {
     id: "soa",
@@ -135,7 +135,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: StatementOfApplicability,
+    route: "/statement-of-applicability",
   },
   {
     id: "settings",
@@ -150,7 +150,7 @@ export const modules: Module[] = [
       "Team Leader",
       "Team Member",
     ],
-    component: Settings,
+    route: "/settings",
   },
 ];
 
@@ -168,7 +168,7 @@ const getStoredRoleModuleMap = (): Record<string, string[]> => {
 
 export default function ModularDashboard() {
   const { user } = useAuth();
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Filter modules based on user role and dynamic role-module mapping
   const [roleModuleMap, setRoleModuleMap] = useState<Record<string, string[]>>(
@@ -242,28 +242,6 @@ export default function ModularDashboard() {
     },
   ];
 
-  if (selectedModule) {
-    const module = modules.find((m) => m.id === selectedModule);
-    if (module?.component) {
-      const Component = module.component;
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setSelectedModule(null)}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              ← Back to Home
-            </button>
-            <span className="text-gray-400">|</span>
-            <h2 className="text-xl font-semibold">{module.name}</h2>
-          </div>
-          <Component />
-        </div>
-      );
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -301,7 +279,7 @@ export default function ModularDashboard() {
           <Card
             key={module.id}
             className="hover:shadow-lg transition-shadow cursor-pointer bg-white border border-gray-200"
-            onClick={() => setSelectedModule(module.id)}
+            onClick={() => navigate(module.route)}
           >
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
