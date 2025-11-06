@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Briefcase,
   Users,
@@ -14,22 +14,22 @@ import {
   Settings as SettingsIcon,
   MessageSquare,
   Calendar,
-  TrendingUp
-} from 'lucide-react';
-import HRDashboard from './dashboards/HRDashboard';
-import AdminDashboard from './dashboards/AdminDashboard';
-import Settings from './Settings';
-import DivisionPartnerDashboard from './dashboards/DivisionPartnerDashboard';
-import DivisionHeadDashboard from './dashboards/DivisionHeadDashboard';
-import TeamMemberDashboard from './dashboards/TeamMemberDashboard';
-import FrameworkDashboard from './dashboards/FrameworkDashboard';
-import FieldworkDashboard from './dashboards/FieldworkDashboard';
-import ATRDashboard from './dashboards/ATRDashboard';
-import RiskAssessmentDashboard from './dashboards/RiskAssessmentDashboard';
-import ReviewDashboard from './dashboards/ReviewDashboard';
-import StatementOfApplicability from './dashboards/StatementOfApplicability';
-import ClientManagement from './ClientManagement';
-import ProjectManagement from './ProjectManagement';
+  TrendingUp,
+} from "lucide-react";
+import HRDashboard from "./dashboards/HRDashboard";
+import AdminDashboard from "./dashboards/AdminDashboard";
+import Settings from "./Settings";
+import DivisionPartnerDashboard from "./dashboards/DivisionPartnerDashboard";
+import DivisionHeadDashboard from "./dashboards/DivisionHeadDashboard";
+import TeamMemberDashboard from "./dashboards/TeamMemberDashboard";
+import FrameworkDashboard from "./dashboards/FrameworkDashboard";
+import FieldworkDashboard from "./dashboards/FieldworkDashboard";
+import ATRDashboard from "./dashboards/ATRDashboard";
+import RiskAssessmentDashboard from "./dashboards/RiskAssessmentDashboard";
+import ReviewDashboard from "./dashboards/ReviewDashboard";
+import StatementOfApplicability from "./dashboards/StatementOfApplicability";
+import ClientManagement from "./ClientManagement";
+import ProjectManagement from "./ProjectManagement";
 
 interface Module {
   id: string;
@@ -42,93 +42,141 @@ interface Module {
 
 export const modules: Module[] = [
   {
-    id: 'client',
-    name: 'Client',
+    id: "client",
+    name: "Client",
     icon: Briefcase,
-    description: 'Manage client information and relationships',
-    roles: ['Admin', 'Division Partner', 'Division Head'],
-    component: ClientManagement
+    description: "Manage client information and relationships",
+    roles: ["Admin", "Division Partner", "Division Head"],
+    component: ClientManagement,
   },
   {
-    id: 'employee',
-    name: 'Employee',
+    id: "employee",
+    name: "Employee",
     icon: Users,
-    description: 'Employee management and role assignments',
-    roles: ['Admin', 'HR'],
-    component: HRDashboard
+    description: "Employee management and role assignments",
+    roles: ["Admin", "HR"],
+    component: HRDashboard,
   },
   {
-    id: 'projects',
-    name: 'Projects',
+    id: "projects",
+    name: "Projects",
     icon: FolderOpen,
-    description: 'Project creation and management',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ProjectManagement
+    description: "Project creation and management",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: ProjectManagement,
   },
   {
-    id: 'framework',
-    name: 'Framework',
+    id: "framework",
+    name: "Framework",
     icon: FileText,
-    description: 'Audit framework and process management',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: FrameworkDashboard
+    description: "Audit framework and process management",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: FrameworkDashboard,
   },
   {
-    id: 'risk-assessment',
-    name: 'Risk Assessment',
+    id: "risk-assessment",
+    name: "Risk Assessment",
     icon: TrendingUp,
-    description: 'Configure risk models, scales, and thresholds',
-    roles: ['Admin'],
-    component: RiskAssessmentDashboard
+    description: "Configure risk models, scales, and thresholds",
+    roles: ["Admin"],
+    component: RiskAssessmentDashboard,
   },
   {
-    id: 'fieldwork',
-    name: 'Fieldwork',
+    id: "fieldwork",
+    name: "Fieldwork",
     icon: BarChart3,
-    description: 'Fieldwork execution and tracking',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: FieldworkDashboard
+    description: "Fieldwork execution and tracking",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: FieldworkDashboard,
   },
   {
-    id: 'review',
-    name: 'Review',
+    id: "review",
+    name: "Review",
     icon: MessageSquare,
-    description: 'Review submitted fieldwork and provide comments',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ReviewDashboard
+    description: "Review submitted fieldwork and provide comments",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: ReviewDashboard,
   },
   {
-    id: 'atr',
-    name: 'ATR',
+    id: "atr",
+    name: "ATR",
     icon: ClipboardList,
-    description: 'Audit Track Reports',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ATRDashboard
+    description: "Audit Track Reports",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: ATRDashboard,
   },
   {
-    id: 'soa',
-    name: 'Statement of Applicability',
+    id: "soa",
+    name: "Statement of Applicability",
     icon: ListChecks,
-    description: 'Decide checklist applicability by industry, client, and period',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: StatementOfApplicability
+    description:
+      "Decide checklist applicability by industry, client, and period",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: StatementOfApplicability,
   },
   {
-    id: 'settings',
-    name: 'Settings',
+    id: "settings",
+    name: "Settings",
     icon: SettingsIcon,
-    description: 'System configuration and preferences',
-    roles: ['Admin', 'HR', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: Settings
-  }
+    description: "System configuration and preferences",
+    roles: [
+      "Admin",
+      "HR",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    component: Settings,
+  },
 ];
 
 // Role -> moduleId[] mapping stored in localStorage under key 'roleModuleMap'
-const ROLE_MODULE_KEY = 'roleModuleMap';
+const ROLE_MODULE_KEY = "roleModuleMap";
 
-const getStoredRoleModuleMap = (): Record<string,string[]> => {
+const getStoredRoleModuleMap = (): Record<string, string[]> => {
   const raw = localStorage.getItem(ROLE_MODULE_KEY);
-  try { return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 };
 
 export default function ModularDashboard() {
@@ -136,9 +184,11 @@ export default function ModularDashboard() {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
   // Filter modules based on user role and dynamic role-module mapping
-  const [roleModuleMap, setRoleModuleMap] = useState<Record<string,string[]>>(() => getStoredRoleModuleMap());
-  const availableModules = modules.filter(module => {
-    const role = user?.role || '';
+  const [roleModuleMap, setRoleModuleMap] = useState<Record<string, string[]>>(
+    () => getStoredRoleModuleMap(),
+  );
+  const availableModules = modules.filter((module) => {
+    const role = user?.role || "";
     if (!role) return false;
     const allowedFromUser = user?.allowedModules;
     if (allowedFromUser && allowedFromUser.length) {
@@ -155,7 +205,7 @@ export default function ModularDashboard() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/settings/roleModuleMap');
+        const res = await fetch("/api/settings/roleModuleMap");
         if (res.ok) {
           const data = await res.json();
           if (mounted) {
@@ -163,9 +213,9 @@ export default function ModularDashboard() {
             localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(data));
           }
         } else if (!localStorage.getItem(ROLE_MODULE_KEY)) {
-          const map: Record<string,string[]> = {};
-          modules.forEach(m => {
-            (m.roles || []).forEach(r => {
+          const map: Record<string, string[]> = {};
+          modules.forEach((m) => {
+            (m.roles || []).forEach((r) => {
               if (!map[r]) map[r] = [];
               if (!map[r].includes(m.id)) map[r].push(m.id);
             });
@@ -175,42 +225,44 @@ export default function ModularDashboard() {
         }
       } catch {}
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Mock data for status cards
   const statusCards = [
     {
-      title: 'Ongoing Audits',
-      value: '12',
+      title: "Ongoing Audits",
+      value: "12",
       icon: TrendingUp,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
     },
     {
-      title: 'Pending Comments',
-      value: '8',
+      title: "Pending Comments",
+      value: "8",
       icon: MessageSquare,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
     },
     {
-      title: 'Upcoming Deadlines',
-      value: '5',
+      title: "Upcoming Deadlines",
+      value: "5",
       icon: Calendar,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50'
-    }
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+    },
   ];
 
   if (selectedModule) {
-    const module = modules.find(m => m.id === selectedModule);
+    const module = modules.find((m) => m.id === selectedModule);
     if (module?.component) {
       const Component = module.component;
       return (
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
-            <button 
+            <button
               onClick={() => setSelectedModule(null)}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
@@ -232,9 +284,7 @@ export default function ModularDashboard() {
         <h1 className="text-3xl font-bold text-gray-900">
           Welcome, {user?.username}
         </h1>
-        <Badge className="bg-blue-100 text-blue-800">
-          {user?.role}
-        </Badge>
+        <Badge className="bg-blue-100 text-blue-800">{user?.role}</Badge>
       </div>
 
       {/* Status Cards */}
@@ -261,8 +311,8 @@ export default function ModularDashboard() {
       {/* Module Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {availableModules.map((module) => (
-          <Card 
-            key={module.id} 
+          <Card
+            key={module.id}
             className="hover:shadow-lg transition-shadow cursor-pointer bg-white border border-gray-200"
             onClick={() => setSelectedModule(module.id)}
           >
@@ -275,9 +325,7 @@ export default function ModularDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
                     {module.name}
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    {module.description}
-                  </p>
+                  <p className="text-sm text-gray-600">{module.description}</p>
                 </div>
               </div>
             </CardContent>
@@ -294,7 +342,8 @@ export default function ModularDashboard() {
               No modules available
             </h3>
             <p className="text-gray-600">
-              Your role does not have access to any modules. Contact your administrator for assistance.
+              Your role does not have access to any modules. Contact your
+              administrator for assistance.
             </p>
           </CardContent>
         </Card>

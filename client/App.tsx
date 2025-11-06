@@ -8,7 +8,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { suppressResizeObserverWarnings, patchResizeObserverRAF } from "./utils/errorHandler";
+import {
+  suppressResizeObserverWarnings,
+  patchResizeObserverRAF,
+} from "./utils/errorHandler";
 // Suppress noisy ResizeObserver warnings and patch RO callback timing
 suppressResizeObserverWarnings();
 patchResizeObserverRAF();
@@ -37,7 +40,10 @@ const App = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/audit-demo" element={<Index />} />
               <Route path="/client/:clientName" element={<ClientChecklist />} />
-              <Route path="/client/:clientName/project/:projectId" element={<ProjectDetail />} />
+              <Route
+                path="/client/:clientName/project/:projectId"
+                element={<ProjectDetail />}
+              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

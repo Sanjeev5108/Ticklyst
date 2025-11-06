@@ -1,26 +1,51 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Filter as FilterIcon, Columns2, Rows3, Download, Trash2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import React, { useEffect, useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Plus,
-  MessageSquare,
-  Send
-} from 'lucide-react';
-import { FieldworkStore } from '@/contexts/FieldworkStore';
-import { FieldworkRecord } from '@shared/fieldwork';
-import { useAuth } from '@/contexts/AuthContext';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Filter as FilterIcon,
+  Columns2,
+  Rows3,
+  Download,
+  Trash2,
+} from "lucide-react";
+import * as XLSX from "xlsx";
+import { Plus, MessageSquare, Send } from "lucide-react";
+import { FieldworkStore } from "@/contexts/FieldworkStore";
+import { FieldworkRecord } from "@shared/fieldwork";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AuditTrackRow {
   id: string;
@@ -37,7 +62,7 @@ interface Client {
   id: string;
   name: string;
   description: string;
-  status: 'completed' | 'in-progress';
+  status: "completed" | "in-progress";
   industry: string;
   assignedProjects: number;
 }
@@ -47,21 +72,39 @@ interface Comment {
   author: string;
   content: string;
   timestamp: string;
-  type: 'note' | 'issue' | 'resolution';
+  type: "note" | "issue" | "resolution";
 }
 
 const statuses = ["Open", "In Progress", "Closed", "Overdue"];
 
-const MultiSelectSimple = ({ options, value, onChange, placeholder }: { options: string[]; value: string[]; onChange: (v:string[])=>void; placeholder?: string }) => {
+const MultiSelectSimple = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: string[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) => {
   const [open, setOpen] = React.useState(false);
-  const display = value && value.length ? (value.length<=2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : (placeholder || 'Select');
+  const display =
+    value && value.length
+      ? value.length <= 2
+        ? value.join(", ")
+        : `${value.slice(0, 2).join(", ")} (+${value.length - 2})`
+      : placeholder || "Select";
   const toggle = (opt: string) => {
     let next = Array.isArray(value) ? [...value] : [];
     const has = next.includes(opt);
-    if (has) next = next.filter(x=>x!==opt); else next.push(opt);
+    if (has) next = next.filter((x) => x !== opt);
+    else next.push(opt);
     onChange(next);
   };
-  const stop = (e:any) => { e.stopPropagation(); };
+  const stop = (e: any) => {
+    e.stopPropagation();
+  };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -76,17 +119,29 @@ const MultiSelectSimple = ({ options, value, onChange, placeholder }: { options:
           <CommandEmpty>No results.</CommandEmpty>
           <CommandList className="max-h-60 overflow-y-auto">
             <CommandGroup>
-              {options.map(opt => (
+              {options.map((opt) => (
                 <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
-                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                  <Checkbox
+                    className="mr-2"
+                    checked={value?.includes(opt)}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    onClick={stop}
+                    onCheckedChange={() => toggle(opt)}
+                  />{" "}
+                  {opt}
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
         <div className="border-t p-2 flex justify-between">
-          <Button size="sm" variant="ghost" onClick={()=>onChange([])}>Clear</Button>
-          <Button size="sm" onClick={()=>onChange([...options])}>Select All</Button>
+          <Button size="sm" variant="ghost" onClick={() => onChange([])}>
+            Clear
+          </Button>
+          <Button size="sm" onClick={() => onChange([...options])}>
+            Select All
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -95,67 +150,85 @@ const MultiSelectSimple = ({ options, value, onChange, placeholder }: { options:
 
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [newComment, setNewComment] = useState('');
-  const [commentType, setCommentType] = useState<'note' | 'issue' | 'resolution'>('note');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [newComment, setNewComment] = useState("");
+  const [commentType, setCommentType] = useState<
+    "note" | "issue" | "resolution"
+  >("note");
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
 
   const [clients] = useState<Client[]>([
     {
-      id: 'CLT-001',
-      name: 'Bull Machines India Pvt. LTD',
-      description: 'Manufacturing and production company specializing in industrial machinery',
-      status: 'in-progress',
-      industry: 'Manufacturing',
-      assignedProjects: 2
+      id: "CLT-001",
+      name: "Bull Machines India Pvt. LTD",
+      description:
+        "Manufacturing and production company specializing in industrial machinery",
+      status: "in-progress",
+      industry: "Manufacturing",
+      assignedProjects: 2,
     },
     {
-      id: 'CLT-002',
-      name: 'Supreme Mobiles',
-      description: 'Mobile phone retail and distribution company',
-      status: 'in-progress',
-      industry: 'Retail',
-      assignedProjects: 1
+      id: "CLT-002",
+      name: "Supreme Mobiles",
+      description: "Mobile phone retail and distribution company",
+      status: "in-progress",
+      industry: "Retail",
+      assignedProjects: 1,
     },
     {
-      id: 'CLT-003',
-      name: 'Thalapakatti Hospitality Pvt. LTD',
-      description: 'Restaurant chain and hospitality services',
-      status: 'completed',
-      industry: 'Hospitality',
-      assignedProjects: 1
+      id: "CLT-003",
+      name: "Thalapakatti Hospitality Pvt. LTD",
+      description: "Restaurant chain and hospitality services",
+      status: "completed",
+      industry: "Hospitality",
+      assignedProjects: 1,
     },
     {
-      id: 'CLT-004',
-      name: 'KTM',
-      description: 'Automotive and motorcycle manufacturing',
-      status: 'in-progress',
-      industry: 'Automotive',
-      assignedProjects: 3
+      id: "CLT-004",
+      name: "KTM",
+      description: "Automotive and motorcycle manufacturing",
+      status: "in-progress",
+      industry: "Automotive",
+      assignedProjects: 3,
     },
     {
-      id: 'CLT-005',
-      name: 'KMCH',
-      description: 'Healthcare and medical services provider',
-      status: 'completed',
-      industry: 'Healthcare',
-      assignedProjects: 1
-    }
+      id: "CLT-005",
+      name: "KMCH",
+      description: "Healthcare and medical services provider",
+      status: "completed",
+      industry: "Healthcare",
+      assignedProjects: 1,
+    },
   ]);
 
   // Controls (copied parsing logic from Fieldwork) ------------------------------------------------
-  interface ControlRow { id: string; name: string; process?: string; subprocess?: string; activity?: string; risk?: string }
-  const FRAMEWORK_DATA_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
+  interface ControlRow {
+    id: string;
+    name: string;
+    process?: string;
+    subprocess?: string;
+    activity?: string;
+    risk?: string;
+  }
+  const FRAMEWORK_DATA_URL =
+    "https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c";
   const [controls, setControls] = useState<ControlRow[]>([]);
-  const [controlsSearch, setControlsSearch] = useState('');
+  const [controlsSearch, setControlsSearch] = useState("");
   const [selectedControl, setSelectedControl] = useState<string | null>(null);
-  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
-  const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
-  const [reportableProjectFilter, setReportableProjectFilter] = useState<string>('');
+  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>(
+    {},
+  );
+  const [projects, setProjects] = useState<
+    { id: string; title: string; raw?: any }[]
+  >([]);
+  const [reportableProjectFilter, setReportableProjectFilter] =
+    useState<string>("");
   const { user } = useAuth();
 
   useEffect(() => {
-    const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll()));
+    const unsub = FieldworkStore.subscribe(() =>
+      setFwRecords(FieldworkStore.getAll()),
+    );
     setFwRecords(FieldworkStore.getAll());
     return () => unsub();
   }, []);
@@ -163,25 +236,63 @@ export default function ATRDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/projects');
+        const res = await fetch("/api/projects");
         if (!res.ok) return;
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
+        const mapped = (rows || []).map((r: any) => ({
+          id: r.id,
+          title: r.name || r.data?.projectName || r.code || "Untitled Project",
+          raw: r,
+        }));
 
-        const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
-        const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
-        const scope = (user?.id && userScopeMap[user.id]) ? userScopeMap[user.id] : (user?.role ? roleScopeMap[user.role] : 'all');
-        const normalizedRole = (user?.role || '').toLowerCase();
-        const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
-        const userName = user?.username || '';
-        const initials = userName.split(' ').map((s:string)=>s[0]).join('');
+        const roleScopeMap = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("roleProjectScope") || "{}");
+          } catch {
+            return {};
+          }
+        })();
+        const userScopeMap = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("userProjectScope") || "{}");
+          } catch {
+            return {};
+          }
+        })();
+        const scope =
+          user?.id && userScopeMap[user.id]
+            ? userScopeMap[user.id]
+            : user?.role
+              ? roleScopeMap[user.role]
+              : "all";
+        const normalizedRole = (user?.role || "").toLowerCase();
+        const isTargetRole = [
+          "division partner",
+          "partner",
+          "division head",
+          "team leader",
+          "team member",
+        ].includes(normalizedRole);
+        const userName = user?.username || "";
+        const initials = userName
+          .split(" ")
+          .map((s: string) => s[0])
+          .join("");
         const isOnProject = (prj: any) => {
           const d = prj?.raw?.data || {};
-          const lists: string[][] = [d.divisionHeads||[], d.partners||[], d.teamLeaders||[], d.teamMembers||[]];
-          const flat = lists.flat().map((s:string)=>String(s||''));
+          const lists: string[][] = [
+            d.divisionHeads || [],
+            d.partners || [],
+            d.teamLeaders || [],
+            d.teamMembers || [],
+          ];
+          const flat = lists.flat().map((s: string) => String(s || ""));
           return flat.includes(userName) || flat.includes(initials);
         };
-        const filtered = (scope === 'own' && isTargetRole && user) ? mapped.filter(isOnProject) : mapped;
+        const filtered =
+          scope === "own" && isTargetRole && user
+            ? mapped.filter(isOnProject)
+            : mapped;
         setProjects(filtered);
       } catch {}
     })();
@@ -192,13 +303,15 @@ export default function ATRDashboard() {
     const normalizeRows = (data: any): any[] => {
       if (!data) return [];
       if (Array.isArray(data)) return data;
-      if ((data as any).Sheet1 && Array.isArray((data as any).Sheet1)) return (data as any).Sheet1;
-      if ((data as any).sheets && typeof (data as any).sheets === 'object') {
+      if ((data as any).Sheet1 && Array.isArray((data as any).Sheet1))
+        return (data as any).Sheet1;
+      if ((data as any).sheets && typeof (data as any).sheets === "object") {
         const first = Object.values((data as any).sheets)[0] as any[];
         if (Array.isArray(first)) return first;
       }
       const keys = Object.keys(data);
-      if (keys.length === 1 && Array.isArray((data as any)[keys[0]])) return (data as any)[keys[0]];
+      if (keys.length === 1 && Array.isArray((data as any)[keys[0]]))
+        return (data as any)[keys[0]];
       return [];
     };
 
@@ -214,39 +327,103 @@ export default function ATRDashboard() {
         const actIndex = new Map<string, string>();
         const riskCounts = new Map<string, number>();
         const ctrlCounts = new Map<string, number>();
-        const get = (row: any, keys: string[]) => { for (const k of keys) { const v = row[k]; if (v != null && String(v).trim() !== '') return String(v).trim(); } return ''; };
+        const get = (row: any, keys: string[]) => {
+          for (const k of keys) {
+            const v = row[k];
+            if (v != null && String(v).trim() !== "") return String(v).trim();
+          }
+          return "";
+        };
         const getNext = {
           proc: () => `P${procIndex.size + 1}`,
-          sub: (p: string) => `${p}.${Array.from(subIndex.values()).filter(id=>id.startsWith(p + '.')).length + 1}`,
-          act: (s: string) => `${s}.${Array.from(actIndex.values()).filter(id=>id.startsWith(s + '.')).length + 1}`,
-          risk: (a: string) => { const c = (riskCounts.get(a) || 0) + 1; riskCounts.set(a, c); return `${a}/R${c}`; },
-          ctrl: (r: string) => { const c = (ctrlCounts.get(r) || 0) + 1; ctrlCounts.set(r, c); return `${r}/C${c}`; },
+          sub: (p: string) =>
+            `${p}.${Array.from(subIndex.values()).filter((id) => id.startsWith(p + ".")).length + 1}`,
+          act: (s: string) =>
+            `${s}.${Array.from(actIndex.values()).filter((id) => id.startsWith(s + ".")).length + 1}`,
+          risk: (a: string) => {
+            const c = (riskCounts.get(a) || 0) + 1;
+            riskCounts.set(a, c);
+            return `${a}/R${c}`;
+          },
+          ctrl: (r: string) => {
+            const c = (ctrlCounts.get(r) || 0) + 1;
+            ctrlCounts.set(r, c);
+            return `${r}/C${c}`;
+          },
         };
         for (const row of rows) {
-          const processName = get(row, ['Process','process','PROCESS']);
-          const subName = get(row, ['Sub Process','SubProcess','subprocess']);
-          const activityName = get(row, ['Activity','activity']);
-          const riskDesc = get(row, ['Identification of Risk of Material Misstatement (What could go wrong?) Risk Description','Risk Description','Risk','risk']);
-          const controlDesc = get(row, ['Controls in Place','Control','Control Description']);
+          const processName = get(row, ["Process", "process", "PROCESS"]);
+          const subName = get(row, ["Sub Process", "SubProcess", "subprocess"]);
+          const activityName = get(row, ["Activity", "activity"]);
+          const riskDesc = get(row, [
+            "Identification of Risk of Material Misstatement (What could go wrong?) Risk Description",
+            "Risk Description",
+            "Risk",
+            "risk",
+          ]);
+          const controlDesc = get(row, [
+            "Controls in Place",
+            "Control",
+            "Control Description",
+          ]);
           if (!processName) continue;
           let procId = procIndex.get(processName);
-          if (!procId) { procId = getNext.proc(); procIndex.set(processName, procId); }
-          let subId = '';
-          if (subName) { const key = procId + '|' + subName; subId = subIndex.get(key) || ''; if (!subId) { subId = getNext.sub(procId); subIndex.set(key, subId); } }
-          let actId = '';
-          if (activityName) { const key = (subId || procId) + '|' + activityName; actId = actIndex.get(key) || ''; if (!actId) { const parent = subId || getNext.sub(procId); if (!subId) { subId = parent; } actId = getNext.act(subId); actIndex.set(key, actId); } }
-          let riskId = '';
-          if (riskDesc) { const parentAct = actId || (()=>{ if (!subId) { subId = getNext.sub(procId); } return getNext.act(subId); })(); riskId = getNext.risk(parentAct); }
+          if (!procId) {
+            procId = getNext.proc();
+            procIndex.set(processName, procId);
+          }
+          let subId = "";
+          if (subName) {
+            const key = procId + "|" + subName;
+            subId = subIndex.get(key) || "";
+            if (!subId) {
+              subId = getNext.sub(procId);
+              subIndex.set(key, subId);
+            }
+          }
+          let actId = "";
+          if (activityName) {
+            const key = (subId || procId) + "|" + activityName;
+            actId = actIndex.get(key) || "";
+            if (!actId) {
+              const parent = subId || getNext.sub(procId);
+              if (!subId) {
+                subId = parent;
+              }
+              actId = getNext.act(subId);
+              actIndex.set(key, actId);
+            }
+          }
+          let riskId = "";
+          if (riskDesc) {
+            const parentAct =
+              actId ||
+              (() => {
+                if (!subId) {
+                  subId = getNext.sub(procId);
+                }
+                return getNext.act(subId);
+              })();
+            riskId = getNext.risk(parentAct);
+          }
           if (riskId && controlDesc) {
             const ctrlId = getNext.ctrl(riskId);
-            controlsList.push({ id: ctrlId, name: controlDesc || 'Control', process: processName, subprocess: subName || 'General', activity: activityName || 'General', risk: riskDesc });
+            controlsList.push({
+              id: ctrlId,
+              name: controlDesc || "Control",
+              process: processName,
+              subprocess: subName || "General",
+              activity: activityName || "General",
+              risk: riskDesc,
+            });
           }
         }
         setControls(controlsList);
-      } catch (err) { console.error('Failed to fetch framework', err); }
+      } catch (err) {
+        console.error("Failed to fetch framework", err);
+      }
     })();
   }, [controls.length]);
-
 
   const [auditTrackData, setAuditTrackData] = useState<AuditTrackRow[]>([
     {
@@ -257,27 +434,37 @@ export default function ATRDashboard() {
       designation: "",
       dueDate: "",
       previousDueDates: [],
-      status: ""
-    }
+      status: "",
+    },
   ]);
 
   const [comments, setComments] = useState<Comment[]>([]);
 
-  const updateAuditTrackField = (id: string, field: keyof AuditTrackRow, value: string) => {
-    setAuditTrackData(prev =>
-      prev.map(row => {
+  const updateAuditTrackField = (
+    id: string,
+    field: keyof AuditTrackRow,
+    value: string,
+  ) => {
+    setAuditTrackData((prev) =>
+      prev.map((row) => {
         if (row.id !== id) return row;
-        if (field === 'dueDate') {
+        if (field === "dueDate") {
           const prevDate = row.dueDate;
           if (prevDate && prevDate !== value) {
-            const prevList = row.previousDueDates ? [...row.previousDueDates] : [];
+            const prevList = row.previousDueDates
+              ? [...row.previousDueDates]
+              : [];
             prevList.unshift(prevDate);
-            return { ...row, dueDate: value, previousDueDates: prevList } as AuditTrackRow;
+            return {
+              ...row,
+              dueDate: value,
+              previousDueDates: prevList,
+            } as AuditTrackRow;
           }
           return { ...row, dueDate: value } as AuditTrackRow;
         }
         return { ...row, [field]: value } as AuditTrackRow;
-      })
+      }),
     );
   };
 
@@ -294,39 +481,50 @@ export default function ATRDashboard() {
 
     const comment: Comment = {
       id: Date.now().toString(),
-      author: 'Team Member',
+      author: "Team Member",
       content: newComment.trim(),
       timestamp: new Date().toLocaleString(),
-      type: commentType
+      type: commentType,
     };
 
-    setComments(prev => [...prev, comment]);
-    setNewComment('');
+    setComments((prev) => [...prev, comment]);
+    setNewComment("");
     setIsCommentDialogOpen(false);
   };
 
   const getCommentTypeColor = (type: string) => {
     const colors = {
-      'note': 'bg-blue-100 text-blue-800',
-      'issue': 'bg-red-100 text-red-800',
-      'resolution': 'bg-green-100 text-green-800'
+      note: "bg-blue-100 text-blue-800",
+      issue: "bg-red-100 text-red-800",
+      resolution: "bg-green-100 text-green-800",
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   const renderATREditor = () => {
-    const selectedClientData = clients.find(c => c.id === selectedClient);
-  // If editing a control, editor should be editable. If viewing a completed client ATR, read-only.
-  const isReadOnly = !!selectedControl ? false : (selectedClientData?.status === 'completed');
+    const selectedClientData = clients.find((c) => c.id === selectedClient);
+    // If editing a control, editor should be editable. If viewing a completed client ATR, read-only.
+    const isReadOnly = !!selectedControl
+      ? false
+      : selectedClientData?.status === "completed";
 
-  return (
-    <div className="space-y-4">
+    return (
+      <div className="space-y-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">ATR Editor (Audit Track Report)</h3>
+          <h3 className="text-lg font-semibold">
+            ATR Editor (Audit Track Report)
+          </h3>
           <div className="flex gap-2">
-            <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
+            <Dialog
+              open={isCommentDialogOpen}
+              onOpenChange={setIsCommentDialogOpen}
+            >
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
                   <MessageSquare className="h-4 w-4" />
                   <span>Add Comments</span>
                 </Button>
@@ -367,15 +565,23 @@ export default function ATRDashboard() {
               </DialogContent>
             </Dialog>
             {!isReadOnly && (
-              <Button onClick={() => setAuditTrackData(prev => [...prev, {
-                id: `at${Date.now()}`,
-                auditObservation: "",
-                actionPlan: "",
-                responsibility: "",
-                designation: "",
-                dueDate: "",
-                status: ""
-              }])} size="sm">
+              <Button
+                onClick={() =>
+                  setAuditTrackData((prev) => [
+                    ...prev,
+                    {
+                      id: `at${Date.now()}`,
+                      auditObservation: "",
+                      actionPlan: "",
+                      responsibility: "",
+                      designation: "",
+                      dueDate: "",
+                      status: "",
+                    },
+                  ])
+                }
+                size="sm"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Row
               </Button>
@@ -401,7 +607,13 @@ export default function ATRDashboard() {
                   <td className="p-3 border-r">
                     <Input
                       value={row.auditObservation}
-                      onChange={(e) => updateAuditTrackField(row.id, 'auditObservation', e.target.value)}
+                      onChange={(e) =>
+                        updateAuditTrackField(
+                          row.id,
+                          "auditObservation",
+                          e.target.value,
+                        )
+                      }
                       placeholder="Enter audit observation"
                       disabled={isReadOnly}
                     />
@@ -409,7 +621,13 @@ export default function ATRDashboard() {
                   <td className="p-3 border-r">
                     <Input
                       value={row.actionPlan}
-                      onChange={(e) => updateAuditTrackField(row.id, 'actionPlan', e.target.value)}
+                      onChange={(e) =>
+                        updateAuditTrackField(
+                          row.id,
+                          "actionPlan",
+                          e.target.value,
+                        )
+                      }
                       placeholder="Enter action plan"
                       disabled={isReadOnly}
                     />
@@ -417,7 +635,13 @@ export default function ATRDashboard() {
                   <td className="p-3 border-r">
                     <Input
                       value={row.responsibility}
-                      onChange={(e) => updateAuditTrackField(row.id, 'responsibility', e.target.value)}
+                      onChange={(e) =>
+                        updateAuditTrackField(
+                          row.id,
+                          "responsibility",
+                          e.target.value,
+                        )
+                      }
                       placeholder="Enter responsibility"
                       disabled={isReadOnly}
                     />
@@ -425,7 +649,13 @@ export default function ATRDashboard() {
                   <td className="p-3 border-r">
                     <Input
                       value={row.designation}
-                      onChange={(e) => updateAuditTrackField(row.id, 'designation', e.target.value)}
+                      onChange={(e) =>
+                        updateAuditTrackField(
+                          row.id,
+                          "designation",
+                          e.target.value,
+                        )
+                      }
                       placeholder="Enter designation"
                       disabled={isReadOnly}
                     />
@@ -434,30 +664,37 @@ export default function ATRDashboard() {
                     <Input
                       type="date"
                       value={row.dueDate}
-                      onChange={(e) => updateAuditTrackField(row.id, 'dueDate', e.target.value)}
+                      onChange={(e) =>
+                        updateAuditTrackField(row.id, "dueDate", e.target.value)
+                      }
                       disabled={isReadOnly}
                     />
-                    {row.previousDueDates && row.previousDueDates.length > 0 && (
-                      <div className="mt-1 text-xs text-gray-500">
-                        <div>Previous dates:</div>
-                        {row.previousDueDates.map((d, idx) => (
-                          <div key={idx}>{d}</div>
-                        ))}
-                      </div>
-                    )}
+                    {row.previousDueDates &&
+                      row.previousDueDates.length > 0 && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          <div>Previous dates:</div>
+                          {row.previousDueDates.map((d, idx) => (
+                            <div key={idx}>{d}</div>
+                          ))}
+                        </div>
+                      )}
                   </td>
                   <td className="p-3">
                     <Select
                       value={row.status}
-                      onValueChange={(value) => updateAuditTrackField(row.id, 'status', value)}
+                      onValueChange={(value) =>
+                        updateAuditTrackField(row.id, "status", value)
+                      }
                       disabled={isReadOnly}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        {statuses.map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        {statuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -471,7 +708,8 @@ export default function ATRDashboard() {
         {isReadOnly && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-yellow-800 text-sm">
-              <strong>Read-Only Mode:</strong> This ATR report is completed and cannot be edited. You can only view and add comments.
+              <strong>Read-Only Mode:</strong> This ATR report is completed and
+              cannot be edited. You can only view and add comments.
             </p>
           </div>
         )}
@@ -488,15 +726,24 @@ export default function ATRDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-blue-200 pl-4 py-2">
+                  <div
+                    key={comment.id}
+                    className="border-l-4 border-blue-200 pl-4 py-2"
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-medium">{comment.author}</span>
-                        <Badge className={`text-xs ${getCommentTypeColor(comment.type)}`}>
+                        <span className="text-xs font-medium">
+                          {comment.author}
+                        </span>
+                        <Badge
+                          className={`text-xs ${getCommentTypeColor(comment.type)}`}
+                        >
                           {comment.type}
                         </Badge>
                       </div>
-                      <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                      <span className="text-xs text-gray-500">
+                        {comment.timestamp}
+                      </span>
                     </div>
                     <p className="text-sm text-gray-700">{comment.content}</p>
                   </div>
@@ -510,79 +757,106 @@ export default function ATRDashboard() {
   };
 
   const reportableRows = useMemo(() => {
-    const slug = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    const slug = (s: string) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
     const partsFromId = (id: string) => {
-      const parts = String(id || '').split('|');
+      const parts = String(id || "").split("|");
       // expect: fw|proc|sub|act|risk|idx
-      return { proc: parts[1] || '', sub: parts[2] || '' };
+      return { proc: parts[1] || "", sub: parts[2] || "" };
     };
     const all = Object.values(fwRecords || {});
-    const approved = all.filter(r => r.status === 'approved');
-    const yesReportable = approved.filter(r => {
-      const v = (r as any).arc?.reportable || '';
-      return String(v).toLowerCase() === 'yes';
+    const approved = all.filter((r) => r.status === "approved");
+    const yesReportable = approved.filter((r) => {
+      const v = (r as any).arc?.reportable || "";
+      return String(v).toLowerCase() === "yes";
     });
     const seen = new Set<string>();
-    const rows = [] as { id: string; projectId?: string; control: string; process?: string; subprocess?: string; activity?: string; risk?: string }[];
+    const rows = [] as {
+      id: string;
+      projectId?: string;
+      control: string;
+      process?: string;
+      subprocess?: string;
+      activity?: string;
+      risk?: string;
+    }[];
     for (const r of yesReportable) {
-      const pid = r.projectId || 'GLOBAL';
+      const pid = r.projectId || "GLOBAL";
       const uid = `${pid}|${r.controlId}`;
       if (seen.has(uid)) continue;
       seen.add(uid);
       const a: any = (r as any).arc || {};
-      let processName = '';
-      let subprocessName = '';
+      let processName = "";
+      let subprocessName = "";
       if (r.projectId) {
-        const proj = projects.find(p => p.id === r.projectId)?.raw;
+        const proj = projects.find((p) => p.id === r.projectId)?.raw;
         const tree = proj?.data?.selectedChecklistTree || {};
         const { proc, sub } = partsFromId(r.controlId);
         // resolve process
         for (const pName of Object.keys(tree || {})) {
-          if (slug(pName) === proc) { processName = pName; const subs = tree[pName]?.subprocesses || {}; for (const sName of Object.keys(subs)) { if (slug(sName) === sub) { subprocessName = sName; break; } } break; }
+          if (slug(pName) === proc) {
+            processName = pName;
+            const subs = tree[pName]?.subprocesses || {};
+            for (const sName of Object.keys(subs)) {
+              if (slug(sName) === sub) {
+                subprocessName = sName;
+                break;
+              }
+            }
+            break;
+          }
         }
       }
       if (!processName || !subprocessName) {
         const { proc, sub } = partsFromId(r.controlId);
-        processName = processName || proc.replace(/-/g,' ');
-        subprocessName = subprocessName || sub.replace(/-/g,' ');
+        processName = processName || proc.replace(/-/g, " ");
+        subprocessName = subprocessName || sub.replace(/-/g, " ");
       }
-      const match = controls.find(c => c.id === r.controlId);
+      const match = controls.find((c) => c.id === r.controlId);
       rows.push({
         id: r.controlId,
         projectId: r.projectId,
-        control: a.control || match?.name || '',
-        process: processName || match?.process || '',
-        subprocess: subprocessName || match?.subprocess || '',
-        activity: a.activity || match?.activity || '',
-        risk: a.risk || match?.risk || ''
+        control: a.control || match?.name || "",
+        process: processName || match?.process || "",
+        subprocess: subprocessName || match?.subprocess || "",
+        activity: a.activity || match?.activity || "",
+        risk: a.risk || match?.risk || "",
       });
     }
     return rows;
   }, [fwRecords, controls, projects]);
 
   const reportableProjectOptions = useMemo(() => {
-    const ids = Array.from(new Set(reportableRows.map(r => r.projectId).filter(Boolean))) as string[];
-    return ids.map(id => ({ id, title: projects.find(p => p.id === id)?.title || id }));
+    const ids = Array.from(
+      new Set(reportableRows.map((r) => r.projectId).filter(Boolean)),
+    ) as string[];
+    return ids.map((id) => ({
+      id,
+      title: projects.find((p) => p.id === id)?.title || id,
+    }));
   }, [reportableRows, projects]);
 
   // ATR Access data per project (not linked to controls)
   const [atrRows, setAtrRows] = useState<AuditTrackRow[]>([]);
-  const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : '';
+  const atrKey = selectedProjectId ? `atr:project:${selectedProjectId}` : "";
   const makeEmptyAtrRow = (): AuditTrackRow => ({
-    id: `row_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-    auditObservation: '',
-    actionPlan: '',
-    responsibility: '',
-    designation: '',
-    dueDate: '',
+    id: `row_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    auditObservation: "",
+    actionPlan: "",
+    responsibility: "",
+    designation: "",
+    dueDate: "",
     previousDueDates: [],
-    status: ''
+    status: "",
   });
   const addAtrRow = () => {
-    setAtrRows(prev => [...prev, makeEmptyAtrRow()]);
+    setAtrRows((prev) => [...prev, makeEmptyAtrRow()]);
   };
   const deleteAtrRow = (index: number) => {
-    setAtrRows(prev => {
+    setAtrRows((prev) => {
       const arr = [...prev];
       if (arr.length === 0) return prev;
       arr.splice(index, 1);
@@ -590,32 +864,40 @@ export default function ATRDashboard() {
       return arr;
     });
   };
-  useEffect(()=>{
-    (async()=>{
-      if (!selectedProjectId) { setAtrRows([]); return; }
+  useEffect(() => {
+    (async () => {
+      if (!selectedProjectId) {
+        setAtrRows([]);
+        return;
+      }
       try {
         const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) setAtrRows(data as AuditTrackRow[]);
-          else if (data && typeof data==='object') {
-            const flat = (Object.values(data as any).flat() as AuditTrackRow[]);
+          else if (data && typeof data === "object") {
+            const flat = Object.values(data as any).flat() as AuditTrackRow[];
             setAtrRows(flat);
           }
         }
       } catch {}
-      setAtrRows(prev => prev.length ? prev : [makeEmptyAtrRow()]);
+      setAtrRows((prev) => (prev.length ? prev : [makeEmptyAtrRow()]));
     })();
   }, [selectedProjectId, atrKey, reportableRows]);
 
-  const updateAtrField = (index: number, field: keyof AuditTrackRow, value: string) => {
-    setAtrRows(prev => {
+  const updateAtrField = (
+    index: number,
+    field: keyof AuditTrackRow,
+    value: string,
+  ) => {
+    setAtrRows((prev) => {
       const arr = [...prev];
       const row = arr[index] || makeEmptyAtrRow();
       const next: AuditTrackRow = { ...row } as any;
-      if (field === 'dueDate') {
+      if (field === "dueDate") {
         const prevDate = row.dueDate;
-        if (prevDate && prevDate !== value) next.previousDueDates = [prevDate, ...(row.previousDueDates||[])];
+        if (prevDate && prevDate !== value)
+          next.previousDueDates = [prevDate, ...(row.previousDueDates || [])];
         next.dueDate = value;
       } else {
         (next as any)[field] = value;
@@ -628,65 +910,137 @@ export default function ATRDashboard() {
   const saveAtr = async () => {
     if (!selectedProjectId) return;
     try {
-      await fetch(`/api/settings/${encodeURIComponent(atrKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(atrRows) });
+      await fetch(`/api/settings/${encodeURIComponent(atrKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(atrRows),
+      });
     } catch {}
   };
 
   // Toolbar: filters, fields, export
-  const atrAllFields = ['Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'] as const;
-  const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([...atrAllFields]);
-  const [atrStatusFilter, setAtrStatusFilter] = useState<string>('all');
-  const [atrDueFrom, setAtrDueFrom] = useState<string>('');
-  const [atrDueTo, setAtrDueTo] = useState<string>('');
-  const [atrSearch, setAtrSearch] = useState<string>('');
+  const atrAllFields = [
+    "Audit Observation",
+    "Action Plan",
+    "Responsibility",
+    "Designation",
+    "Due date",
+    "Status",
+  ] as const;
+  const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([
+    ...atrAllFields,
+  ]);
+  const [atrStatusFilter, setAtrStatusFilter] = useState<string>("all");
+  const [atrDueFrom, setAtrDueFrom] = useState<string>("");
+  const [atrDueTo, setAtrDueTo] = useState<string>("");
+  const [atrSearch, setAtrSearch] = useState<string>("");
   const [atrRespFilter, setAtrRespFilter] = useState<string[]>([]);
   const [atrDeptFilter, setAtrDeptFilter] = useState<string[]>([]);
-  const [atrGroupBy, setAtrGroupBy] = useState<'none'|'status'|'due'|'department'|'person'>('none');
+  const [atrGroupBy, setAtrGroupBy] = useState<
+    "none" | "status" | "due" | "department" | "person"
+  >("none");
 
-  const atrRowsForProject = useMemo(()=>{
-    const rows = reportableRows.filter(r => selectedProjectId ? r.projectId===selectedProjectId : true);
+  const atrRowsForProject = useMemo(() => {
+    const rows = reportableRows.filter((r) =>
+      selectedProjectId ? r.projectId === selectedProjectId : true,
+    );
     return rows;
   }, [reportableRows, selectedProjectId]);
 
-  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
-  const atrRespOptions = useMemo(()=> {
-    const list = atrRows.map(a=>a.responsibility);
+  const uniq = (arr: (string | undefined | null)[]) =>
+    Array.from(new Set(arr.filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  const atrRespOptions = useMemo(() => {
+    const list = atrRows.map((a) => a.responsibility);
     return uniq(list);
   }, [atrRows]);
-  const atrDeptOptions = useMemo(()=> {
-    const list = atrRows.map(a=>a.designation);
+  const atrDeptOptions = useMemo(() => {
+    const list = atrRows.map((a) => a.designation);
     return uniq(list);
   }, [atrRows]);
 
-  const atrRowsFiltered = useMemo(()=>{
+  const atrRowsFiltered = useMemo(() => {
     const filtered = atrRows
       .map((a, idx) => ({ a, idx }))
       .filter(({ a }) => {
-      if (atrStatusFilter!=='all' && (a.status||'')!==atrStatusFilter) return false;
-      if (atrDueFrom && (a.dueDate||'') && new Date(a.dueDate) < new Date(atrDueFrom)) return false;
-      if (atrDueTo && (a.dueDate||'') && new Date(a.dueDate) > new Date(atrDueTo)) return false;
-      if (atrRespFilter.length && !atrRespFilter.includes(a.responsibility||'')) return false;
-      if (atrDeptFilter.length && !atrDeptFilter.includes(a.designation||'')) return false;
-      const q = atrSearch.trim().toLowerCase();
-      if (!q) return true;
-      const hay = [a.auditObservation, a.actionPlan, a.responsibility, a.designation, a.status, a.dueDate].filter(Boolean).map(s=>String(s).toLowerCase());
-      return hay.some(s=>s.includes(q));
-    });
+        if (atrStatusFilter !== "all" && (a.status || "") !== atrStatusFilter)
+          return false;
+        if (
+          atrDueFrom &&
+          (a.dueDate || "") &&
+          new Date(a.dueDate) < new Date(atrDueFrom)
+        )
+          return false;
+        if (
+          atrDueTo &&
+          (a.dueDate || "") &&
+          new Date(a.dueDate) > new Date(atrDueTo)
+        )
+          return false;
+        if (
+          atrRespFilter.length &&
+          !atrRespFilter.includes(a.responsibility || "")
+        )
+          return false;
+        if (
+          atrDeptFilter.length &&
+          !atrDeptFilter.includes(a.designation || "")
+        )
+          return false;
+        const q = atrSearch.trim().toLowerCase();
+        if (!q) return true;
+        const hay = [
+          a.auditObservation,
+          a.actionPlan,
+          a.responsibility,
+          a.designation,
+          a.status,
+          a.dueDate,
+        ]
+          .filter(Boolean)
+          .map((s) => String(s).toLowerCase());
+        return hay.some((s) => s.includes(q));
+      });
     return filtered;
-  }, [atrRows, atrStatusFilter, atrDueFrom, atrDueTo, atrRespFilter, atrDeptFilter, atrSearch]);
+  }, [
+    atrRows,
+    atrStatusFilter,
+    atrDueFrom,
+    atrDueTo,
+    atrRespFilter,
+    atrDeptFilter,
+    atrSearch,
+  ]);
 
   if (selectedClient || selectedControl) {
     // If a control is selected, show ATR editor for that control
-    const client = selectedClient ? clients.find(c => c.id === selectedClient) : undefined;
+    const client = selectedClient
+      ? clients.find((c) => c.id === selectedClient)
+      : undefined;
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{selectedControl ? `ATR Editor - Control ${selectedControl}` : (client?.name || 'Client')}</h1>
-            <p className="text-gray-600">{selectedControl ? `Control ID: ${selectedControl} • ATR Module` : `Client ID: ${selectedClient} • ${client?.industry} • ATR Module`}</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {selectedControl
+                ? `ATR Editor - Control ${selectedControl}`
+                : client?.name || "Client"}
+            </h1>
+            <p className="text-gray-600">
+              {selectedControl
+                ? `Control ID: ${selectedControl} • ATR Module`
+                : `Client ID: ${selectedClient} • ${client?.industry} • ATR Module`}
+            </p>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => { setSelectedControl(null); setSelectedClient(null); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedControl(null);
+                setSelectedClient(null);
+              }}
+            >
               Back to ATR Reports
             </Button>
             <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
@@ -704,19 +1058,27 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v); }}>
+                    <Select
+                      value={selectedProjectId || reportableProjectFilter}
+                      onValueChange={(v) => {
+                        setReportableProjectFilter(v);
+                        setSelectedProjectId(v);
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {reportableProjectOptions.map(opt => (
-                          <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                        {reportableProjectOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.title}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div style={{maxHeight:420, overflow:'auto'}}>
+                <div style={{ maxHeight: 420, overflow: "auto" }}>
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 sticky top-0 z-10">
                       <tr>
@@ -726,25 +1088,54 @@ export default function ATRDashboard() {
                         <th className="text-left p-3 w-48">Subprocess</th>
                         <th className="text-left p-3 w-40">Activity</th>
                         <th className="text-left p-3 w-48">Risk</th>
-
                       </tr>
                     </thead>
                     <tbody>
-                      {reportableRows.filter(r=>{
-                        if (reportableProjectFilter && r.projectId !== reportableProjectFilter) return false;
-                        const q = controlsSearch.trim().toLowerCase();
-                        if (!q) return true;
-                        return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
-                      }).map(r=> (
-                        <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                          <td className="p-3">{r.control || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
-                        </tr>
-                      ))}
+                      {reportableRows
+                        .filter((r) => {
+                          if (
+                            reportableProjectFilter &&
+                            r.projectId !== reportableProjectFilter
+                          )
+                            return false;
+                          const q = controlsSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return [
+                            r.id,
+                            r.control,
+                            r.process,
+                            r.subprocess,
+                            r.activity,
+                            r.risk,
+                          ]
+                            .filter(Boolean)
+                            .map((s) => String(s).toLowerCase())
+                            .some((s) => s.includes(q));
+                        })
+                        .map((r) => (
+                          <tr
+                            key={`${r.projectId || "GLOBAL"}|${r.id}`}
+                            className="border-t hover:bg-slate-50"
+                            onClick={() => setSelectedControl(r.id)}
+                          >
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.id}
+                            </td>
+                            <td className="p-3">{r.control || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.process || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.subprocess || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.activity || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.risk || "-"}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -757,13 +1148,18 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label>Project</Label>
-                  <Select value={selectedProjectId || ''} onValueChange={(v)=> setSelectedProjectId(v)}>
+                  <Select
+                    value={selectedProjectId || ""}
+                    onValueChange={(v) => setSelectedProjectId(v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {reportableProjectOptions.map(opt => (
-                        <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                      {reportableProjectOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.title}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -771,55 +1167,138 @@ export default function ATRDashboard() {
                 <div className="flex justify-end gap-2 md:col-span-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <FilterIcon className="h-4 w-4" /> Filter
+                      </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[720px] z-[60]">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs">Status</Label>
-                          <Select value={atrStatusFilter} onValueChange={setAtrStatusFilter}>
-                            <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                          <Select
+                            value={atrStatusFilter}
+                            onValueChange={setAtrStatusFilter}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All</SelectItem>
-                              {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                              {statuses.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {s}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <Label className="text-xs">Due from</Label>
-                            <Input type="date" value={atrDueFrom} onChange={(e)=>setAtrDueFrom(e.target.value)} className="mt-1" />
+                            <Input
+                              type="date"
+                              value={atrDueFrom}
+                              onChange={(e) => setAtrDueFrom(e.target.value)}
+                              className="mt-1"
+                            />
                           </div>
                           <div>
                             <Label className="text-xs">Due to</Label>
-                            <Input type="date" value={atrDueTo} onChange={(e)=>setAtrDueTo(e.target.value)} className="mt-1" />
+                            <Input
+                              type="date"
+                              value={atrDueTo}
+                              onChange={(e) => setAtrDueTo(e.target.value)}
+                              className="mt-1"
+                            />
                           </div>
                         </div>
                         <div>
                           <Label className="text-xs">Person responsible</Label>
-                          <MultiSelectSimple options={atrRespOptions} value={atrRespFilter} onChange={setAtrRespFilter} placeholder="All" />
+                          <MultiSelectSimple
+                            options={atrRespOptions}
+                            value={atrRespFilter}
+                            onChange={setAtrRespFilter}
+                            placeholder="All"
+                          />
                         </div>
                         <div>
                           <Label className="text-xs">Department</Label>
-                          <MultiSelectSimple options={atrDeptOptions} value={atrDeptFilter} onChange={setAtrDeptFilter} placeholder="All" />
+                          <MultiSelectSimple
+                            options={atrDeptOptions}
+                            value={atrDeptFilter}
+                            onChange={setAtrDeptFilter}
+                            placeholder="All"
+                          />
                         </div>
                         <div className="sm:col-span-2">
                           <Label className="text-xs">Search</Label>
-                          <Input value={atrSearch} onChange={(e)=>setAtrSearch(e.target.value)} placeholder="Search..." className="mt-1" />
+                          <Input
+                            value={atrSearch}
+                            onChange={(e) => setAtrSearch(e.target.value)}
+                            placeholder="Search..."
+                            className="mt-1"
+                          />
                         </div>
-                        <div className="flex justify-end sm:col-span-2"><Button size="sm" variant="outline" onClick={()=>{ setAtrStatusFilter('all'); setAtrDueFrom(''); setAtrDueTo(''); setAtrSearch(''); setAtrRespFilter([]); setAtrDeptFilter([]); }}>Reset</Button></div>
+                        <div className="flex justify-end sm:col-span-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setAtrStatusFilter("all");
+                              setAtrDueFrom("");
+                              setAtrDueTo("");
+                              setAtrSearch("");
+                              setAtrRespFilter([]);
+                              setAtrDeptFilter([]);
+                            }}
+                          >
+                            Reset
+                          </Button>
+                        </div>
                       </div>
                     </PopoverContent>
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Rows3 className="h-4 w-4" /> Group
+                      </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56">
                       <div className="grid gap-2">
-                        {(['none','status','due','department','person'] as const).map(opt => (
-                          <Button key={opt} variant={atrGroupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setAtrGroupBy(opt)}>
-                            {opt==='none' ? 'None' : opt==='due' ? 'Due date' : opt==='person' ? 'Person responsible' : opt==='department' ? 'Department' : 'Implementation status'}
+                        {(
+                          [
+                            "none",
+                            "status",
+                            "due",
+                            "department",
+                            "person",
+                          ] as const
+                        ).map((opt) => (
+                          <Button
+                            key={opt}
+                            variant={atrGroupBy === opt ? "default" : "outline"}
+                            size="sm"
+                            className="capitalize justify-start"
+                            onClick={() => setAtrGroupBy(opt)}
+                          >
+                            {opt === "none"
+                              ? "None"
+                              : opt === "due"
+                                ? "Due date"
+                                : opt === "person"
+                                  ? "Person responsible"
+                                  : opt === "department"
+                                    ? "Department"
+                                    : "Implementation status"}
                           </Button>
                         ))}
                       </div>
@@ -827,63 +1306,133 @@ export default function ATRDashboard() {
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Columns2 className="h-4 w-4" /> Fields
+                      </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72">
                       <div className="grid gap-2">
-                        {atrAllFields.map(f => (
-                          <label key={f} className="flex items-center gap-2 text-sm">
-                            <input type="checkbox" checked={atrSelectedFields.includes(f)} onChange={(e)=> setAtrSelectedFields(prev => e.target.checked ? [...prev, f] : prev.filter(x=>x!==f))} />
+                        {atrAllFields.map((f) => (
+                          <label
+                            key={f}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={atrSelectedFields.includes(f)}
+                              onChange={(e) =>
+                                setAtrSelectedFields((prev) =>
+                                  e.target.checked
+                                    ? [...prev, f]
+                                    : prev.filter((x) => x !== f),
+                                )
+                              }
+                            />
                             <span>{f}</span>
                           </label>
                         ))}
                         <div className="flex gap-2 pt-1">
-                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([...atrAllFields])}>All</Button>
-                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields(['Control ID','Control','Process','Subprocess','Activity','Risk','Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'])}>Default</Button>
-                          <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([])}>None</Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setAtrSelectedFields([...atrAllFields])
+                            }
+                          >
+                            All
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setAtrSelectedFields([
+                                "Control ID",
+                                "Control",
+                                "Process",
+                                "Subprocess",
+                                "Activity",
+                                "Risk",
+                                "Audit Observation",
+                                "Action Plan",
+                                "Responsibility",
+                                "Designation",
+                                "Due date",
+                                "Status",
+                              ])
+                            }
+                          >
+                            Default
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setAtrSelectedFields([])}
+                          >
+                            None
+                          </Button>
                         </div>
                       </div>
                     </PopoverContent>
                   </Popover>
-                  <Button size="sm" className="flex items-center gap-2" onClick={()=>{
-                    const wb = XLSX.utils.book_new();
-                    const build = (it:any) => {
-                      const { a } = it;
-                      const row: Record<string, any> = {};
-                      const add = (k:string, v:any) => { row[k] = v; };
-                      
-                      add('Audit Observation', a.auditObservation || '');
-                      add('Action Plan', a.actionPlan || '');
-                      add('Responsibility', a.responsibility || '');
-                      add('Designation', a.designation || '');
-                      add('Due date', a.dueDate || '');
-                      add('Status', a.status || '');
-                      return row;
-                    };
-                    let rows:any[] = [];
-                    if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
-                    else {
-                      const groups: Record<string, any[]> = {};
-                      const keyOf = (it:any) => {
+                  <Button
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      const wb = XLSX.utils.book_new();
+                      const build = (it: any) => {
                         const { a } = it;
-                        if (atrGroupBy==='status') return a.status || '';
-                        if (atrGroupBy==='due') return a.dueDate || '';
-                        if (atrGroupBy==='department') return a.designation || '';
-                        return a.responsibility || '';
+                        const row: Record<string, any> = {};
+                        const add = (k: string, v: any) => {
+                          row[k] = v;
+                        };
+
+                        add("Audit Observation", a.auditObservation || "");
+                        add("Action Plan", a.actionPlan || "");
+                        add("Responsibility", a.responsibility || "");
+                        add("Designation", a.designation || "");
+                        add("Due date", a.dueDate || "");
+                        add("Status", a.status || "");
+                        return row;
                       };
-                      atrRowsFiltered.forEach(it => {
-                        const k = keyOf(it);
-                        if (!groups[k]) groups[k] = [];
-                        groups[k].push(build(it));
-                      });
-                      const keys = Object.keys(groups).sort();
-                      for (const k of keys) { rows.push({ Group: k }); rows.push(...groups[k]); rows.push({}); }
-                    }
-                    const ws = XLSX.utils.json_to_sheet(rows);
-                    XLSX.utils.book_append_sheet(wb, ws, 'ATR');
-                    XLSX.writeFile(wb, 'atr.xlsx');
-                  }}><Download className="h-4 w-4"/> Export XLSX</Button>
-                  <Button size="sm" onClick={saveAtr}>Save</Button>
+                      let rows: any[] = [];
+                      if (atrGroupBy === "none")
+                        rows = atrRowsFiltered.map(build);
+                      else {
+                        const groups: Record<string, any[]> = {};
+                        const keyOf = (it: any) => {
+                          const { a } = it;
+                          if (atrGroupBy === "status") return a.status || "";
+                          if (atrGroupBy === "due") return a.dueDate || "";
+                          if (atrGroupBy === "department")
+                            return a.designation || "";
+                          return a.responsibility || "";
+                        };
+                        atrRowsFiltered.forEach((it) => {
+                          const k = keyOf(it);
+                          if (!groups[k]) groups[k] = [];
+                          groups[k].push(build(it));
+                        });
+                        const keys = Object.keys(groups).sort();
+                        for (const k of keys) {
+                          rows.push({ Group: k });
+                          rows.push(...groups[k]);
+                          rows.push({});
+                        }
+                      }
+                      const ws = XLSX.utils.json_to_sheet(rows);
+                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                      XLSX.writeFile(wb, "atr.xlsx");
+                    }}
+                  >
+                    <Download className="h-4 w-4" /> Export XLSX
+                  </Button>
+                  <Button size="sm" onClick={saveAtr}>
+                    Save
+                  </Button>
                 </div>
               </div>
 
@@ -901,41 +1450,109 @@ export default function ATRDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {atrRowsFiltered.map(({ a, idx })=>{
-                      const isLast = (atrRows.length - 1) === idx;
+                    {atrRowsFiltered.map(({ a, idx }) => {
+                      const isLast = atrRows.length - 1 === idx;
                       return (
-                        <tr key={`${selectedProjectId||'ALL'}|${a.id}`} className="border-t">
+                        <tr
+                          key={`${selectedProjectId || "ALL"}|${a.id}`}
+                          className="border-t"
+                        >
                           <td className="p-3 border-l">
-                            <Input value={a.auditObservation} onChange={(e)=>updateAtrField(idx,'auditObservation',e.target.value)} />
+                            <Input
+                              value={a.auditObservation}
+                              onChange={(e) =>
+                                updateAtrField(
+                                  idx,
+                                  "auditObservation",
+                                  e.target.value,
+                                )
+                              }
+                            />
                           </td>
                           <td className="p-3">
-                            <Input value={a.actionPlan} onChange={(e)=>updateAtrField(idx,'actionPlan',e.target.value)} />
+                            <Input
+                              value={a.actionPlan}
+                              onChange={(e) =>
+                                updateAtrField(
+                                  idx,
+                                  "actionPlan",
+                                  e.target.value,
+                                )
+                              }
+                            />
                           </td>
                           <td className="p-3">
-                            <Input value={a.responsibility} onChange={(e)=>updateAtrField(idx,'responsibility',e.target.value)} />
+                            <Input
+                              value={a.responsibility}
+                              onChange={(e) =>
+                                updateAtrField(
+                                  idx,
+                                  "responsibility",
+                                  e.target.value,
+                                )
+                              }
+                            />
                           </td>
                           <td className="p-3">
-                            <Input value={a.designation} onChange={(e)=>updateAtrField(idx,'designation',e.target.value)} />
+                            <Input
+                              value={a.designation}
+                              onChange={(e) =>
+                                updateAtrField(
+                                  idx,
+                                  "designation",
+                                  e.target.value,
+                                )
+                              }
+                            />
                           </td>
                           <td className="p-3">
-                            <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(idx,'dueDate',e.target.value)} />
-                            {a.previousDueDates && a.previousDueDates.length>0 && (
-                              <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
-                            )}
+                            <Input
+                              type="date"
+                              value={a.dueDate}
+                              onChange={(e) =>
+                                updateAtrField(idx, "dueDate", e.target.value)
+                              }
+                            />
+                            {a.previousDueDates &&
+                              a.previousDueDates.length > 0 && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  Prev: {a.previousDueDates.join(", ")}
+                                </div>
+                              )}
                           </td>
                           <td className="p-3 flex items-center gap-2">
-                            <Select value={a.status} onValueChange={(v)=>updateAtrField(idx,'status',v)}>
+                            <Select
+                              value={a.status}
+                              onValueChange={(v) =>
+                                updateAtrField(idx, "status", v)
+                              }
+                            >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select status" />
                               </SelectTrigger>
                               <SelectContent>
-                                {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                                {statuses.map((s) => (
+                                  <SelectItem key={s} value={s}>
+                                    {s}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             {isLast && (
-                              <Button variant="ghost" size="sm" onClick={()=>addAtrRow()}>Add Row</Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addAtrRow()}
+                              >
+                                Add Row
+                              </Button>
                             )}
-                            <Button variant="ghost" size="sm" onClick={()=>deleteAtrRow(idx)} title="Delete row">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteAtrRow(idx)}
+                              title="Delete row"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </td>
@@ -959,7 +1576,6 @@ export default function ATRDashboard() {
         <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
       </div>
 
-
       <Tabs defaultValue="access">
         <TabsList>
           <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
@@ -970,12 +1586,19 @@ export default function ATRDashboard() {
             <div>
               <Label>Search Controls</Label>
               <div className="relative">
-                <Input className="pl-9" placeholder="Search controls, process, risk..." value={controlsSearch} onChange={e=>setControlsSearch(e.target.value)} />
+                <Input
+                  className="pl-9"
+                  placeholder="Search controls, process, risk..."
+                  value={controlsSearch}
+                  onChange={(e) => setControlsSearch(e.target.value)}
+                />
               </div>
             </div>
             <div />
             <div className="flex items-center justify-end">
-              <Badge className="bg-blue-50 text-blue-800">Approved & Reportable</Badge>
+              <Badge className="bg-blue-50 text-blue-800">
+                Approved & Reportable
+              </Badge>
             </div>
           </div>
 
@@ -988,19 +1611,27 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select value={selectedProjectId || reportableProjectFilter} onValueChange={(v)=>{ setReportableProjectFilter(v); setSelectedProjectId(v); }}>
+                    <Select
+                      value={selectedProjectId || reportableProjectFilter}
+                      onValueChange={(v) => {
+                        setReportableProjectFilter(v);
+                        setSelectedProjectId(v);
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {reportableProjectOptions.map(opt => (
-                          <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                        {reportableProjectOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.title}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div style={{maxHeight:420, overflow:'auto'}}>
+                <div style={{ maxHeight: 420, overflow: "auto" }}>
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 sticky top-0 z-10">
                       <tr>
@@ -1010,25 +1641,54 @@ export default function ATRDashboard() {
                         <th className="text-left p-3 w-48">Subprocess</th>
                         <th className="text-left p-3 w-40">Activity</th>
                         <th className="text-left p-3 w-48">Risk</th>
-
                       </tr>
                     </thead>
                     <tbody>
-                      {reportableRows.filter(r=>{
-                        if (reportableProjectFilter && r.projectId !== reportableProjectFilter) return false;
-                        const q = controlsSearch.trim().toLowerCase();
-                        if (!q) return true;
-                        return [r.id,r.control,r.process,r.subprocess,r.activity,r.risk].filter(Boolean).map(s=>String(s).toLowerCase()).some(s=>s.includes(q));
-                      }).map(r=> (
-                        <tr key={`${r.projectId || 'GLOBAL'}|${r.id}`} className="border-t hover:bg-slate-50" onClick={()=> setSelectedControl(r.id)}>
-                          <td className="p-3 text-xs text-slate-600">{r.id}</td>
-                          <td className="p-3">{r.control || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.process || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.subprocess || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.activity || '-'}</td>
-                          <td className="p-3 text-xs text-slate-600">{r.risk || '-'}</td>
-                        </tr>
-                      ))}
+                      {reportableRows
+                        .filter((r) => {
+                          if (
+                            reportableProjectFilter &&
+                            r.projectId !== reportableProjectFilter
+                          )
+                            return false;
+                          const q = controlsSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return [
+                            r.id,
+                            r.control,
+                            r.process,
+                            r.subprocess,
+                            r.activity,
+                            r.risk,
+                          ]
+                            .filter(Boolean)
+                            .map((s) => String(s).toLowerCase())
+                            .some((s) => s.includes(q));
+                        })
+                        .map((r) => (
+                          <tr
+                            key={`${r.projectId || "GLOBAL"}|${r.id}`}
+                            className="border-t hover:bg-slate-50"
+                            onClick={() => setSelectedControl(r.id)}
+                          >
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.id}
+                            </td>
+                            <td className="p-3">{r.control || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.process || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.subprocess || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.activity || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {r.risk || "-"}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -1042,13 +1702,18 @@ export default function ATRDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div>
                 <Label>Project</Label>
-                <Select value={selectedProjectId || ''} onValueChange={(v)=> setSelectedProjectId(v)}>
+                <Select
+                  value={selectedProjectId || ""}
+                  onValueChange={(v) => setSelectedProjectId(v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {reportableProjectOptions.map(opt => (
-                      <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                    {reportableProjectOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        {opt.title}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1056,55 +1721,138 @@ export default function ATRDashboard() {
               <div className="flex justify-end gap-2 md:col-span-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <FilterIcon className="h-4 w-4" /> Filter
+                    </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[720px] z-[60]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Status</Label>
-                        <Select value={atrStatusFilter} onValueChange={setAtrStatusFilter}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                        <Select
+                          value={atrStatusFilter}
+                          onValueChange={setAtrStatusFilter}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All</SelectItem>
-                            {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                            {statuses.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {s}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-xs">Due from</Label>
-                          <Input type="date" value={atrDueFrom} onChange={(e)=>setAtrDueFrom(e.target.value)} className="mt-1" />
+                          <Input
+                            type="date"
+                            value={atrDueFrom}
+                            onChange={(e) => setAtrDueFrom(e.target.value)}
+                            className="mt-1"
+                          />
                         </div>
                         <div>
                           <Label className="text-xs">Due to</Label>
-                          <Input type="date" value={atrDueTo} onChange={(e)=>setAtrDueTo(e.target.value)} className="mt-1" />
+                          <Input
+                            type="date"
+                            value={atrDueTo}
+                            onChange={(e) => setAtrDueTo(e.target.value)}
+                            className="mt-1"
+                          />
                         </div>
                       </div>
                       <div>
                         <Label className="text-xs">Person responsible</Label>
-                        <MultiSelectSimple options={atrRespOptions} value={atrRespFilter} onChange={setAtrRespFilter} placeholder="All" />
+                        <MultiSelectSimple
+                          options={atrRespOptions}
+                          value={atrRespFilter}
+                          onChange={setAtrRespFilter}
+                          placeholder="All"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Department</Label>
-                        <MultiSelectSimple options={atrDeptOptions} value={atrDeptFilter} onChange={setAtrDeptFilter} placeholder="All" />
+                        <MultiSelectSimple
+                          options={atrDeptOptions}
+                          value={atrDeptFilter}
+                          onChange={setAtrDeptFilter}
+                          placeholder="All"
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <Label className="text-xs">Search</Label>
-                        <Input value={atrSearch} onChange={(e)=>setAtrSearch(e.target.value)} placeholder="Search..." className="mt-1" />
+                        <Input
+                          value={atrSearch}
+                          onChange={(e) => setAtrSearch(e.target.value)}
+                          placeholder="Search..."
+                          className="mt-1"
+                        />
                       </div>
-                      <div className="flex justify-end sm:col-span-2"><Button size="sm" variant="outline" onClick={()=>{ setAtrStatusFilter('all'); setAtrDueFrom(''); setAtrDueTo(''); setAtrSearch(''); setAtrRespFilter([]); setAtrDeptFilter([]); }}>Reset</Button></div>
+                      <div className="flex justify-end sm:col-span-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setAtrStatusFilter("all");
+                            setAtrDueFrom("");
+                            setAtrDueTo("");
+                            setAtrSearch("");
+                            setAtrRespFilter([]);
+                            setAtrDeptFilter([]);
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Rows3 className="h-4 w-4" /> Group
+                    </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-56">
                     <div className="grid gap-2">
-                      {(['none','status','due','department','person'] as const).map(opt => (
-                        <Button key={opt} variant={atrGroupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setAtrGroupBy(opt)}>
-                          {opt==='none' ? 'None' : opt==='due' ? 'Due date' : opt==='person' ? 'Person responsible' : opt==='department' ? 'Department' : 'Implementation status'}
+                      {(
+                        [
+                          "none",
+                          "status",
+                          "due",
+                          "department",
+                          "person",
+                        ] as const
+                      ).map((opt) => (
+                        <Button
+                          key={opt}
+                          variant={atrGroupBy === opt ? "default" : "outline"}
+                          size="sm"
+                          className="capitalize justify-start"
+                          onClick={() => setAtrGroupBy(opt)}
+                        >
+                          {opt === "none"
+                            ? "None"
+                            : opt === "due"
+                              ? "Due date"
+                              : opt === "person"
+                                ? "Person responsible"
+                                : opt === "department"
+                                  ? "Department"
+                                  : "Implementation status"}
                         </Button>
                       ))}
                     </div>
@@ -1112,63 +1860,133 @@ export default function ATRDashboard() {
                 </Popover>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Columns2 className="h-4 w-4" /> Fields
+                    </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-72">
                     <div className="grid gap-2">
-                      {atrAllFields.map(f => (
-                        <label key={f} className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" checked={atrSelectedFields.includes(f)} onChange={(e)=> setAtrSelectedFields(prev => e.target.checked ? [...prev, f] : prev.filter(x=>x!==f))} />
+                      {atrAllFields.map((f) => (
+                        <label
+                          key={f}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={atrSelectedFields.includes(f)}
+                            onChange={(e) =>
+                              setAtrSelectedFields((prev) =>
+                                e.target.checked
+                                  ? [...prev, f]
+                                  : prev.filter((x) => x !== f),
+                              )
+                            }
+                          />
                           <span>{f}</span>
                         </label>
                       ))}
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([...atrAllFields])}>All</Button>
-                        <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields(['Control ID','Control','Process','Subprocess','Activity','Risk','Audit Observation','Action Plan','Responsibility','Designation','Due date','Status'])}>Default</Button>
-                        <Button size="sm" variant="outline" onClick={()=>setAtrSelectedFields([])}>None</Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setAtrSelectedFields([...atrAllFields])
+                          }
+                        >
+                          All
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setAtrSelectedFields([
+                              "Control ID",
+                              "Control",
+                              "Process",
+                              "Subprocess",
+                              "Activity",
+                              "Risk",
+                              "Audit Observation",
+                              "Action Plan",
+                              "Responsibility",
+                              "Designation",
+                              "Due date",
+                              "Status",
+                            ])
+                          }
+                        >
+                          Default
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAtrSelectedFields([])}
+                        >
+                          None
+                        </Button>
                       </div>
                     </div>
                   </PopoverContent>
                 </Popover>
-                <Button size="sm" className="flex items-center gap-2" onClick={()=>{
-                  const wb = XLSX.utils.book_new();
-                  const build = (it:any) => {
+                <Button
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    const wb = XLSX.utils.book_new();
+                    const build = (it: any) => {
                       const { a } = it;
-                    const row: Record<string, any> = {};
-                    const add = (k:string, v:any) => { row[k] = v; };
-                    
-                    add('Audit Observation', a.auditObservation || '');
-                    add('Action Plan', a.actionPlan || '');
-                    add('Responsibility', a.responsibility || '');
-                    add('Designation', a.designation || '');
-                    add('Due date', a.dueDate || '');
-                    add('Status', a.status || '');
-                    return row;
-                  };
-                  let rows:any[] = [];
-                  if (atrGroupBy==='none') rows = atrRowsFiltered.map(build);
-                  else {
-                    const groups: Record<string, any[]> = {};
-                    const keyOf = (it:any) => {
-                      const { a } = it;
-                      if (atrGroupBy==='status') return a.status || '';
-                      if (atrGroupBy==='due') return a.dueDate || '';
-                      if (atrGroupBy==='department') return a.designation || '';
-                      return a.responsibility || '';
+                      const row: Record<string, any> = {};
+                      const add = (k: string, v: any) => {
+                        row[k] = v;
+                      };
+
+                      add("Audit Observation", a.auditObservation || "");
+                      add("Action Plan", a.actionPlan || "");
+                      add("Responsibility", a.responsibility || "");
+                      add("Designation", a.designation || "");
+                      add("Due date", a.dueDate || "");
+                      add("Status", a.status || "");
+                      return row;
                     };
-                    atrRowsFiltered.forEach(it => {
-                      const k = keyOf(it);
-                      if (!groups[k]) groups[k] = [];
-                      groups[k].push(build(it));
-                    });
-                    const keys = Object.keys(groups).sort();
-                    for (const k of keys) { rows.push({ Group: k }); rows.push(...groups[k]); rows.push({}); }
-                  }
-                  const ws = XLSX.utils.json_to_sheet(rows);
-                  XLSX.utils.book_append_sheet(wb, ws, 'ATR');
-                  XLSX.writeFile(wb, 'atr.xlsx');
-                }}><Download className="h-4 w-4"/> Export XLSX</Button>
-                <Button size="sm" onClick={saveAtr}>Save</Button>
+                    let rows: any[] = [];
+                    if (atrGroupBy === "none")
+                      rows = atrRowsFiltered.map(build);
+                    else {
+                      const groups: Record<string, any[]> = {};
+                      const keyOf = (it: any) => {
+                        const { a } = it;
+                        if (atrGroupBy === "status") return a.status || "";
+                        if (atrGroupBy === "due") return a.dueDate || "";
+                        if (atrGroupBy === "department")
+                          return a.designation || "";
+                        return a.responsibility || "";
+                      };
+                      atrRowsFiltered.forEach((it) => {
+                        const k = keyOf(it);
+                        if (!groups[k]) groups[k] = [];
+                        groups[k].push(build(it));
+                      });
+                      const keys = Object.keys(groups).sort();
+                      for (const k of keys) {
+                        rows.push({ Group: k });
+                        rows.push(...groups[k]);
+                        rows.push({});
+                      }
+                    }
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                    XLSX.writeFile(wb, "atr.xlsx");
+                  }}
+                >
+                  <Download className="h-4 w-4" /> Export XLSX
+                </Button>
+                <Button size="sm" onClick={saveAtr}>
+                  Save
+                </Button>
               </div>
             </div>
 
@@ -1186,39 +2004,94 @@ export default function ATRDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {atrRowsFiltered.map(({ a, idx })=>{
-                    const isLast = (atrRows.length - 1) === idx;
+                  {atrRowsFiltered.map(({ a, idx }) => {
+                    const isLast = atrRows.length - 1 === idx;
                     return (
-                      <tr key={`${selectedProjectId||'ALL'}|${a.id}`} className="border-t">
+                      <tr
+                        key={`${selectedProjectId || "ALL"}|${a.id}`}
+                        className="border-t"
+                      >
                         <td className="p-3 border-l">
-                          <Input value={a.auditObservation} onChange={(e)=>updateAtrField(idx,'auditObservation',e.target.value)} />
+                          <Input
+                            value={a.auditObservation}
+                            onChange={(e) =>
+                              updateAtrField(
+                                idx,
+                                "auditObservation",
+                                e.target.value,
+                              )
+                            }
+                          />
                         </td>
                         <td className="p-3">
-                          <Input value={a.actionPlan} onChange={(e)=>updateAtrField(idx,'actionPlan',e.target.value)} />
+                          <Input
+                            value={a.actionPlan}
+                            onChange={(e) =>
+                              updateAtrField(idx, "actionPlan", e.target.value)
+                            }
+                          />
                         </td>
                         <td className="p-3">
-                          <Input value={a.responsibility} onChange={(e)=>updateAtrField(idx,'responsibility',e.target.value)} />
+                          <Input
+                            value={a.responsibility}
+                            onChange={(e) =>
+                              updateAtrField(
+                                idx,
+                                "responsibility",
+                                e.target.value,
+                              )
+                            }
+                          />
                         </td>
                         <td className="p-3">
-                          <Input value={a.designation} onChange={(e)=>updateAtrField(idx,'designation',e.target.value)} />
+                          <Input
+                            value={a.designation}
+                            onChange={(e) =>
+                              updateAtrField(idx, "designation", e.target.value)
+                            }
+                          />
                         </td>
                         <td className="p-3">
-                          <Input type="date" value={a.dueDate} onChange={(e)=>updateAtrField(idx,'dueDate',e.target.value)} />
-                          {a.previousDueDates && a.previousDueDates.length>0 && (
-                            <div className="mt-1 text-xs text-gray-500">Prev: {a.previousDueDates.join(', ')}</div>
-                          )}
+                          <Input
+                            type="date"
+                            value={a.dueDate}
+                            onChange={(e) =>
+                              updateAtrField(idx, "dueDate", e.target.value)
+                            }
+                          />
+                          {a.previousDueDates &&
+                            a.previousDueDates.length > 0 && (
+                              <div className="mt-1 text-xs text-gray-500">
+                                Prev: {a.previousDueDates.join(", ")}
+                              </div>
+                            )}
                         </td>
                         <td className="p-3 flex items-center gap-2">
-                          <Select value={a.status} onValueChange={(v)=>updateAtrField(idx,'status',v)}>
+                          <Select
+                            value={a.status}
+                            onValueChange={(v) =>
+                              updateAtrField(idx, "status", v)
+                            }
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
-                              {statuses.map(s=> (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                              {statuses.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {s}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           {isLast && (
-                            <Button variant="ghost" size="sm" onClick={()=>addAtrRow()}>Add Row</Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => addAtrRow()}
+                            >
+                              Add Row
+                            </Button>
                           )}
                         </td>
                       </tr>
@@ -1230,7 +2103,6 @@ export default function ATRDashboard() {
           </div>
         </TabsContent>
       </Tabs>
-
     </div>
   );
 }
