@@ -1400,6 +1400,7 @@ export default function ATRDashboard() {
                         add("Responsibility", a.responsibility || "");
                         add("Designation", a.designation || "");
                         add("Due date", a.dueDate || "");
+                        add("Actual Completion date", a.actualCompletionDate || "");
                         add("Status", a.status || "");
                         return row;
                       };
