@@ -2085,6 +2085,15 @@ export default function ATRDashboard() {
                               </div>
                             )}
                         </td>
+                        <td className="p-3">
+                          <Input
+                            type="date"
+                            value={a.actualCompletionDate || ""}
+                            onChange={(e) =>
+                              updateAtrField(idx, "actualCompletionDate", e.target.value)
+                            }
+                          />
+                        </td>
                         <td className="p-3 flex items-center gap-2">
                           <Select
                             value={a.status}
