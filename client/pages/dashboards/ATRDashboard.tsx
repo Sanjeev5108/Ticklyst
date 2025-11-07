@@ -850,6 +850,7 @@ export default function ATRDashboard() {
     responsibility: "",
     designation: "",
     dueDate: "",
+    actualCompletionDate: "",
     previousDueDates: [],
     status: "",
   });
