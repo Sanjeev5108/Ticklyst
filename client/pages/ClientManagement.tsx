@@ -726,8 +726,12 @@ export default function ClientManagement() {
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-gray-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                {client.logo ? (
+                  <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
+                ) : (
+                  <Building2 className="h-6 w-6 text-gray-600" />
+                )}
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
@@ -1228,8 +1232,12 @@ export default function ClientManagement() {
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-gray-600" />
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                      {client.logo ? (
+                        <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
+                      ) : (
+                        <Building2 className="h-5 w-5 text-gray-600" />
+                      )}
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">{client.name}</h3>
