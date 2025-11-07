@@ -1452,6 +1452,7 @@ export default function ATRDashboard() {
                       <th className="text-left p-3 w-40">Responsibility</th>
                       <th className="text-left p-3 w-40">Designation</th>
                       <th className="text-left p-3 w-40">Due date</th>
+                      <th className="text-left p-3 w-44">Actual Completion date</th>
                       <th className="text-left p-3 w-32">Status</th>
                     </tr>
                   </thead>
