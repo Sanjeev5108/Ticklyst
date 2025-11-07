@@ -1920,6 +1920,7 @@ export default function ATRDashboard() {
                               "Responsibility",
                               "Designation",
                               "Due date",
+                              "Actual Completion date",
                               "Status",
                             ])
                           }
