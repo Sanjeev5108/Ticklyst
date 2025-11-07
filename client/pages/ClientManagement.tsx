@@ -890,18 +890,33 @@ export default function ClientManagement() {
 
               {/* Client Logo */}
               <div>
-                <Label htmlFor="logo" className="text-sm font-medium">Client Logo</Label>
+                <Label htmlFor="logoNew" className="text-sm font-medium">Client Logo</Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input
-                    id="logo"
+                    id="logoNew"
                     type="file"
                     accept="image/*"
                     className="flex-1"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const dataUrl = String(reader.result || '');
+                        setNewClient(prev => ({ ...prev, logo: dataUrl }));
+                      };
+                      reader.readAsDataURL(file);
+                    }}
                   />
-                  <Button type="button" variant="outline" size="sm">
+                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logoNew')?.click()}>
                     <Upload className="h-4 w-4" />
                   </Button>
                 </div>
+                {newClient.logo ? (
+                  <div className="mt-2">
+                    <img src={newClient.logo} alt="Logo preview" className="h-10 w-auto rounded border" />
+                  </div>
+                ) : null}
               </div>
 
               {/* Audit Universe */}
@@ -1416,6 +1431,37 @@ export default function ClientManagement() {
                 placeholder="Enter website URL"
                 className="mt-1"
               />
+            </div>
+
+            {/* Client Logo (Edit) */}
+            <div>
+              <Label htmlFor="logoEdit" className="text-sm font-medium">Client Logo</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <Input
+                  id="logoEdit"
+                  type="file"
+                  accept="image/*"
+                  className="flex-1"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const dataUrl = String(reader.result || '');
+                      setEditClient(prev => ({ ...prev, logo: dataUrl }));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logoEdit')?.click()}>
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
+              {editClient.logo ? (
+                <div className="mt-2">
+                  <img src={editClient.logo} alt="Logo preview" className="h-10 w-auto rounded border" />
+                </div>
+              ) : null}
             </div>
 
             <div>
