@@ -927,6 +927,7 @@ export default function ATRDashboard() {
     "Responsibility",
     "Designation",
     "Due date",
+    "Actual Completion date",
     "Status",
   ] as const;
   const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([
