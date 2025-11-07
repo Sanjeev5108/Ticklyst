@@ -1000,6 +1000,7 @@ export default function ATRDashboard() {
           a.designation,
           a.status,
           a.dueDate,
+          a.actualCompletionDate,
         ]
           .filter(Boolean)
           .map((s) => String(s).toLowerCase());
