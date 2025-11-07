@@ -746,6 +746,37 @@ export default function FrameworkDashboard() {
     return hay.some((s: string) => s.includes(q));
   };
 
+  useEffect(() => {
+    if (!selectedProcessId) return;
+    const q = treeSearch.trim().toLowerCase();
+    if (!q) return;
+    const baseIds = [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
+    const scopeAll = nodes.filter(n => {
+      if (!baseIds.includes(n.id)) return false;
+      if (controlFilterValue !== 'ALL' && n.type === 'control') {
+        return (detailsById[n.id] as any)?.control_type === controlFilterValue;
+      }
+      return true;
+    });
+    const matchIds = new Set(scopeAll.filter(matchesTreeSearch).map(n => n.id));
+    if (matchIds.size === 0) return;
+    const toExpand = new Set<string>();
+    for (const id of Array.from(matchIds)) {
+      for (const a of getAncestorIds(id)) toExpand.add(a);
+    }
+    setNodes(prev => {
+      let changed = false;
+      const next = prev.map(n => {
+        if (toExpand.has(n.id) && n.isExpanded !== true) {
+          changed = true;
+          return { ...n, isExpanded: true };
+        }
+        return n;
+      });
+      return changed ? next : prev;
+    });
+  }, [treeSearch, selectedProcessId, nodes, controlFilterValue, detailsById]);
+
   const passesTypeFilters = (n: FrameworkNode) => {
     if (controlFilterValue !== 'ALL' && n.type === 'control') {
       return (detailsById[n.id] as any)?.control_type === controlFilterValue;
@@ -1211,7 +1242,8 @@ export default function FrameworkDashboard() {
                       list = allowed.filter(n => n.type === 'process' && (n.name.toLowerCase().includes(q) || String((detailsById[n.id] as any)?.process_description || '').toLowerCase().includes(q)));
                     }
                     if (treeSearch.trim()) {
-                      const matchIds = new Set(allowed.filter(matchesTreeSearch).map(n => n.id));
+                      const scopeAll = nodes.filter(n => baseIds.includes(n.id) && passesTypeFilters(n));
+                      const matchIds = new Set(scopeAll.filter(matchesTreeSearch).map(n => n.id));
                       const includeIds = new Set<string>(matchIds);
                       for (const id of Array.from(matchIds)) {
                         for (const a of getAncestorIds(id)) includeIds.add(a);
