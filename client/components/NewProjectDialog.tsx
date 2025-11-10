@@ -118,6 +118,8 @@ const reportingFrequencies = ['Weekly', 'Fortnightly', 'Monthly', 'Quarterly'];
 
 export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, onProjectEdit, mode = 'new', initialData = null }: NewProjectDialogProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [missingDialogOpen, setMissingDialogOpen] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
   const apiEnabled = React.useMemo(() => {
     try {
       const forced = localStorage.getItem('api:enabled');
