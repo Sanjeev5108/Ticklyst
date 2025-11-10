@@ -1095,6 +1095,9 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
     }
   };
 
+  const [endDateError, setEndDateError] = useState<string | null>(null);
+  const todayStart = React.useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+
   const handleNext = () => {
     if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
