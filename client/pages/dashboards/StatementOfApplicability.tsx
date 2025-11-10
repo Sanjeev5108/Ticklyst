@@ -660,10 +660,9 @@ export default function StatementOfApplicability() {
                       setIndustryProcessMap(prev => ({ ...prev, [selectedIndustry]: selectedProcessesIndustry }));
                       setIndustryNodeMap(prev => ({ ...prev, [selectedIndustry]: Array.from(industrySelections) }));
                       const nodeApplicability: Record<string, boolean | null> = {};
-                      for (const [id, det] of Object.entries(details)) {
-                        if (det.industry === selectedIndustry && det.applicable !== undefined && det.applicable !== null) {
-                          nodeApplicability[id] = det.applicable;
-                        }
+                      const mapInd = detailsIndustry[selectedIndustry] || {};
+                      for (const [id, det] of Object.entries(mapInd)) {
+                        if (det.applicable !== undefined && det.applicable !== null) nodeApplicability[id] = det.applicable;
                       }
                       const payload = {
                         industry: selectedIndustry,
