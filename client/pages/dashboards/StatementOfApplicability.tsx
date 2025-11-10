@@ -418,21 +418,23 @@ export default function StatementOfApplicability() {
   };
 
   const selectedNode = selectedNodeId ? tree.find(n => n.id === selectedNodeId) || null : null;
-  const nodeDetails: NodeDetails | undefined = selectedNodeId ? details[selectedNodeId!] : undefined;
+  const nodeDetails: NodeDetails | undefined = selectedNodeId ? (activeDetails as any)[selectedNodeId!] : undefined;
 
   const updateNodeDetails = (patch: Partial<NodeDetails>) => {
     if (!selectedNodeId) return;
-    setDetails(prev => ({
-      ...prev,
-      [selectedNodeId]: {
-        description: nodeDetails?.description || '',
-        industry: nodeDetails?.industry || selectedIndustry,
-        client: nodeDetails?.client || selectedClientId,
-        itemId: nodeDetails?.itemId || '',
-        applicable: nodeDetails?.applicable ?? null,
-        ...patch
-      }
-    }));
+    if (tab === 'industry') {
+      setDetailsIndustry(prev => {
+        const current = prev[selectedIndustry] || {};
+        const base = current[selectedNodeId] || { description: '', industry: selectedIndustry, client: '', itemId: '', applicable: null };
+        return { ...prev, [selectedIndustry]: { ...current, [selectedNodeId]: { ...base, ...patch } } };
+      });
+    } else {
+      setDetailsClient(prev => {
+        const current = prev[selectedClientId] || {};
+        const base = current[selectedNodeId] || { description: '', industry: selectedClient?.industry || '', client: selectedClientId, itemId: '', applicable: null };
+        return { ...prev, [selectedClientId]: { ...current, [selectedNodeId]: { ...base, ...patch } } };
+      });
+    }
   };
 
   const resetSelectionsToFilter = () => {
