@@ -531,6 +531,7 @@ export default function ProjectManagement() {
         customChecklistItems: projectData.customChecklistItems || '',
         selectedChecklistTree: projectData.selectedChecklistTree || null,
         riskConfig: projectData.riskConfig || null,
+        references: projectData.references || '',
       }
     };
 
@@ -559,7 +560,7 @@ export default function ProjectManagement() {
     auditUniverse: p.details?.auditUniverse || [],
     scopeNotes: p.details?.scopeNotes || '',
     documents: [],
-    references: '',
+    references: p.details?.references || '',
     emailNotifications: !!p.details?.emailNotifications,
     reportingFrequency: p.details?.reportingFrequency || '',
     auditCommentsModule: true,
@@ -594,6 +595,7 @@ export default function ProjectManagement() {
         customChecklistItems: data.customChecklistItems || '',
         selectedChecklistTree: data.selectedChecklistTree || null,
         riskConfig: data.riskConfig || p.details?.riskConfig || null,
+        references: data.references || p.details?.references || '',
       }
     } : p));
     try {
@@ -1347,6 +1349,24 @@ export default function ProjectManagement() {
               <div>
                 <div className="text-sm text-gray-500">Scope Notes</div>
                 <div className="text-sm whitespace-pre-wrap">{selectedProject.details?.scopeNotes || '-'}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Link References</div>
+                {(() => {
+                  const raw = (selectedProject as any).details?.references || '';
+                  const parts = String(raw).split(/\n|,|;|\s+/).map(s => s.trim()).filter(Boolean);
+                  if (!parts.length) return <div className="text-sm">-</div>;
+                  return (
+                    <div className="mt-1 space-y-1">
+                      {parts.map((href, idx) => (
+                        <div key={`ref-${idx}`}>
+                          <a href={href} target="_blank" rel="noreferrer noopener" className="text-blue-600 hover:underline break-all">{href}</a>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : null}
