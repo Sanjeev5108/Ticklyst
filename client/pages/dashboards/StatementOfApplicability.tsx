@@ -438,14 +438,19 @@ export default function StatementOfApplicability() {
   };
 
   const resetSelectionsToFilter = () => {
-    setDetails(prev => {
-      const updated = { ...prev } as Record<string, NodeDetails>;
-      Object.keys(updated).forEach(key => {
-        if (!updated[key].industry) updated[key].industry = selectedIndustry;
-        if (!updated[key].client) updated[key].client = selectedClientId;
+    if (tab === 'industry') {
+      setDetailsIndustry(prev => {
+        const cur = { ...(prev[selectedIndustry] || {}) } as Record<string, NodeDetails>;
+        Object.keys(cur).forEach(k => { if (!cur[k].industry) cur[k].industry = selectedIndustry; });
+        return { ...prev, [selectedIndustry]: cur };
       });
-      return updated;
-    });
+    } else {
+      setDetailsClient(prev => {
+        const cur = { ...(prev[selectedClientId] || {}) } as Record<string, NodeDetails>;
+        Object.keys(cur).forEach(k => { if (!cur[k].client) cur[k].client = selectedClientId; });
+        return { ...prev, [selectedClientId]: cur };
+      });
+    }
   };
 
   return (
