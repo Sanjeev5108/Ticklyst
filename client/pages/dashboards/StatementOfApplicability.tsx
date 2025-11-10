@@ -190,6 +190,7 @@ export default function StatementOfApplicability() {
       if (!selectedClient) return;
       const ind = selectedClient.industry;
       try {
+        // Load industry mapping for client's industry
         const res = await fetch(`/api/settings/${encodeURIComponent('soa:industry:' + ind)}`);
         const saved = res.ok ? await res.json() : LS.get(`soa:industry:${ind}`);
         if (!saved || !Array.isArray(saved.processes) || !saved.processes.length) {
@@ -200,16 +201,45 @@ export default function StatementOfApplicability() {
         setClientNeedsIndustryMapping(null);
         setIndustryProcessMap(prev => ({ ...prev, [ind]: saved.processes }));
         setSelectedProcessesClient(saved.processes);
-        // apply industry applicability to this client as initial
+
+        // Load client-specific mapping if available
+        let savedClient: any = null;
+        try {
+          const rc = await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`);
+          if (rc.ok) savedClient = await rc.json(); else savedClient = LS.get(`soa:client:${selectedClientId}`);
+        } catch {
+          savedClient = LS.get(`soa:client:${selectedClientId}`);
+        }
+
+        if (savedClient && typeof savedClient === 'object') {
+          if (Array.isArray(savedClient.processes) && savedClient.processes.length) setSelectedProcessesClient(savedClient.processes);
+          if (savedClient.nodeApplicability && typeof savedClient.nodeApplicability === 'object') {
+            const appMapClient: Record<string, boolean | null> = savedClient.nodeApplicability;
+            setDetailsClient(prev => {
+              const current = prev[selectedClientId] || {};
+              const next: Record<string, NodeDetails> = { ...current };
+              for (const [id, val] of Object.entries(appMapClient)) {
+                const existing = next[id] || { description: '', industry: ind, client: selectedClientId, itemId: '', applicable: null };
+                next[id] = { ...existing, client: selectedClientId, industry: ind, applicable: val };
+              }
+              return { ...prev, [selectedClientId]: next };
+            });
+            setClientSelections(new Set(Object.keys(appMapClient).filter(id => appMapClient[id] === true)));
+            return;
+          }
+        }
+
+        // Seed client's details from industry defaults if no client mapping exists yet
         if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
           const appMap: Record<string, boolean | null> = saved.nodeApplicability;
-          setDetails(prev => {
-            const copy = { ...prev } as Record<string, NodeDetails>;
+          setDetailsClient(prev => {
+            const current = prev[selectedClientId] || {};
+            const next: Record<string, NodeDetails> = { ...current };
             for (const [id, val] of Object.entries(appMap)) {
-              const existing = copy[id] || { description: '', industry: ind, client: selectedClientId, itemId: '', applicable: null };
-              copy[id] = { ...existing, client: selectedClientId, industry: ind, applicable: val };
+              const existing = next[id] || { description: '', industry: ind, client: selectedClientId, itemId: '', applicable: null };
+              next[id] = { ...existing, client: selectedClientId, industry: ind, applicable: val };
             }
-            return copy;
+            return { ...prev, [selectedClientId]: next };
           });
           setClientSelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
         } else {
