@@ -102,6 +102,8 @@ export const updateFrameworkNode: RequestHandler = async (req, res) => {
     res.json({ ok: true });
   } catch (e: any) {
     console.error(e);
+    if (e && e.code === "23505")
+      return res.status(409).json({ error: "process_name_exists" });
     res.status(500).json({ error: e.message || "db_error" });
   }
 };
