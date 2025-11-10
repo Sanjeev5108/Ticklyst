@@ -1108,6 +1108,12 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   const handleSubmit = () => {
+    if (!formData.endDate || (new Date(formData.endDate).setHours(0,0,0,0) < todayStart.getTime())) {
+      setEndDateError('Project end date cannot be earlier than today.');
+      setCurrentStep(2);
+      return;
+    }
+    setEndDateError(null);
     if (mode === 'edit' && onProjectEdit) onProjectEdit(formData); else if (onProjectCreate) onProjectCreate(formData);
     onOpenChange(false);
     setCurrentStep(1);
