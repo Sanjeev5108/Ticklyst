@@ -1277,6 +1277,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
               <div>
                 <Label className="mb-2 block">To</Label>
+                {endDateError && <div className="text-xs text-red-600 mb-1">{endDateError}</div>}
                 <div className="flex items-center gap-2 mb-2">
                   <Select value={String(endViewMonth.getMonth())} onValueChange={(m) => { const mi = Number(m); const updated = new Date(endViewMonth.getFullYear(), mi, 1); setEndViewMonth(updated); }}>
                     <SelectTrigger className="w-28">
@@ -1305,7 +1306,18 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
                   hideCaption
                   month={endViewMonth}
                   selected={formData.endDate}
-                  onSelect={(date) => { updateFormData('endDate', date); if (date) setEndViewMonth(new Date(date)); }}
+                  disabled={{ before: todayStart }}
+                  onSelect={(date) => {
+                    if (date) {
+                      const d = new Date(date); d.setHours(0,0,0,0);
+                      if (d.getTime() < todayStart.getTime()) { setEndDateError('Project end date cannot be earlier than today.'); return; }
+                      setEndDateError(null);
+                      updateFormData('endDate', date);
+                      setEndViewMonth(new Date(date));
+                    } else {
+                      updateFormData('endDate', date);
+                    }
+                  }}
                 />
               </div>
             </div>
