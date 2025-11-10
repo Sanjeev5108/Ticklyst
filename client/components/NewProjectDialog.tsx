@@ -1103,6 +1103,7 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   const handlePrevious = () => {
+    setEndDateError(null);
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
