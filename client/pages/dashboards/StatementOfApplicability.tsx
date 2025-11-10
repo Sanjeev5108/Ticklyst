@@ -683,10 +683,9 @@ export default function StatementOfApplicability() {
                   <Button disabled={!selectedClient} onClick={async () => {
                     try {
                       const nodeApplicability: Record<string, boolean | null> = {};
-                      for (const [id, det] of Object.entries(details)) {
-                        if (det.client === selectedClientId && det.applicable !== undefined && det.applicable !== null) {
-                          nodeApplicability[id] = det.applicable;
-                        }
+                      const mapCli = detailsClient[selectedClientId] || {};
+                      for (const [id, det] of Object.entries(mapCli)) {
+                        if (det.applicable !== undefined && det.applicable !== null) nodeApplicability[id] = det.applicable;
                       }
                       const payloadClient = { clientId: selectedClientId, industry: selectedClient?.industry || '', processes: selectedProcessesClient, nodeApplicability, updatedAt: new Date().toISOString() };
                       try { await fetch(`/api/settings/${encodeURIComponent('soa:client:' + selectedClientId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadClient) }); } catch {}
