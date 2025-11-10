@@ -164,13 +164,14 @@ export default function StatementOfApplicability() {
           if (Array.isArray(saved.processes)) setSelectedProcessesIndustry(saved.processes);
           if (saved.nodeApplicability && typeof saved.nodeApplicability === 'object') {
             const appMap: Record<string, boolean | null> = saved.nodeApplicability;
-            setDetails(prev => {
-              const copy = { ...prev } as Record<string, NodeDetails>;
+            setDetailsIndustry(prev => {
+              const current = prev[selectedIndustry] || {};
+              const next: Record<string, NodeDetails> = { ...current };
               for (const [id, val] of Object.entries(appMap)) {
-                const existing = copy[id] || { description: '', industry: selectedIndustry, client: selectedClientId, itemId: '', applicable: null };
-                copy[id] = { ...existing, applicable: val };
+                const existing = next[id] || { description: '', industry: selectedIndustry, client: '', itemId: '', applicable: null };
+                next[id] = { ...existing, industry: selectedIndustry, applicable: val };
               }
-              return copy;
+              return { ...prev, [selectedIndustry]: next };
             });
             setIndustrySelections(new Set(Object.keys(appMap).filter(id => appMap[id] === true)));
           }
@@ -182,7 +183,7 @@ export default function StatementOfApplicability() {
         }
       }
     })();
-  }, [selectedIndustry, selectedClientId]);
+  }, [selectedIndustry]);
 
   useEffect(() => {
     (async () => {
