@@ -20,6 +20,7 @@ async function ensure() {
     );
     CREATE INDEX IF NOT EXISTS idx_framework_parent ON framework_nodes(parent_id);
     CREATE INDEX IF NOT EXISTS idx_framework_type ON framework_nodes(type);
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_process_name_ci ON framework_nodes ((lower(name))) WHERE type='process' AND parent_id IS NULL;
   `);
 }
 ensure().catch((e) => console.error("ensure framework_nodes failed", e));

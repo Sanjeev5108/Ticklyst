@@ -631,11 +631,25 @@ export default function FrameworkDashboard() {
     const name = type === 'process' ? 'New Process' : type === 'subprocess' ? 'New Subprocess' : type === 'activity' ? 'New Activity' : type === 'risk' ? 'New Risk' : 'New Control';
     const node: FrameworkNode = { id, type, name, parentId: parent?.id, isExpanded: true };
     const details = createDefaultDetails(node);
+
+    // Prevent duplicate process names (case-insensitive)
+    if (type === 'process') {
+      const exists = nodes.some(n => n.type === 'process' && n.name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (exists) {
+        toast({ title: 'A process with this name already exists. Please use a different name.' });
+        return;
+      }
+    }
+
     try {
       const res = await fetch('/api/framework/nodes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type, name, parentId: parent?.id || null, details })
       });
+      if (res.status === 409) {
+        toast({ title: 'A process with this name already exists. Please use a different name.' });
+        return;
+      }
       if (!res.ok) throw new Error('create_failed');
       setNodes(prev => [...prev, node].sort((a,b)=>compareHier(a.id,b.id)));
       setDetailsById(prev => ({ ...prev, [id]: details }));
@@ -644,7 +658,7 @@ export default function FrameworkDashboard() {
       if (type === 'process') setSelectedProcessId(id);
       toast({ title: `${type.charAt(0).toUpperCase()+type.slice(1)} added` });
     } catch (e) {
-      toast({ title: 'Failed to add', description: (e as any)?.message || '' });
+      toast({ title: 'Failed to add' });
     }
   };
 
@@ -1541,10 +1555,23 @@ export default function FrameworkDashboard() {
                   else if (node.type === 'risk') name = d.risk_name;
                   else if (node.type === 'control') name = d.control_description;
                   try {
+                    // Client-side duplicate check for process rename
+                    if (node.type === 'process') {
+                      const exists = nodes.some(n => n.type === 'process' && n.id !== selectedNodeId && n.name.trim().toLowerCase() === String(name || '').trim().toLowerCase());
+                      if (exists) {
+                        toast({ title: 'A process with this name already exists. Please use a different name.' });
+                        return;
+                      }
+                    }
+
                     const res = await fetch(`/api/framework/nodes/${selectedNodeId}`, {
                       method: 'PUT', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ name, details: d })
                     });
+                    if (res.status === 409) {
+                      toast({ title: 'A process with this name already exists. Please use a different name.' });
+                      return;
+                    }
                     if (!res.ok) throw new Error('update_failed');
                     setNodes(prev => prev.map(n => n.id === selectedNodeId ? { ...n, name } : n));
                     setIsDetailsOpen(false);
