@@ -724,7 +724,7 @@ export default function StatementOfApplicability() {
                 {renderNodes.map((node) => {
                   const level = getLevel(node);
                   const hasChildren = tree.some(n => n.parentId === node.id);
-                  const nd = details[node.id];
+                  const nd = activeDetails[node.id];
                   return (
                     <div key={node.id} className={`flex items-center py-2 px-1 ${selectedNodeId === node.id ? 'bg-blue-50' : ''}`}>
                       <div className="flex items-center w-full" style={{ paddingLeft: `${level * 16 + (node.type === 'control' ? 8 : 0)}px` }}>
