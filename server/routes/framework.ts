@@ -444,7 +444,7 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
       childrenByParent.set(n.parent_id || "", arr);
     }
     const existingProcessKeys = new Set(
-      Array.from(byKey.keys()).filter((k) => k.startsWith("process|"))
+      Array.from(byKey.keys()).filter((k) => k.startsWith("process|")),
     );
 
     const nextProcessId = (): string => {
@@ -683,7 +683,7 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         if (!curProc) continue;
         const proc = curProc;
         if (processDesc || procDeps.length) {
-          const procKey = `process||${(processName || proc.name || '').toLowerCase()}`;
+          const procKey = `process||${(processName || proc.name || "").toLowerCase()}`;
           const isExistingInDb = existingProcessKeys.has(procKey);
           if (!isExistingInDb) {
             const bad = procDeps.filter((d) => d && !DEPARTMENTS.includes(d));

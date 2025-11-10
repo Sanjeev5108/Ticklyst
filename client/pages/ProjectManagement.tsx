@@ -1,25 +1,53 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import NewProjectDialog from '@/components/NewProjectDialog';
-import { FieldworkStore } from '@/contexts/FieldworkStore';
-import { FieldworkRecord } from '@shared/fieldwork';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import * as XLSX from 'xlsx';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Columns2, Rows3, Download } from 'lucide-react';
-import { computeRiskScore, computeResidual, resolveLevel } from '@shared/risk';
-import { Checkbox } from '@/components/ui/checkbox';
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import NewProjectDialog from "@/components/NewProjectDialog";
+import { FieldworkStore } from "@/contexts/FieldworkStore";
+import { FieldworkRecord } from "@shared/fieldwork";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import * as XLSX from "xlsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Columns2, Rows3, Download } from "lucide-react";
+import { computeRiskScore, computeResidual, resolveLevel } from "@shared/risk";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus,
   Search,
@@ -31,9 +59,9 @@ import {
   Filter,
   Grid3x3,
   List,
-  MoreHorizontal
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+  MoreHorizontal,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProjectDetails {
   division: string;
@@ -55,7 +83,7 @@ interface Project {
   projectCode: string;
   title: string;
   client: string;
-  status: 'todo' | 'in-progress' | 'hold';
+  status: "todo" | "in-progress" | "hold";
   progress: number;
   totalTasks: number;
   completedTasks: number;
@@ -68,191 +96,199 @@ interface Project {
     initials: string;
   }>;
   category: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
   details?: ProjectDetails;
 }
 
 const mockProjects: Project[] = [
   {
-    id: '1',
-    projectCode: '2024-2025 001',
-    title: 'SQ/25-26/0135 - Customisation T...',
-    client: 'Pharma Care Limited',
-    status: 'todo',
+    id: "1",
+    projectCode: "2024-2025 001",
+    title: "SQ/25-26/0135 - Customisation T...",
+    client: "Pharma Care Limited",
+    status: "todo",
     progress: 0,
     totalTasks: 8,
     completedTasks: 0,
-    startDate: '2024-01-15',
-    endDate: '2024-03-15',
+    startDate: "2024-01-15",
+    endDate: "2024-03-15",
     teamMembers: [
-      { id: '1', name: 'John Doe', initials: 'JD' },
-      { id: '2', name: 'Jane Smith', initials: 'JS' }
+      { id: "1", name: "John Doe", initials: "JD" },
+      { id: "2", name: "Jane Smith", initials: "JS" },
     ],
-    category: 'Customisation',
-    priority: 'medium'
+    category: "Customisation",
+    priority: "medium",
   },
   {
-    id: '2',
-    projectCode: '2024-2025 002',
-    title: 'SQ/25-26/0150 - Customisation T...',
-    client: 'MORGANS FOODS PRIVATE LIMITED',
-    status: 'todo',
+    id: "2",
+    projectCode: "2024-2025 002",
+    title: "SQ/25-26/0150 - Customisation T...",
+    client: "MORGANS FOODS PRIVATE LIMITED",
+    status: "todo",
     progress: 0,
     totalTasks: 1,
     completedTasks: 0,
-    startDate: '2024-01-20',
-    endDate: '2024-04-20',
-    teamMembers: [
-      { id: '3', name: 'Mike Wilson', initials: 'MW' }
-    ],
-    category: 'Customisation',
-    priority: 'low'
+    startDate: "2024-01-20",
+    endDate: "2024-04-20",
+    teamMembers: [{ id: "3", name: "Mike Wilson", initials: "MW" }],
+    category: "Customisation",
+    priority: "low",
   },
   {
-    id: '3',
-    projectCode: '2024-2025 003',
-    title: 'CA Articles Training',
-    client: 'Internal Training',
-    status: 'todo',
+    id: "3",
+    projectCode: "2024-2025 003",
+    title: "CA Articles Training",
+    client: "Internal Training",
+    status: "todo",
     progress: 0,
     totalTasks: 1,
     completedTasks: 0,
-    startDate: '2024-02-01',
-    endDate: '2024-02-28',
-    teamMembers: [
-      { id: '4', name: 'Emily Davis', initials: 'ED' }
-    ],
-    category: 'Training',
-    priority: 'high'
+    startDate: "2024-02-01",
+    endDate: "2024-02-28",
+    teamMembers: [{ id: "4", name: "Emily Davis", initials: "ED" }],
+    category: "Training",
+    priority: "high",
   },
   {
-    id: '4',
-    projectCode: '2024-2025 004',
-    title: 'Reshmi - Customisation',
-    client: 'Reshmi Industries (India) Private Limited',
-    status: 'in-progress',
+    id: "4",
+    projectCode: "2024-2025 004",
+    title: "Reshmi - Customisation",
+    client: "Reshmi Industries (India) Private Limited",
+    status: "in-progress",
     progress: 65,
     totalTasks: 23,
     completedTasks: 15,
-    startDate: '2024-01-01',
-    endDate: '2024-05-23',
+    startDate: "2024-01-01",
+    endDate: "2024-05-23",
     teamMembers: [
-      { id: '5', name: 'Alex Johnson', initials: 'AJ' },
-      { id: '6', name: 'Sarah Brown', initials: 'SB' }
+      { id: "5", name: "Alex Johnson", initials: "AJ" },
+      { id: "6", name: "Sarah Brown", initials: "SB" },
     ],
-    category: 'Customisation',
-    priority: 'high'
+    category: "Customisation",
+    priority: "high",
   },
   {
-    id: '5',
-    projectCode: '2024-2025 005',
-    title: 'Artika VII - Customisation',
-    client: 'ARTIKA COTTON MILLS',
-    status: 'in-progress',
+    id: "5",
+    projectCode: "2024-2025 005",
+    title: "Artika VII - Customisation",
+    client: "ARTIKA COTTON MILLS",
+    status: "in-progress",
     progress: 45,
     totalTasks: 18,
     completedTasks: 8,
-    startDate: '2024-01-10',
-    endDate: '2024-04-25',
-    teamMembers: [
-      { id: '7', name: 'David Lee', initials: 'DL' }
-    ],
-    category: 'Customisation',
-    priority: 'medium'
+    startDate: "2024-01-10",
+    endDate: "2024-04-25",
+    teamMembers: [{ id: "7", name: "David Lee", initials: "DL" }],
+    category: "Customisation",
+    priority: "medium",
   },
   {
-    id: '6',
-    projectCode: '2024-2025 006',
-    title: 'SQ/25-26/0086 - Prashanthi Cust...',
-    client: 'WESTRADE FUTURE PRIVATE LIMITED',
-    status: 'in-progress',
+    id: "6",
+    projectCode: "2024-2025 006",
+    title: "SQ/25-26/0086 - Prashanthi Cust...",
+    client: "WESTRADE FUTURE PRIVATE LIMITED",
+    status: "in-progress",
     progress: 80,
     totalTasks: 12,
     completedTasks: 10,
-    startDate: '2024-01-05',
-    endDate: '2024-03-30',
+    startDate: "2024-01-05",
+    endDate: "2024-03-30",
     teamMembers: [
-      { id: '8', name: 'Lisa Wang', initials: 'LW' },
-      { id: '9', name: 'Tom Chen', initials: 'TC' }
+      { id: "8", name: "Lisa Wang", initials: "LW" },
+      { id: "9", name: "Tom Chen", initials: "TC" },
     ],
-    category: 'Customisation',
-    priority: 'high'
+    category: "Customisation",
+    priority: "high",
   },
   {
-    id: '7',
-    projectCode: '2024-2025 007',
-    title: 'SQ/25-26/0168 - RMCL CCA June...',
-    client: 'Roots Multiclean Ltd',
-    status: 'hold',
+    id: "7",
+    projectCode: "2024-2025 007",
+    title: "SQ/25-26/0168 - RMCL CCA June...",
+    client: "Roots Multiclean Ltd",
+    status: "hold",
     progress: 25,
     totalTasks: 7,
     completedTasks: 2,
-    startDate: '2024-02-05',
-    endDate: '2024-06-30',
-    teamMembers: [
-      { id: '10', name: 'Kevin Park', initials: 'KP' }
-    ],
-    category: 'Audit & Assurance',
-    priority: 'medium'
+    startDate: "2024-02-05",
+    endDate: "2024-06-30",
+    teamMembers: [{ id: "10", name: "Kevin Park", initials: "KP" }],
+    category: "Audit & Assurance",
+    priority: "medium",
   },
   {
-    id: '8',
-    projectCode: '2024-2025 008',
-    title: 'KSS Event ABC',
-    client: 'Astral Business Consulting LLP',
-    status: 'hold',
+    id: "8",
+    projectCode: "2024-2025 008",
+    title: "KSS Event ABC",
+    client: "Astral Business Consulting LLP",
+    status: "hold",
     progress: 15,
     totalTasks: 1,
     completedTasks: 0,
-    startDate: '2024-01-25',
-    endDate: '2024-04-15',
-    teamMembers: [
-      { id: '11', name: 'Amy Taylor', initials: 'AT' }
-    ],
-    category: 'Event Management',
-    priority: 'low'
+    startDate: "2024-01-25",
+    endDate: "2024-04-15",
+    teamMembers: [{ id: "11", name: "Amy Taylor", initials: "AT" }],
+    category: "Event Management",
+    priority: "low",
   },
   {
-    id: '9',
-    projectCode: '2024-2025 009',
-    title: 'SQ/25-26/0059 - MMD IA April 2...',
-    client: 'Milky Mist Dairy Food Ltd',
-    status: 'hold',
+    id: "9",
+    projectCode: "2024-2025 009",
+    title: "SQ/25-26/0059 - MMD IA April 2...",
+    client: "Milky Mist Dairy Food Ltd",
+    status: "hold",
     progress: 40,
     totalTasks: 1,
     completedTasks: 0,
-    startDate: '2024-02-10',
-    endDate: '2024-05-15',
+    startDate: "2024-02-10",
+    endDate: "2024-05-15",
     teamMembers: [
-      { id: '12', name: 'Chris Martin', initials: 'CM' },
-      { id: '13', name: 'Priya Patel', initials: 'PP' }
+      { id: "12", name: "Chris Martin", initials: "CM" },
+      { id: "13", name: "Priya Patel", initials: "PP" },
     ],
-    category: 'Internal Audit',
-    priority: 'high'
-  }
+    category: "Internal Audit",
+    priority: "high",
+  },
 ];
 
 const getCategoryColor = (category: string) => {
   const colors = {
-    'Customisation': 'bg-green-100 text-green-800',
-    'Audit & Assurance': 'bg-blue-100 text-blue-800',
-    'Training': 'bg-purple-100 text-purple-800',
-    'Event Management': 'bg-orange-100 text-orange-800',
-    'Internal Audit': 'bg-red-100 text-red-800'
+    Customisation: "bg-green-100 text-green-800",
+    "Audit & Assurance": "bg-blue-100 text-blue-800",
+    Training: "bg-purple-100 text-purple-800",
+    "Event Management": "bg-orange-100 text-orange-800",
+    "Internal Audit": "bg-red-100 text-red-800",
   };
-  return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800";
 };
 
-const MultiSelect = ({ options, value, onChange, placeholder }: { options: string[]; value: string[]; onChange: (v:string[])=>void; placeholder?: string }) => {
+const MultiSelect = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: string[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) => {
   const [open, setOpen] = React.useState(false);
-  const display = value && value.length ? (value.length<=2 ? value.join(', ') : `${value.slice(0,2).join(', ')} (+${value.length-2})`) : (placeholder || 'Select');
+  const display =
+    value && value.length
+      ? value.length <= 2
+        ? value.join(", ")
+        : `${value.slice(0, 2).join(", ")} (+${value.length - 2})`
+      : placeholder || "Select";
   const toggle = (opt: string) => {
     let next = Array.isArray(value) ? [...value] : [];
     const has = next.includes(opt);
-    if (has) next = next.filter(x=>x!==opt); else next.push(opt);
+    if (has) next = next.filter((x) => x !== opt);
+    else next.push(opt);
     onChange(next);
   };
-  const stop = (e:any) => { e.stopPropagation(); };
+  const stop = (e: any) => {
+    e.stopPropagation();
+  };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -267,17 +303,29 @@ const MultiSelect = ({ options, value, onChange, placeholder }: { options: strin
           <CommandEmpty>No results.</CommandEmpty>
           <CommandList className="max-h-60 overflow-y-auto">
             <CommandGroup>
-              {options.map(opt => (
+              {options.map((opt) => (
                 <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
-                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                  <Checkbox
+                    className="mr-2"
+                    checked={value?.includes(opt)}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    onClick={stop}
+                    onCheckedChange={() => toggle(opt)}
+                  />{" "}
+                  {opt}
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
         <div className="border-t p-2 flex justify-between">
-          <Button size="sm" variant="ghost" onClick={()=>onChange([])}>Clear</Button>
-          <Button size="sm" onClick={()=>onChange([...options])}>Select All</Button>
+          <Button size="sm" variant="ghost" onClick={() => onChange([])}>
+            Clear
+          </Button>
+          <Button size="sm" onClick={() => onChange([...options])}>
+            Select All
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -287,269 +335,453 @@ const MultiSelect = ({ options, value, onChange, placeholder }: { options: strin
 export default function ProjectManagement() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>({});
+  const [fwRecords, setFwRecords] = useState<Record<string, FieldworkRecord>>(
+    {},
+  );
 
   // Export toolbar state
-  const [filterProject, setFilterProject] = useState<string>('all');
-  const [groupBy, setGroupBy] = useState<string>('none');
+  const [filterProject, setFilterProject] = useState<string>("all");
+  const [groupBy, setGroupBy] = useState<string>("none");
 
   // Advanced filters
   const [filterProjectNo, setFilterProjectNo] = useState<string[]>([]);
   const [filterClient, setFilterClient] = useState<string[]>([]);
   const [filterDivision, setFilterDivision] = useState<string[]>([]);
-  const [filterAssignmentType, setFilterAssignmentType] = useState<string[]>([]);
+  const [filterAssignmentType, setFilterAssignmentType] = useState<string[]>(
+    [],
+  );
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterPartner, setFilterPartner] = useState<string[]>([]);
   const [filterDivisionHead, setFilterDivisionHead] = useState<string[]>([]);
   const [filterTeamLeader, setFilterTeamLeader] = useState<string[]>([]);
   const [filterMember, setFilterMember] = useState<string[]>([]);
   const [filterProcess, setFilterProcess] = useState<string[]>([]);
-  const [filterStartFrom, setFilterStartFrom] = useState<string>('');
-  const [filterStartTo, setFilterStartTo] = useState<string>('');
+  const [filterStartFrom, setFilterStartFrom] = useState<string>("");
+  const [filterStartTo, setFilterStartTo] = useState<string>("");
   const [filterCompletionMin, setFilterCompletionMin] = useState<number>(0);
 
-  const uniq = (arr: (string|undefined|null)[]) => Array.from(new Set(arr.filter(Boolean) as string[])).sort((a,b)=>a.localeCompare(b));
-  const projectNos = React.useMemo(()=>uniq(projects.map(p=>p.projectCode)),[projects]);
-  const clients = React.useMemo(()=>uniq(projects.map(p=>p.client)),[projects]);
-  const divisions = React.useMemo(()=>uniq(projects.map(p=>p.details?.division)),[projects]);
-  const assignmentTypes = React.useMemo(()=>uniq(projects.map(p=>p.details?.auditType || p.category)),[projects]);
-  const partners = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.partners||[])),[projects]);
-  const divisionHeads = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.divisionHeads||[])),[projects]);
-  const teamLeaders = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamLeaders||[])),[projects]);
-  const members = React.useMemo(()=>uniq(projects.flatMap(p=>p.details?.teamMembers||[])),[projects]);
-  const statuses = React.useMemo(()=>uniq(projects.map(p=>String(p.status))),[projects]);
-  const processes = React.useMemo(()=>{
+  const uniq = (arr: (string | undefined | null)[]) =>
+    Array.from(new Set(arr.filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  const projectNos = React.useMemo(
+    () => uniq(projects.map((p) => p.projectCode)),
+    [projects],
+  );
+  const clients = React.useMemo(
+    () => uniq(projects.map((p) => p.client)),
+    [projects],
+  );
+  const divisions = React.useMemo(
+    () => uniq(projects.map((p) => p.details?.division)),
+    [projects],
+  );
+  const assignmentTypes = React.useMemo(
+    () => uniq(projects.map((p) => p.details?.auditType || p.category)),
+    [projects],
+  );
+  const partners = React.useMemo(
+    () => uniq(projects.flatMap((p) => p.details?.partners || [])),
+    [projects],
+  );
+  const divisionHeads = React.useMemo(
+    () => uniq(projects.flatMap((p) => p.details?.divisionHeads || [])),
+    [projects],
+  );
+  const teamLeaders = React.useMemo(
+    () => uniq(projects.flatMap((p) => p.details?.teamLeaders || [])),
+    [projects],
+  );
+  const members = React.useMemo(
+    () => uniq(projects.flatMap((p) => p.details?.teamMembers || [])),
+    [projects],
+  );
+  const statuses = React.useMemo(
+    () => uniq(projects.map((p) => String(p.status))),
+    [projects],
+  );
+  const processes = React.useMemo(() => {
     const keys = new Set<string>();
     for (const p of projects) {
-      try { Object.keys((p as any).details?.selectedChecklistTree||{}).forEach(k=>keys.add(k)); } catch {}
+      try {
+        Object.keys((p as any).details?.selectedChecklistTree || {}).forEach(
+          (k) => keys.add(k),
+        );
+      } catch {}
     }
-    return Array.from(keys).sort((a,b)=>a.localeCompare(b));
-  },[projects]);
+    return Array.from(keys).sort((a, b) => a.localeCompare(b));
+  }, [projects]);
 
   const groupOptions: { key: string; label: string }[] = [
-    { key: 'none', label: 'No grouping' },
-    { key: 'Project No', label: 'Project No' },
-    { key: 'Client', label: 'Client' },
-    { key: 'Division', label: 'Division' },
-    { key: 'Assignment type', label: 'Assignment type' },
-    { key: 'Project start Date', label: 'Project start Date' },
-    { key: 'Project status', label: 'Project status' },
-    { key: 'Partner', label: 'Partner' },
-    { key: 'Division Head', label: 'Division Head' },
-    { key: 'Team Leader', label: 'Team Leader' },
-    { key: 'Member', label: 'Member' },
-    { key: 'Process', label: 'Process' },
-    { key: '% of completion', label: '% of completion' },
+    { key: "none", label: "No grouping" },
+    { key: "Project No", label: "Project No" },
+    { key: "Client", label: "Client" },
+    { key: "Division", label: "Division" },
+    { key: "Assignment type", label: "Assignment type" },
+    { key: "Project start Date", label: "Project start Date" },
+    { key: "Project status", label: "Project status" },
+    { key: "Partner", label: "Partner" },
+    { key: "Division Head", label: "Division Head" },
+    { key: "Team Leader", label: "Team Leader" },
+    { key: "Member", label: "Member" },
+    { key: "Process", label: "Process" },
+    { key: "% of completion", label: "% of completion" },
   ];
   const allFields = [
-    'Project No','Client','Division','Assignment type','Project start Date','Project status','Partner','Division Head','Team Leader','Member','Process','% of completion'
+    "Project No",
+    "Client",
+    "Division",
+    "Assignment type",
+    "Project start Date",
+    "Project status",
+    "Partner",
+    "Division Head",
+    "Team Leader",
+    "Member",
+    "Process",
+    "% of completion",
   ];
-  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
+  const [selectedFields, setSelectedFields] = useState<string[]>([
+    ...allFields,
+  ]);
 
-  const ROLE_PROJECT_SCOPE_KEY = 'roleProjectScope';
+  const ROLE_PROJECT_SCOPE_KEY = "roleProjectScope";
   const getRoleProjectScope = (role?: string) => {
     try {
       const raw = localStorage.getItem(ROLE_PROJECT_SCOPE_KEY);
       if (!raw) return undefined;
-      const map = JSON.parse(raw) as Record<string,string>;
+      const map = JSON.parse(raw) as Record<string, string>;
       return role ? map[role] : map;
-    } catch { return undefined; }
+    } catch {
+      return undefined;
+    }
   };
 
   const isUserOnProject = (project: Project) => {
     if (!user) return false;
-    const uname = user.username || '';
-    const initials = uname.split(' ').map(s=>s[0]).join('');
-    return project.teamMembers.some(tm => tm.name === uname || tm.initials === initials);
+    const uname = user.username || "";
+    const initials = uname
+      .split(" ")
+      .map((s) => s[0])
+      .join("");
+    return project.teamMembers.some(
+      (tm) => tm.name === uname || tm.initials === initials,
+    );
   };
 
-  React.useEffect(() => { const unsub = FieldworkStore.subscribe(() => setFwRecords(FieldworkStore.getAll())); setFwRecords(FieldworkStore.getAll()); return () => unsub(); }, []);
+  React.useEffect(() => {
+    const unsub = FieldworkStore.subscribe(() =>
+      setFwRecords(FieldworkStore.getAll()),
+    );
+    setFwRecords(FieldworkStore.getAll());
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/projects');
-        if (!res.ok) throw new Error('load_failed');
+        const res = await fetch("/api/projects");
+        if (!res.ok) throw new Error("load_failed");
         const rows = await res.json();
         const mapped: Project[] = rows.map((r: any) => ({
           id: r.id,
-          projectCode: r.code || r.data?.projectCode || '',
-          title: r.name || r.data?.projectName || '',
-          client: r.clientName || r.data?.clientName || '',
-          status: (r.status as any) || 'todo',
+          projectCode: r.code || r.data?.projectCode || "",
+          title: r.name || r.data?.projectName || "",
+          client: r.clientName || r.data?.clientName || "",
+          status: (r.status as any) || "todo",
           progress: 0,
           totalTasks: 1,
           completedTasks: 0,
-          startDate: r.startDate || r.data?.startDate || '',
-          endDate: r.endDate || r.data?.endDate || '',
-          teamMembers: (r.data?.divisionHeads || []).map((name: string, i: number) => ({ id: `dh-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') }))
-            .concat((r.data?.partners || []).map((name: string, i: number) => ({ id: `p-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') })))
-            .concat((r.data?.teamLeaders || []).map((name: string, i: number) => ({ id: `tl-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') })))
-            .concat((r.data?.teamMembers || []).map((name: string, i: number) => ({ id: `tm-${i}`, name, initials: name.split(' ').map((n:string)=>n[0]).join('') }))),
-          category: r.data?.auditType || 'General',
-          priority: 'medium',
+          startDate: r.startDate || r.data?.startDate || "",
+          endDate: r.endDate || r.data?.endDate || "",
+          teamMembers: (r.data?.divisionHeads || [])
+            .map((name: string, i: number) => ({
+              id: `dh-${i}`,
+              name,
+              initials: name
+                .split(" ")
+                .map((n: string) => n[0])
+                .join(""),
+            }))
+            .concat(
+              (r.data?.partners || []).map((name: string, i: number) => ({
+                id: `p-${i}`,
+                name,
+                initials: name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join(""),
+              })),
+            )
+            .concat(
+              (r.data?.teamLeaders || []).map((name: string, i: number) => ({
+                id: `tl-${i}`,
+                name,
+                initials: name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join(""),
+              })),
+            )
+            .concat(
+              (r.data?.teamMembers || []).map((name: string, i: number) => ({
+                id: `tm-${i}`,
+                name,
+                initials: name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join(""),
+              })),
+            ),
+          category: r.data?.auditType || "General",
+          priority: "medium",
           details: {
-            division: r.data?.division || '',
-            auditType: r.data?.auditType || '',
-            description: r.data?.projectDescription || '',
+            division: r.data?.division || "",
+            auditType: r.data?.auditType || "",
+            description: r.data?.projectDescription || "",
             divisionHeads: r.data?.divisionHeads || [],
             partners: r.data?.partners || [],
             teamLeaders: r.data?.teamLeaders || [],
             teamMembers: r.data?.teamMembers || [],
             auditUniverse: r.data?.auditUniverse || [],
-            scopeNotes: r.data?.scopeNotes || '',
-            reportingFrequency: r.data?.reportingFrequency || '',
+            scopeNotes: r.data?.scopeNotes || "",
+            reportingFrequency: r.data?.reportingFrequency || "",
             emailNotifications: !!r.data?.emailNotifications,
             checklistTemplate: r.data?.checklistTemplate || [],
-            customChecklistItems: r.data?.customChecklistItems || '',
+            customChecklistItems: r.data?.customChecklistItems || "",
             selectedChecklistTree: r.data?.selectedChecklistTree || null,
             riskConfig: r.data?.riskConfig || null,
-            references: r.data?.references || '',
-          }
+            references: r.data?.references || "",
+          },
         }));
         setProjects(mapped);
       } catch {}
     })();
   }, []);
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) || project.client.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.client.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
     const scope = getRoleProjectScope(user?.role);
-    if (!scope || scope === 'all') {
+    if (!scope || scope === "all") {
       // continue
-    } else if (scope === 'own') {
+    } else if (scope === "own") {
       if (!isUserOnProject(project)) return false;
     }
 
     // Apply advanced filters
-    if (filterProject !== 'all' && project.id !== filterProject) return false;
-    if (filterProjectNo.length && !filterProjectNo.includes(project.projectCode || '')) return false;
-    if (filterClient.length && !filterClient.includes(project.client || '')) return false;
-    if (filterDivision.length && !filterDivision.includes(project.details?.division || '')) return false;
-    if (filterAssignmentType.length && !filterAssignmentType.includes(project.details?.auditType || project.category || '')) return false;
-    if (filterStatus.length && !filterStatus.includes(project.status || '')) return false;
-    if (filterPartner.length && !(project.details?.partners || []).some(v => filterPartner.includes(v))) return false;
-    if (filterDivisionHead.length && !(project.details?.divisionHeads || []).some(v => filterDivisionHead.includes(v))) return false;
-    if (filterTeamLeader.length && !(project.details?.teamLeaders || []).some(v => filterTeamLeader.includes(v))) return false;
-    if (filterMember.length && !(project.details?.teamMembers || []).some(v => filterMember.includes(v))) return false;
+    if (filterProject !== "all" && project.id !== filterProject) return false;
+    if (
+      filterProjectNo.length &&
+      !filterProjectNo.includes(project.projectCode || "")
+    )
+      return false;
+    if (filterClient.length && !filterClient.includes(project.client || ""))
+      return false;
+    if (
+      filterDivision.length &&
+      !filterDivision.includes(project.details?.division || "")
+    )
+      return false;
+    if (
+      filterAssignmentType.length &&
+      !filterAssignmentType.includes(
+        project.details?.auditType || project.category || "",
+      )
+    )
+      return false;
+    if (filterStatus.length && !filterStatus.includes(project.status || ""))
+      return false;
+    if (
+      filterPartner.length &&
+      !(project.details?.partners || []).some((v) => filterPartner.includes(v))
+    )
+      return false;
+    if (
+      filterDivisionHead.length &&
+      !(project.details?.divisionHeads || []).some((v) =>
+        filterDivisionHead.includes(v),
+      )
+    )
+      return false;
+    if (
+      filterTeamLeader.length &&
+      !(project.details?.teamLeaders || []).some((v) =>
+        filterTeamLeader.includes(v),
+      )
+    )
+      return false;
+    if (
+      filterMember.length &&
+      !(project.details?.teamMembers || []).some((v) =>
+        filterMember.includes(v),
+      )
+    )
+      return false;
     if (filterProcess.length) {
       try {
         const tree = (project as any).details?.selectedChecklistTree || {};
         const keys = Object.keys(tree || {});
-        if (!keys.some(k => filterProcess.includes(k))) return false;
-      } catch { return false; }
+        if (!keys.some((k) => filterProcess.includes(k))) return false;
+      } catch {
+        return false;
+      }
     }
-    if (filterStartFrom && new Date(project.startDate) < new Date(filterStartFrom)) return false;
-    if (filterStartTo && new Date(project.startDate) > new Date(filterStartTo)) return false;
+    if (
+      filterStartFrom &&
+      new Date(project.startDate) < new Date(filterStartFrom)
+    )
+      return false;
+    if (filterStartTo && new Date(project.startDate) > new Date(filterStartTo))
+      return false;
     if (project.progress < filterCompletionMin) return false;
 
     return true;
   });
 
-  const todoProjects = filteredProjects.filter(p => p.status === 'todo');
-  const inProgressProjects = filteredProjects.filter(p => p.status === 'in-progress');
-  const holdProjects = filteredProjects.filter(p => p.status === 'hold');
-  const completedProjects = filteredProjects.filter(p => p.status === 'completed');
+  const todoProjects = filteredProjects.filter((p) => p.status === "todo");
+  const inProgressProjects = filteredProjects.filter(
+    (p) => p.status === "in-progress",
+  );
+  const holdProjects = filteredProjects.filter((p) => p.status === "hold");
+  const completedProjects = filteredProjects.filter(
+    (p) => p.status === "completed",
+  );
 
   const handleCreateProject = async (projectData: any) => {
     // Build payload and let server assign authoritative project code
     const tempId = `PRJ-${Date.now()}`;
-    const payload = { ...projectData, id: tempId, status: 'in-progress' };
+    const payload = { ...projectData, id: tempId, status: "in-progress" };
 
     let serverResp: any = null;
     try {
-      const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       serverResp = res.ok ? await res.json() : null;
     } catch {}
 
     const assignedId = serverResp?.id || tempId;
-    const assignedCode = serverResp?.code || (() => {
-      // Fallback local generation (in case API unavailable)
-      const sd = projectData.startDate ? new Date(projectData.startDate) : new Date();
-      const month = sd.getMonth();
-      const year = sd.getFullYear();
-      const fyStart = month >= 3 ? year : year - 1;
-      const fyString = `${fyStart}-${fyStart + 1}`;
-      const existingCount = projects.filter(p => p.projectCode && p.projectCode.startsWith(fyString)).length;
-      const seq = String(existingCount + 1).padStart(3, '0');
-      return `${fyString} ${seq}`;
-    })();
+    const assignedCode =
+      serverResp?.code ||
+      (() => {
+        // Fallback local generation (in case API unavailable)
+        const sd = projectData.startDate
+          ? new Date(projectData.startDate)
+          : new Date();
+        const month = sd.getMonth();
+        const year = sd.getFullYear();
+        const fyStart = month >= 3 ? year : year - 1;
+        const fyString = `${fyStart}-${fyStart + 1}`;
+        const existingCount = projects.filter(
+          (p) => p.projectCode && p.projectCode.startsWith(fyString),
+        ).length;
+        const seq = String(existingCount + 1).padStart(3, "0");
+        return `${fyString} ${seq}`;
+      })();
 
     const newProject: Project = {
       id: assignedId,
       projectCode: assignedCode,
       title: projectData.projectName,
       client: projectData.clientName,
-      status: 'in-progress',
+      status: "in-progress",
       progress: 0,
       totalTasks: 1,
       completedTasks: 0,
-      startDate: projectData.startDate ? projectData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      endDate: projectData.endDate ? projectData.endDate.toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      startDate: projectData.startDate
+        ? projectData.startDate.toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      endDate: projectData.endDate
+        ? projectData.endDate.toISOString().split("T")[0]
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
       teamMembers: [
         ...projectData.divisionHeads.map((name: string, index: number) => ({
           id: `dh-${index}`,
           name,
-          initials: name.split(' ').map(n => n[0]).join('')
+          initials: name
+            .split(" ")
+            .map((n) => n[0])
+            .join(""),
         })),
         ...projectData.partners.map((name: string, index: number) => ({
           id: `p-${index}`,
           name,
-          initials: name.split(' ').map(n => n[0]).join('')
+          initials: name
+            .split(" ")
+            .map((n) => n[0])
+            .join(""),
         })),
         ...projectData.teamLeaders.map((name: string, index: number) => ({
           id: `tl-${index}`,
           name,
-          initials: name.split(' ').map(n => n[0]).join('')
+          initials: name
+            .split(" ")
+            .map((n) => n[0])
+            .join(""),
         })),
         ...projectData.teamMembers.map((name: string, index: number) => ({
           id: `tm-${index}`,
           name,
-          initials: name.split(' ').map(n => n[0]).join('')
-        }))
+          initials: name
+            .split(" ")
+            .map((n) => n[0])
+            .join(""),
+        })),
       ],
-      category: projectData.auditType || 'General',
-      priority: 'medium',
+      category: projectData.auditType || "General",
+      priority: "medium",
       details: {
-        division: projectData.division || '',
-        auditType: projectData.auditType || '',
-        description: projectData.projectDescription || '',
+        division: projectData.division || "",
+        auditType: projectData.auditType || "",
+        description: projectData.projectDescription || "",
         divisionHeads: projectData.divisionHeads || [],
         partners: projectData.partners || [],
         teamLeaders: projectData.teamLeaders || [],
         teamMembers: projectData.teamMembers || [],
         auditUniverse: projectData.auditUniverse || [],
-        scopeNotes: projectData.scopeNotes || '',
-        reportingFrequency: projectData.reportingFrequency || '',
+        scopeNotes: projectData.scopeNotes || "",
+        reportingFrequency: projectData.reportingFrequency || "",
         emailNotifications: !!projectData.emailNotifications,
         checklistTemplate: projectData.checklistTemplate || [],
-        customChecklistItems: projectData.customChecklistItems || '',
+        customChecklistItems: projectData.customChecklistItems || "",
         selectedChecklistTree: projectData.selectedChecklistTree || null,
         riskConfig: projectData.riskConfig || null,
-        references: projectData.references || '',
-      }
+        references: projectData.references || "",
+      },
     };
 
-    setProjects(prev => [...prev, newProject]);
+    setProjects((prev) => [...prev, newProject]);
   };
 
-  const openDetails = (p: Project) => { setSelectedProject(p); setIsDetailsOpen(true); };
-  const openEdit = (p: Project) => { setSelectedProject(p); setIsEditOpen(true); };
+  const openDetails = (p: Project) => {
+    setSelectedProject(p);
+    setIsDetailsOpen(true);
+  };
+  const openEdit = (p: Project) => {
+    setSelectedProject(p);
+    setIsEditOpen(true);
+  };
 
   const mapProjectToFormData = (p: Project) => ({
     projectName: p.title,
     projectCode: p.projectCode,
     clientName: p.client,
-    division: p.details?.division || '',
-    auditType: p.details?.auditType || p.category || '',
-    projectDescription: p.details?.description || '',
+    division: p.details?.division || "",
+    auditType: p.details?.auditType || p.category || "",
+    projectDescription: p.details?.description || "",
     startDate: p.startDate ? new Date(p.startDate) : null,
     endDate: p.endDate ? new Date(p.endDate) : null,
     divisionHeads: p.details?.divisionHeads || [],
@@ -557,69 +789,90 @@ export default function ProjectManagement() {
     teamLeaders: p.details?.teamLeaders || [],
     teamMembers: p.details?.teamMembers || [],
     checklistTemplate: (p as any).details?.checklistTemplate || [],
-    customChecklistItems: (p as any).details?.customChecklistItems || '',
+    customChecklistItems: (p as any).details?.customChecklistItems || "",
     selectedChecklistTree: (p as any).details?.selectedChecklistTree || null,
     auditUniverse: p.details?.auditUniverse || [],
-    scopeNotes: p.details?.scopeNotes || '',
+    scopeNotes: p.details?.scopeNotes || "",
     documents: [],
-    references: p.details?.references || '',
+    references: p.details?.references || "",
     emailNotifications: !!p.details?.emailNotifications,
-    reportingFrequency: p.details?.reportingFrequency || '',
+    reportingFrequency: p.details?.reportingFrequency || "",
     auditCommentsModule: true,
-    workflowStatus: 'Draft',
+    workflowStatus: "Draft",
     changeLogsEnabled: true,
     riskConfig: (p as any).details?.riskConfig || null,
   });
 
   const handleEditSubmit = async (data: any) => {
     if (!selectedProject) return;
-    setProjects(prev => prev.map(p => p.id === selectedProject.id ? {
-      ...p,
-      title: data.projectName || p.title,
-      projectCode: data.projectCode || p.projectCode,
-      client: data.clientName || p.client,
-      category: data.auditType || p.category,
-      startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : p.startDate,
-      endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : p.endDate,
-      details: {
-        division: data.division || p.details?.division || '',
-        auditType: data.auditType || p.details?.auditType || '',
-        description: data.projectDescription || p.details?.description || '',
-        divisionHeads: data.divisionHeads || p.details?.divisionHeads || [],
-        partners: data.partners || p.details?.partners || [],
-        teamLeaders: data.teamLeaders || p.details?.teamLeaders || [],
-        teamMembers: data.teamMembers || p.details?.teamMembers || [],
-        auditUniverse: data.auditUniverse || p.details?.auditUniverse || [],
-        scopeNotes: data.scopeNotes || p.details?.scopeNotes || '',
-        reportingFrequency: data.reportingFrequency || p.details?.reportingFrequency || '',
-        emailNotifications: !!data.emailNotifications,
-        checklistTemplate: data.checklistTemplate || [],
-        customChecklistItems: data.customChecklistItems || '',
-        selectedChecklistTree: data.selectedChecklistTree || null,
-        riskConfig: data.riskConfig || p.details?.riskConfig || null,
-        references: data.references || p.details?.references || '',
-      }
-    } : p));
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === selectedProject.id
+          ? {
+              ...p,
+              title: data.projectName || p.title,
+              projectCode: data.projectCode || p.projectCode,
+              client: data.clientName || p.client,
+              category: data.auditType || p.category,
+              startDate: data.startDate
+                ? new Date(data.startDate).toISOString().split("T")[0]
+                : p.startDate,
+              endDate: data.endDate
+                ? new Date(data.endDate).toISOString().split("T")[0]
+                : p.endDate,
+              details: {
+                division: data.division || p.details?.division || "",
+                auditType: data.auditType || p.details?.auditType || "",
+                description:
+                  data.projectDescription || p.details?.description || "",
+                divisionHeads:
+                  data.divisionHeads || p.details?.divisionHeads || [],
+                partners: data.partners || p.details?.partners || [],
+                teamLeaders: data.teamLeaders || p.details?.teamLeaders || [],
+                teamMembers: data.teamMembers || p.details?.teamMembers || [],
+                auditUniverse:
+                  data.auditUniverse || p.details?.auditUniverse || [],
+                scopeNotes: data.scopeNotes || p.details?.scopeNotes || "",
+                reportingFrequency:
+                  data.reportingFrequency ||
+                  p.details?.reportingFrequency ||
+                  "",
+                emailNotifications: !!data.emailNotifications,
+                checklistTemplate: data.checklistTemplate || [],
+                customChecklistItems: data.customChecklistItems || "",
+                selectedChecklistTree: data.selectedChecklistTree || null,
+                riskConfig: data.riskConfig || p.details?.riskConfig || null,
+                references: data.references || p.details?.references || "",
+              },
+            }
+          : p,
+      ),
+    );
     try {
-      await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           id: selectedProject.id,
           status: selectedProject.status,
-        })
+        }),
       });
     } catch {}
     setIsEditOpen(false);
   };
 
-  const updateProjectStatus = async (proj: Project, next: 'todo'|'in-progress'|'hold'|'completed') => {
-    setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, status: next } : p));
+  const updateProjectStatus = async (
+    proj: Project,
+    next: "todo" | "in-progress" | "hold" | "completed",
+  ) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === proj.id ? { ...p, status: next } : p)),
+    );
     try {
-      await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: proj.id,
           projectCode: proj.projectCode,
@@ -628,25 +881,39 @@ export default function ProjectManagement() {
           status: next,
           startDate: proj.startDate,
           endDate: proj.endDate,
-          data: proj.details
-        })
+          data: proj.details,
+        }),
       });
     } catch {}
   };
 
   // Count total controls from project's selected checklist tree
   const countTotalControlsFromTree = (tree: any): number => {
-    if (!tree || typeof tree !== 'object') return 0;
+    if (!tree || typeof tree !== "object") return 0;
     let total = 0;
     try {
       for (const procNode of Object.values<any>(tree)) {
-        const subs = (procNode && typeof procNode === 'object' && (procNode as any).subprocesses) || {};
+        const subs =
+          (procNode &&
+            typeof procNode === "object" &&
+            (procNode as any).subprocesses) ||
+          {};
         for (const subNode of Object.values<any>(subs)) {
-          const acts = (subNode && typeof subNode === 'object' && (subNode as any).activities) || {};
+          const acts =
+            (subNode &&
+              typeof subNode === "object" &&
+              (subNode as any).activities) ||
+            {};
           for (const actNode of Object.values<any>(acts)) {
-            const risks = (actNode && typeof actNode === 'object' && (actNode as any).risks) || {};
+            const risks =
+              (actNode &&
+                typeof actNode === "object" &&
+                (actNode as any).risks) ||
+              {};
             for (const riskNode of Object.values<any>(risks)) {
-              const ctrls = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
+              const ctrls = Array.isArray((riskNode as any).controls)
+                ? (riskNode as any).controls
+                : [];
               total += ctrls.length;
             }
           }
@@ -662,23 +929,34 @@ export default function ProjectManagement() {
     const approvedMap: Record<string, Set<string>> = {};
     for (const rec of Object.values(fwRecords || {})) {
       if (!rec || !rec.projectId) continue;
-      if (rec.status === 'approved') {
-        const set = approvedMap[rec.projectId] || (approvedMap[rec.projectId] = new Set<string>());
+      if (rec.status === "approved") {
+        const set =
+          approvedMap[rec.projectId] ||
+          (approvedMap[rec.projectId] = new Set<string>());
         set.add(rec.controlId);
       }
     }
-    const next = projects.map(p => {
-      const total = countTotalControlsFromTree((p as any).details?.selectedChecklistTree);
+    const next = projects.map((p) => {
+      const total = countTotalControlsFromTree(
+        (p as any).details?.selectedChecklistTree,
+      );
       const approvedRaw = approvedMap[p.id]?.size || 0;
       const approved = Math.min(approvedRaw, total);
       const progress = total > 0 ? Math.round((approved / total) * 100) : 0;
       const totalTasks = total;
       const completedTasks = approved;
-      return progress === p.progress && totalTasks === p.totalTasks && completedTasks === p.completedTasks ? p : { ...p, progress, totalTasks, completedTasks };
+      return progress === p.progress &&
+        totalTasks === p.totalTasks &&
+        completedTasks === p.completedTasks
+        ? p
+        : { ...p, progress, totalTasks, completedTasks };
     });
     let changed = false;
-    for (let i=0;i<projects.length;i++) {
-      if (projects[i] !== next[i]) { changed = true; break; }
+    for (let i = 0; i < projects.length; i++) {
+      if (projects[i] !== next[i]) {
+        changed = true;
+        break;
+      }
     }
     if (changed) setProjects(next);
   }, [fwRecords, projects]);
@@ -691,24 +969,51 @@ export default function ProjectManagement() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div>
-                <div className="text-xs text-gray-500">{project.projectCode}</div>
-                <h4 className="font-medium text-sm text-gray-900 line-clamp-2">{project.title}</h4>
+                <div className="text-xs text-gray-500">
+                  {project.projectCode}
+                </div>
+                <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                  {project.title}
+                </h4>
                 <p className="text-xs text-gray-600 mt-1">{project.client}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => openDetails(project)}>View details</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openDetails(project)}
+              >
+                View details
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label="More">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    aria-label="More"
+                  >
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Set status</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'completed')}>Completed</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'in-progress')}>In Progress</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => updateProjectStatus(project, 'hold')}>Hold</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => updateProjectStatus(project, "completed")}
+                  >
+                    Completed
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => updateProjectStatus(project, "in-progress")}
+                  >
+                    In Progress
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => updateProjectStatus(project, "hold")}
+                  >
+                    Hold
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -730,7 +1035,9 @@ export default function ProjectManagement() {
               <span>{project.totalTasks} Controls</span>
             </div>
             <div className="flex items-center space-x-1 text-xs text-gray-600">
-              <span>{project.completedTasks}/{project.totalTasks}</span>
+              <span>
+                {project.completedTasks}/{project.totalTasks}
+              </span>
             </div>
           </div>
 
@@ -738,7 +1045,10 @@ export default function ProjectManagement() {
           <div className="flex items-center justify-between">
             <div className="flex -space-x-2">
               {project.teamMembers.slice(0, 3).map((member) => (
-                <Avatar key={member.id} className="h-6 w-6 border-2 border-white">
+                <Avatar
+                  key={member.id}
+                  className="h-6 w-6 border-2 border-white"
+                >
                   <AvatarImage src={member.avatar} />
                   <AvatarFallback className="text-xs bg-blue-100 text-blue-800">
                     {member.initials}
@@ -747,7 +1057,9 @@ export default function ProjectManagement() {
               ))}
               {project.teamMembers.length > 3 && (
                 <div className="h-6 w-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center">
-                  <span className="text-xs text-gray-600">+{project.teamMembers.length - 3}</span>
+                  <span className="text-xs text-gray-600">
+                    +{project.teamMembers.length - 3}
+                  </span>
                 </div>
               )}
             </div>
@@ -755,21 +1067,20 @@ export default function ProjectManagement() {
               {project.category}
             </Badge>
           </div>
-
         </div>
       </CardContent>
     </Card>
   );
 
-  const Column = ({ 
-    title, 
-    count, 
-    projects, 
-    icon: Icon, 
-    color 
-  }: { 
-    title: string; 
-    count: number; 
+  const Column = ({
+    title,
+    count,
+    projects,
+    icon: Icon,
+    color,
+  }: {
+    title: string;
+    count: number;
     projects: Project[];
     icon: React.ComponentType<any>;
     color: string;
@@ -785,7 +1096,7 @@ export default function ProjectManagement() {
             </Badge>
           </div>
         </div>
-        
+
         <div className="space-y-0 max-h-[calc(100vh-300px)] overflow-y-auto">
           {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
@@ -831,105 +1142,195 @@ export default function ProjectManagement() {
           {/* Filter by project */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" /> Filter
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[720px] z-[60]">
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs">Project</Label>
-                  <Select value={filterProject} onValueChange={(v:any)=>setFilterProject(v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                  <Select
+                    value={filterProject}
+                    onValueChange={(v: any) => setFilterProject(v)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
                     <SelectContent className="z-[70] max-h-64">
                       <SelectItem value="all">All</SelectItem>
-                      {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.projectCode || p.title}</SelectItem>))}
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.projectCode || p.title}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label className="text-xs">Project No</Label>
-                  <MultiSelect options={projectNos} value={filterProjectNo} onChange={setFilterProjectNo} placeholder="All" />
+                  <MultiSelect
+                    options={projectNos}
+                    value={filterProjectNo}
+                    onChange={setFilterProjectNo}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Client</Label>
-                  <MultiSelect options={clients} value={filterClient} onChange={setFilterClient} placeholder="All" />
+                  <MultiSelect
+                    options={clients}
+                    value={filterClient}
+                    onChange={setFilterClient}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Division</Label>
-                  <MultiSelect options={divisions} value={filterDivision} onChange={setFilterDivision} placeholder="All" />
+                  <MultiSelect
+                    options={divisions}
+                    value={filterDivision}
+                    onChange={setFilterDivision}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Assignment type</Label>
-                  <MultiSelect options={assignmentTypes} value={filterAssignmentType} onChange={setFilterAssignmentType} placeholder="All" />
+                  <MultiSelect
+                    options={assignmentTypes}
+                    value={filterAssignmentType}
+                    onChange={setFilterAssignmentType}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Project status</Label>
-                  <MultiSelect options={statuses} value={filterStatus} onChange={setFilterStatus} placeholder="All" />
+                  <MultiSelect
+                    options={statuses}
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Partner</Label>
-                  <MultiSelect options={partners} value={filterPartner} onChange={setFilterPartner} placeholder="All" />
+                  <MultiSelect
+                    options={partners}
+                    value={filterPartner}
+                    onChange={setFilterPartner}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Division Head</Label>
-                  <MultiSelect options={divisionHeads} value={filterDivisionHead} onChange={setFilterDivisionHead} placeholder="All" />
+                  <MultiSelect
+                    options={divisionHeads}
+                    value={filterDivisionHead}
+                    onChange={setFilterDivisionHead}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Team Leader</Label>
-                  <MultiSelect options={teamLeaders} value={filterTeamLeader} onChange={setFilterTeamLeader} placeholder="All" />
+                  <MultiSelect
+                    options={teamLeaders}
+                    value={filterTeamLeader}
+                    onChange={setFilterTeamLeader}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Member</Label>
-                  <MultiSelect options={members} value={filterMember} onChange={setFilterMember} placeholder="All" />
+                  <MultiSelect
+                    options={members}
+                    value={filterMember}
+                    onChange={setFilterMember}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Process</Label>
-                  <MultiSelect options={processes} value={filterProcess} onChange={setFilterProcess} placeholder="All" />
+                  <MultiSelect
+                    options={processes}
+                    value={filterProcess}
+                    onChange={setFilterProcess}
+                    placeholder="All"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-xs">Project start (from)</Label>
-                  <Input type="date" value={filterStartFrom} onChange={(e)=>setFilterStartFrom(e.target.value)} className="mt-1" />
+                  <Input
+                    type="date"
+                    value={filterStartFrom}
+                    onChange={(e) => setFilterStartFrom(e.target.value)}
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Project start (to)</Label>
-                  <Input type="date" value={filterStartTo} onChange={(e)=>setFilterStartTo(e.target.value)} className="mt-1" />
+                  <Input
+                    type="date"
+                    value={filterStartTo}
+                    onChange={(e) => setFilterStartTo(e.target.value)}
+                    className="mt-1"
+                  />
                 </div>
-
 
                 <div className="col-span-3">
                   <Label className="text-xs">% of completion (min)</Label>
                   <div className="px-1 py-2">
-                    <Slider value={[filterCompletionMin]} min={0} max={100} step={1} onValueChange={(v:any)=> setFilterCompletionMin(Array.isArray(v)?Number(v[0]||0):Number(v||0))} />
+                    <Slider
+                      value={[filterCompletionMin]}
+                      min={0}
+                      max={100}
+                      step={1}
+                      onValueChange={(v: any) =>
+                        setFilterCompletionMin(
+                          Array.isArray(v) ? Number(v[0] || 0) : Number(v || 0),
+                        )
+                      }
+                    />
                   </div>
                 </div>
 
                 <div className="col-span-3 flex justify-between pt-1">
-                  <Button size="sm" variant="outline" onClick={()=>{
-                    setFilterProject('all');
-                    setFilterProjectNo([]);
-                    setFilterClient([]);
-                    setFilterDivision([]);
-                    setFilterAssignmentType([]);
-                    setFilterStatus([]);
-                    setFilterPartner([]);
-                    setFilterDivisionHead([]);
-                    setFilterTeamLeader([]);
-                    setFilterMember([]);
-                    setFilterProcess([]);
-                    setFilterStartFrom('');
-                    setFilterStartTo('');
-                    setFilterCompletionMin(0);
-                  }}>Reset</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setFilterProject("all");
+                      setFilterProjectNo([]);
+                      setFilterClient([]);
+                      setFilterDivision([]);
+                      setFilterAssignmentType([]);
+                      setFilterStatus([]);
+                      setFilterPartner([]);
+                      setFilterDivisionHead([]);
+                      setFilterTeamLeader([]);
+                      setFilterMember([]);
+                      setFilterProcess([]);
+                      setFilterStartFrom("");
+                      setFilterStartTo("");
+                      setFilterCompletionMin(0);
+                    }}
+                  >
+                    Reset
+                  </Button>
                 </div>
               </div>
             </PopoverContent>
@@ -938,12 +1339,24 @@ export default function ProjectManagement() {
           {/* Group */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Rows3 className="h-4 w-4" /> Group
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64">
               <div className="grid gap-2">
-                {groupOptions.map(opt => (
-                  <Button key={opt.key} variant={groupBy===opt.key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setGroupBy(opt.key)}>
+                {groupOptions.map((opt) => (
+                  <Button
+                    key={opt.key}
+                    variant={groupBy === opt.key ? "default" : "outline"}
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => setGroupBy(opt.key)}
+                  >
                     {opt.label}
                   </Button>
                 ))}
@@ -954,182 +1367,316 @@ export default function ProjectManagement() {
           {/* Fields */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Columns2 className="h-4 w-4" /> Fields
+              </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="grid gap-2">
-                {allFields.map(f => (
+                {allFields.map((f) => (
                   <label key={f} className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <Checkbox
+                      checked={selectedFields.includes(f)}
+                      onCheckedChange={(v) =>
+                        setSelectedFields((prev) =>
+                          v ? [...prev, f] : prev.filter((x) => x !== f),
+                        )
+                      }
+                    />
                     <span>{f}</span>
                   </label>
                 ))}
                 <div className="flex gap-2 pt-1">
-                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
-                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>Default</Button>
-                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedFields([...allFields])}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedFields([...allFields])}
+                  >
+                    Default
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedFields([])}
+                  >
+                    None
+                  </Button>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
 
           {/* Export */}
-          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
-            const list = (filterProject==='all' ? projects : projects.filter(p=>p.id===filterProject));
+          <Button
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => {
+              const list =
+                filterProject === "all"
+                  ? projects
+                  : projects.filter((p) => p.id === filterProject);
 
-            const rows:any[] = [];
-            const getProcesses = (tree:any) => {
-              try {
-                return Object.keys(tree||{}).join(', ');
-              } catch { return ''; }
-            };
-            const buildRow = (p: any) => {
-              const f: Record<string, any> = {};
-              if (selectedFields.includes('Project No')) f['Project No'] = p.projectCode;
-              if (selectedFields.includes('Client')) f['Client'] = p.client;
-              if (selectedFields.includes('Division')) f['Division'] = p.details?.division || '';
-              if (selectedFields.includes('Assignment type')) f['Assignment type'] = p.details?.auditType || p.category || '';
-              if (selectedFields.includes('Audit Period')) f['Audit Period'] = `${p.startDate || ''} - ${p.endDate || ''}`;
-              if (selectedFields.includes('Project start Date')) f['Project start Date'] = p.startDate || '';
-              if (selectedFields.includes('Project status')) f['Project status'] = p.status;
-              if (selectedFields.includes('Partner')) f['Partner'] = (p.details?.partners||[]).join(', ');
-              if (selectedFields.includes('Division Head')) f['Division Head'] = (p.details?.divisionHeads||[]).join(', ');
-              if (selectedFields.includes('Team Leader')) f['Team Leader'] = (p.details?.teamLeaders||[]).join(', ');
-              if (selectedFields.includes('Member')) f['Member'] = (p.details?.teamMembers||[]).join(', ');
-              if (selectedFields.includes('Process')) f['Process'] = getProcesses((p as any).details?.selectedChecklistTree);
-              if (selectedFields.includes('% of completion')) f['% of completion'] = `${p.progress}%`;
-              return f;
-            };
+              const rows: any[] = [];
+              const getProcesses = (tree: any) => {
+                try {
+                  return Object.keys(tree || {}).join(", ");
+                } catch {
+                  return "";
+                }
+              };
+              const buildRow = (p: any) => {
+                const f: Record<string, any> = {};
+                if (selectedFields.includes("Project No"))
+                  f["Project No"] = p.projectCode;
+                if (selectedFields.includes("Client")) f["Client"] = p.client;
+                if (selectedFields.includes("Division"))
+                  f["Division"] = p.details?.division || "";
+                if (selectedFields.includes("Assignment type"))
+                  f["Assignment type"] =
+                    p.details?.auditType || p.category || "";
+                if (selectedFields.includes("Audit Period"))
+                  f["Audit Period"] =
+                    `${p.startDate || ""} - ${p.endDate || ""}`;
+                if (selectedFields.includes("Project start Date"))
+                  f["Project start Date"] = p.startDate || "";
+                if (selectedFields.includes("Project status"))
+                  f["Project status"] = p.status;
+                if (selectedFields.includes("Partner"))
+                  f["Partner"] = (p.details?.partners || []).join(", ");
+                if (selectedFields.includes("Division Head"))
+                  f["Division Head"] = (p.details?.divisionHeads || []).join(
+                    ", ",
+                  );
+                if (selectedFields.includes("Team Leader"))
+                  f["Team Leader"] = (p.details?.teamLeaders || []).join(", ");
+                if (selectedFields.includes("Member"))
+                  f["Member"] = (p.details?.teamMembers || []).join(", ");
+                if (selectedFields.includes("Process"))
+                  f["Process"] = getProcesses(
+                    (p as any).details?.selectedChecklistTree,
+                  );
+                if (selectedFields.includes("% of completion"))
+                  f["% of completion"] = `${p.progress}%`;
+                return f;
+              };
 
-            const getGroupKeys = (p:any, key:string): string[] => {
-              switch (key) {
-                case 'Project No': return [p.projectCode || p.title || ''];
-                case 'Client': return [p.client || '(none)'];
-                case 'Division': return [p.details?.division || '(none)'];
-                case 'Assignment type': return [p.details?.auditType || p.category || '(none)'];
-                case 'Audit Period': return [`${p.startDate || ''} - ${p.endDate || ''}`];
-                case 'Project start Date': return [p.startDate || ''];
-                case 'Project status': return [p.status || ''];
-                case 'Partner': {
-                  const arr = (p.details?.partners||[]) as string[];
-                  return (arr.length?arr:['(none)']);
+              const getGroupKeys = (p: any, key: string): string[] => {
+                switch (key) {
+                  case "Project No":
+                    return [p.projectCode || p.title || ""];
+                  case "Client":
+                    return [p.client || "(none)"];
+                  case "Division":
+                    return [p.details?.division || "(none)"];
+                  case "Assignment type":
+                    return [p.details?.auditType || p.category || "(none)"];
+                  case "Audit Period":
+                    return [`${p.startDate || ""} - ${p.endDate || ""}`];
+                  case "Project start Date":
+                    return [p.startDate || ""];
+                  case "Project status":
+                    return [p.status || ""];
+                  case "Partner": {
+                    const arr = (p.details?.partners || []) as string[];
+                    return arr.length ? arr : ["(none)"];
+                  }
+                  case "Division Head": {
+                    const arr = (p.details?.divisionHeads || []) as string[];
+                    return arr.length ? arr : ["(none)"];
+                  }
+                  case "Team Leader": {
+                    const arr = (p.details?.teamLeaders || []) as string[];
+                    return arr.length ? arr : ["(none)"];
+                  }
+                  case "Member": {
+                    const arr = (p.details?.teamMembers || []) as string[];
+                    return arr.length ? arr : ["(none)"];
+                  }
+                  case "Process": {
+                    try {
+                      const tree =
+                        (p as any).details?.selectedChecklistTree || {};
+                      const keys = Object.keys(tree || {});
+                      return keys.length ? keys : ["(none)"];
+                    } catch {
+                      return ["(none)"];
+                    }
+                  }
+                  case "% of completion":
+                    return [`${p.progress}%`];
+                  default:
+                    return [""];
                 }
-                case 'Division Head': {
-                  const arr = (p.details?.divisionHeads||[]) as string[];
-                  return (arr.length?arr:['(none)']);
+              };
+
+              if (groupBy === "none") {
+                for (const p of list) rows.push(buildRow(p));
+              } else {
+                const grouped: Record<string, any[]> = {};
+                for (const p of list) {
+                  const keys = getGroupKeys(p, groupBy);
+                  const row = buildRow(p);
+                  for (const k of keys) {
+                    if (!grouped[k]) grouped[k] = [];
+                    grouped[k].push(row);
+                  }
                 }
-                case 'Team Leader': {
-                  const arr = (p.details?.teamLeaders||[]) as string[];
-                  return (arr.length?arr:['(none)']);
+                const labels = Object.keys(grouped).sort((a, b) =>
+                  a.localeCompare(b),
+                );
+                for (const label of labels) {
+                  rows.push({ Group: label });
+                  grouped[label].forEach((r) => rows.push(r));
+                  rows.push({});
                 }
-                case 'Member': {
-                  const arr = (p.details?.teamMembers||[]) as string[];
-                  return (arr.length?arr:['(none)']);
-                }
-                case 'Process': {
-                  try {
-                    const tree = (p as any).details?.selectedChecklistTree || {};
-                    const keys = Object.keys(tree||{});
-                    return keys.length ? keys : ['(none)'];
-                  } catch { return ['(none)']; }
-                }
-                case '% of completion': return [`${p.progress}%`];
-                default: return [''];
               }
-            };
 
-            if (groupBy==='none') {
-              for (const p of list) rows.push(buildRow(p));
-            } else {
-              const grouped: Record<string, any[]> = {};
-              for (const p of list) {
-                const keys = getGroupKeys(p, groupBy);
-                const row = buildRow(p);
-                for (const k of keys) {
-                  if (!grouped[k]) grouped[k] = [];
-                  grouped[k].push(row);
-                }
-              }
-              const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
-              for (const label of labels) {
-                rows.push({ Group: label });
-                grouped[label].forEach(r => rows.push(r));
-                rows.push({});
-              }
-            }
+              const wb = XLSX.utils.book_new();
+              const ws = XLSX.utils.json_to_sheet(rows);
+              XLSX.utils.book_append_sheet(wb, ws, "Projects");
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, 'Projects');
-
-            // Risk Log for single project selection
-            if (filterProject !== 'all') {
-              const proj = projects.find(p=>p.id===filterProject);
-              const tree:any = (proj as any)?.details?.selectedChecklistTree;
-              const riskRows:any[] = [];
-              if (tree && typeof tree==='object') {
-                Object.entries<any>(tree).forEach(([proc, procVal]) => {
-                  const subs = (procVal && procVal.subprocesses) || {};
-                  Object.entries<any>(subs).forEach(([sub, subVal]) => {
-                    const acts = (subVal && subVal.activities) || {};
-                    Object.entries<any>(acts).forEach(([act, actVal]) => {
-                      const risks = (actVal && actVal.risks) || {};
-                      Object.entries<any>(risks).forEach(([risk, riskVal]) => {
-                        const ctrls = Array.isArray(riskVal?.controls) ? riskVal.controls : [];
-                        if (ctrls.length===0) riskRows.push({ Process:proc, Subprocess:sub, Activity:act, Risk:risk });
-                        ctrls.forEach((ctrl:string) => riskRows.push({ Process:proc, Subprocess:sub, Activity:act, Risk:risk, Control:ctrl }));
+              // Risk Log for single project selection
+              if (filterProject !== "all") {
+                const proj = projects.find((p) => p.id === filterProject);
+                const tree: any = (proj as any)?.details?.selectedChecklistTree;
+                const riskRows: any[] = [];
+                if (tree && typeof tree === "object") {
+                  Object.entries<any>(tree).forEach(([proc, procVal]) => {
+                    const subs = (procVal && procVal.subprocesses) || {};
+                    Object.entries<any>(subs).forEach(([sub, subVal]) => {
+                      const acts = (subVal && subVal.activities) || {};
+                      Object.entries<any>(acts).forEach(([act, actVal]) => {
+                        const risks = (actVal && actVal.risks) || {};
+                        Object.entries<any>(risks).forEach(
+                          ([risk, riskVal]) => {
+                            const ctrls = Array.isArray(riskVal?.controls)
+                              ? riskVal.controls
+                              : [];
+                            if (ctrls.length === 0)
+                              riskRows.push({
+                                Process: proc,
+                                Subprocess: sub,
+                                Activity: act,
+                                Risk: risk,
+                              });
+                            ctrls.forEach((ctrl: string) =>
+                              riskRows.push({
+                                Process: proc,
+                                Subprocess: sub,
+                                Activity: act,
+                                Risk: risk,
+                                Control: ctrl,
+                              }),
+                            );
+                          },
+                        );
                       });
                     });
                   });
-                });
-              }
-              const ws2 = XLSX.utils.json_to_sheet(riskRows);
-              XLSX.utils.book_append_sheet(wb, ws2, 'Risk Log');
+                }
+                const ws2 = XLSX.utils.json_to_sheet(riskRows);
+                XLSX.utils.book_append_sheet(wb, ws2, "Risk Log");
 
-              // Risk Assessment Summary if enabled
-              const rc:any = (proj as any)?.details?.riskConfig;
-              if (rc && rc.enabled !== false) {
-                try {
-                  const like = rc?.riskScore?.likelihood?.scale; const cons = rc?.riskScore?.consequence?.scale; const rscale = rc?.riskScore?.scale; const cscale = rc?.controlScore?.scale || {min:1,max:5};
-                  const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
-                  const l = like ? mid(like) : undefined; const c = cons ? mid(cons) : undefined; const riskVal = computeRiskScore(rc?.riskScore?.mode, l as any, c as any, rscale ? mid(rscale) : undefined);
-                  const resid = computeResidual(rc?.residualRisk?.formula, riskVal, mid(cscale), cscale);
-                  const level = resolveLevel(Math.round(resid), rc?.residualRisk?.thresholds)?.level || '';
-                  const raRows = [{
-                    'Risk Scoring Model': rc?.riskScoringModel || '',
-                    'Calculation Mode': rc?.riskScore?.mode || '',
-                    'Likelihood Scale': like ? `${like.min}–${like.max}` : '',
-                    'Consequence Scale': cons ? `${cons.min}–${cons.max}` : '',
-                    'Risk Scale': rscale ? `${rscale.min}–${rscale.max}` : '',
-                    'Control Scale': cscale ? `${cscale.min}–${cscale.max}` : '',
-                    'Residual Parameter': rc?.residualRisk?.parameter || 'residualRisk',
-                    'Residual Formula': rc?.residualRisk?.formula || '',
-                    'Residual Ranges': (rc?.residualRisk?.thresholds?.ranges||[]).map((r:any)=>`${r.label}: ${r.from}–${r.to}`).join(', '),
-                    'Example Risk Score': riskVal,
-                    'Example Residual': Math.round(resid*100)/100,
-                    'Residual Level': level
-                  }];
-                  const ws3 = XLSX.utils.json_to_sheet(raRows);
-                  XLSX.utils.book_append_sheet(wb, ws3, 'Risk Assessment Summary');
-                } catch {}
+                // Risk Assessment Summary if enabled
+                const rc: any = (proj as any)?.details?.riskConfig;
+                if (rc && rc.enabled !== false) {
+                  try {
+                    const like = rc?.riskScore?.likelihood?.scale;
+                    const cons = rc?.riskScore?.consequence?.scale;
+                    const rscale = rc?.riskScore?.scale;
+                    const cscale = rc?.controlScore?.scale || {
+                      min: 1,
+                      max: 5,
+                    };
+                    const mid = (s: { min: number; max: number }) =>
+                      Math.round((Number(s.min) + Number(s.max)) / 2);
+                    const l = like ? mid(like) : undefined;
+                    const c = cons ? mid(cons) : undefined;
+                    const riskVal = computeRiskScore(
+                      rc?.riskScore?.mode,
+                      l as any,
+                      c as any,
+                      rscale ? mid(rscale) : undefined,
+                    );
+                    const resid = computeResidual(
+                      rc?.residualRisk?.formula,
+                      riskVal,
+                      mid(cscale),
+                      cscale,
+                    );
+                    const level =
+                      resolveLevel(
+                        Math.round(resid),
+                        rc?.residualRisk?.thresholds,
+                      )?.level || "";
+                    const raRows = [
+                      {
+                        "Risk Scoring Model": rc?.riskScoringModel || "",
+                        "Calculation Mode": rc?.riskScore?.mode || "",
+                        "Likelihood Scale": like
+                          ? `${like.min}–${like.max}`
+                          : "",
+                        "Consequence Scale": cons
+                          ? `${cons.min}–${cons.max}`
+                          : "",
+                        "Risk Scale": rscale
+                          ? `${rscale.min}–${rscale.max}`
+                          : "",
+                        "Control Scale": cscale
+                          ? `${cscale.min}–${cscale.max}`
+                          : "",
+                        "Residual Parameter":
+                          rc?.residualRisk?.parameter || "residualRisk",
+                        "Residual Formula": rc?.residualRisk?.formula || "",
+                        "Residual Ranges": (
+                          rc?.residualRisk?.thresholds?.ranges || []
+                        )
+                          .map((r: any) => `${r.label}: ${r.from}–${r.to}`)
+                          .join(", "),
+                        "Example Risk Score": riskVal,
+                        "Example Residual": Math.round(resid * 100) / 100,
+                        "Residual Level": level,
+                      },
+                    ];
+                    const ws3 = XLSX.utils.json_to_sheet(raRows);
+                    XLSX.utils.book_append_sheet(
+                      wb,
+                      ws3,
+                      "Risk Assessment Summary",
+                    );
+                  } catch {}
+                }
               }
-            }
 
-            XLSX.writeFile(wb, 'projects.xlsx');
-          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+              XLSX.writeFile(wb, "projects.xlsx");
+            }}
+          >
+            <Download className="h-4 w-4" /> Export XLSX
+          </Button>
 
           {/* view mode toggles */}
           <Button
-            variant={viewMode === 'board' ? 'default' : 'outline'}
+            variant={viewMode === "board" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode('board')}
+            onClick={() => setViewMode("board")}
           >
             <Grid3x3 className="h-4 w-4" />
           </Button>
           <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
+            variant={viewMode === "list" ? "default" : "outline"}
             size="sm"
-            onClick={() => setViewMode('list')}
+            onClick={() => setViewMode("list")}
           >
             <List className="h-4 w-4" />
           </Button>
@@ -1137,7 +1684,7 @@ export default function ProjectManagement() {
       </div>
 
       {/* Kanban Board */}
-      {viewMode === 'board' ? (
+      {viewMode === "board" ? (
         <div className="flex gap-6 h-full">
           <Column
             title="Completed"
@@ -1169,33 +1716,48 @@ export default function ProjectManagement() {
                 <div
                   key={project.id}
                   className={`flex items-center justify-between p-4 hover:bg-gray-50 ${
-                    index !== filteredProjects.length - 1 ? 'border-b' : ''
+                    index !== filteredProjects.length - 1 ? "border-b" : ""
                   }`}
                 >
                   <div className="flex items-center space-x-4 flex-1">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{project.title}</h3>
+                      <h3 className="font-medium text-gray-900">
+                        {project.title}
+                      </h3>
                       <p className="text-sm text-gray-500">{project.client}</p>
                     </div>
                     <div className="w-32">
                       <Progress value={project.progress} className="h-2" />
-                      <p className="text-xs text-gray-500 mt-1">{project.progress}%</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {project.progress}%
+                      </p>
                     </div>
                     <Badge className={getCategoryColor(project.category)}>
                       {project.category}
                     </Badge>
                     <div className="flex -space-x-1">
                       {project.teamMembers.slice(0, 3).map((member) => (
-                        <Avatar key={member.id} className="h-6 w-6 border-2 border-white">
-                          <AvatarFallback className="text-xs">{member.initials}</AvatarFallback>
+                        <Avatar
+                          key={member.id}
+                          className="h-6 w-6 border-2 border-white"
+                        >
+                          <AvatarFallback className="text-xs">
+                            {member.initials}
+                          </AvatarFallback>
                         </Avatar>
                       ))}
                     </div>
-              </div>
-              <div>
-                <Button variant="outline" size="sm" onClick={() => openDetails(project)}>View details</Button>
-              </div>
-            </div>
+                  </div>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDetails(project)}
+                    >
+                      View details
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -1209,7 +1771,13 @@ export default function ProjectManagement() {
             <div className="flex items-center justify-between pr-8">
               <DialogTitle>Project Details</DialogTitle>
               {selectedProject && (
-                <Button size="sm" className="mr-2" onClick={() => openEdit(selectedProject)}>Edit</Button>
+                <Button
+                  size="sm"
+                  className="mr-2"
+                  onClick={() => openEdit(selectedProject)}
+                >
+                  Edit
+                </Button>
               )}
             </div>
           </DialogHeader>
@@ -1218,11 +1786,21 @@ export default function ProjectManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-gray-500">Project Code</div>
-                  <div className="font-medium">{selectedProject.projectCode}</div>
+                  <div className="font-medium">
+                    {selectedProject.projectCode}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Status</div>
-                  <div className="font-medium">{selectedProject.status === 'completed' ? 'Completed' : selectedProject.status === 'in-progress' ? 'In Progress' : selectedProject.status === 'hold' ? 'Hold' : '-'}</div>
+                  <div className="font-medium">
+                    {selectedProject.status === "completed"
+                      ? "Completed"
+                      : selectedProject.status === "in-progress"
+                        ? "In Progress"
+                        : selectedProject.status === "hold"
+                          ? "Hold"
+                          : "-"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Client</div>
@@ -1234,78 +1812,134 @@ export default function ProjectManagement() {
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Division</div>
-                  <div className="font-medium">{selectedProject.details?.division || '-'}</div>
+                  <div className="font-medium">
+                    {selectedProject.details?.division || "-"}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500">Nature of Assignment</div>
-                  <div className="font-medium">{selectedProject.details?.auditType || selectedProject.category}</div>
+                  <div className="text-sm text-gray-500">
+                    Nature of Assignment
+                  </div>
+                  <div className="font-medium">
+                    {selectedProject.details?.auditType ||
+                      selectedProject.category}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500">Reporting Frequency</div>
-                  <div className="font-medium">{selectedProject.details?.reportingFrequency || '-'}</div>
+                  <div className="text-sm text-gray-500">
+                    Reporting Frequency
+                  </div>
+                  <div className="font-medium">
+                    {selectedProject.details?.reportingFrequency || "-"}
+                  </div>
                 </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-500">Project Description</div>
-                <div className="font-medium whitespace-pre-wrap">{selectedProject.details?.description || '-'}</div>
+                <div className="font-medium whitespace-pre-wrap">
+                  {selectedProject.details?.description || "-"}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-gray-500">Start Date</div>
-                  <div className="font-medium">{new Date(selectedProject.startDate).toLocaleDateString()}</div>
+                  <div className="font-medium">
+                    {new Date(selectedProject.startDate).toLocaleDateString()}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">End Date</div>
-                  <div className="font-medium">{new Date(selectedProject.endDate).toLocaleDateString()}</div>
+                  <div className="font-medium">
+                    {new Date(selectedProject.endDate).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
 
               <div>
-                <div className="text-sm text-gray-500 mb-1">Progress completed</div>
+                <div className="text-sm text-gray-500 mb-1">
+                  Progress completed
+                </div>
                 <div className="flex items-center gap-3">
-                  <Progress value={selectedProject.progress} className="h-2 w-64" />
-                  <span className="text-sm font-medium">{selectedProject.progress}%</span>
+                  <Progress
+                    value={selectedProject.progress}
+                    className="h-2 w-64"
+                  />
+                  <span className="text-sm font-medium">
+                    {selectedProject.progress}%
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-gray-500">Division Heads</div>
-                  <div className="text-sm">{(selectedProject.details?.divisionHeads || []).join(', ') || '-'}</div>
+                  <div className="text-sm">
+                    {(selectedProject.details?.divisionHeads || []).join(
+                      ", ",
+                    ) || "-"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Partners</div>
-                  <div className="text-sm">{(selectedProject.details?.partners || []).join(', ') || '-'}</div>
+                  <div className="text-sm">
+                    {(selectedProject.details?.partners || []).join(", ") ||
+                      "-"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Team Leaders</div>
-                  <div className="text-sm">{(selectedProject.details?.teamLeaders || []).join(', ') || '-'}</div>
+                  <div className="text-sm">
+                    {(selectedProject.details?.teamLeaders || []).join(", ") ||
+                      "-"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Team Members</div>
-                  <div className="text-sm">{(selectedProject.details?.teamMembers || []).join(', ') || '-'}</div>
+                  <div className="text-sm">
+                    {(selectedProject.details?.teamMembers || []).join(", ") ||
+                      "-"}
+                  </div>
                 </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-500">Audit Universe</div>
-                <div className="text-sm">{(selectedProject.details?.auditUniverse || []).join(', ') || '-'}</div>
+                <div className="text-sm">
+                  {(selectedProject.details?.auditUniverse || []).join(", ") ||
+                    "-"}
+                </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-500">Scope & Checklist</div>
                 {(() => {
-                  const tree: any = (selectedProject as any).details?.selectedChecklistTree;
-                  if (!tree || typeof tree !== 'object' || Object.keys(tree).length === 0) {
+                  const tree: any = (selectedProject as any).details
+                    ?.selectedChecklistTree;
+                  if (
+                    !tree ||
+                    typeof tree !== "object" ||
+                    Object.keys(tree).length === 0
+                  ) {
                     return <div className="text-sm">-</div>;
                   }
-                  const renderControls = (controls: string[], prefix: string) => (
+                  const renderControls = (
+                    controls: string[],
+                    prefix: string,
+                  ) => (
                     <div className="space-y-1">
                       {controls.map((ctrl, i) => (
-                        <div key={`${prefix}|${ctrl}|${i}`} className="flex items-center gap-2 pl-8">
-                          <Checkbox checked disabled aria-readonly className="h-3.5 w-3.5" />
+                        <div
+                          key={`${prefix}|${ctrl}|${i}`}
+                          className="flex items-center gap-2 pl-8"
+                        >
+                          <Checkbox
+                            checked
+                            disabled
+                            aria-readonly
+                            className="h-3.5 w-3.5"
+                          />
                           <span className="text-sm">{ctrl}</span>
                         </div>
                       ))}
@@ -1315,34 +1949,63 @@ export default function ProjectManagement() {
                   Object.entries<any>(tree).forEach(([procName, procVal]) => {
                     items.push(
                       <div key={`proc|${procName}`} className="mt-2">
-                        <div className="text-sm font-medium text-blue-800">{procName}</div>
-                      </div>
-                    );
-                    const subprocesses = (procVal && procVal.subprocesses) || {};
-                    Object.entries<any>(subprocesses).forEach(([subName, subVal]) => {
-                      items.push(
-                        <div key={`sub|${procName}|${subName}`} className="pl-2">
-                          <div className="text-sm font-medium text-emerald-800">{subName}</div>
+                        <div className="text-sm font-medium text-blue-800">
+                          {procName}
                         </div>
-                      );
-                      const activities = (subVal && subVal.activities) || {};
-                      Object.entries<any>(activities).forEach(([actName, actVal]) => {
+                      </div>,
+                    );
+                    const subprocesses =
+                      (procVal && procVal.subprocesses) || {};
+                    Object.entries<any>(subprocesses).forEach(
+                      ([subName, subVal]) => {
                         items.push(
-                          <div key={`act|${procName}|${subName}|${actName}`} className="pl-4">
-                            <div className="text-sm font-medium text-amber-800">{actName}</div>
-                          </div>
-                        );
-                        const risks = (actVal && actVal.risks) || {};
-                        Object.entries<any>(risks).forEach(([riskName, riskVal]) => {
-                          items.push(
-                            <div key={`risk|${procName}|${subName}|${actName}|${riskName}`} className="pl-6">
-                              <div className="text-sm font-medium text-red-800">{riskName}</div>
-                              {Array.isArray(riskVal?.controls) && riskVal.controls.length > 0 && renderControls(riskVal.controls, `${procName}|${subName}|${actName}|${riskName}`)}
+                          <div
+                            key={`sub|${procName}|${subName}`}
+                            className="pl-2"
+                          >
+                            <div className="text-sm font-medium text-emerald-800">
+                              {subName}
                             </div>
-                          );
-                        });
-                      });
-                    });
+                          </div>,
+                        );
+                        const activities = (subVal && subVal.activities) || {};
+                        Object.entries<any>(activities).forEach(
+                          ([actName, actVal]) => {
+                            items.push(
+                              <div
+                                key={`act|${procName}|${subName}|${actName}`}
+                                className="pl-4"
+                              >
+                                <div className="text-sm font-medium text-amber-800">
+                                  {actName}
+                                </div>
+                              </div>,
+                            );
+                            const risks = (actVal && actVal.risks) || {};
+                            Object.entries<any>(risks).forEach(
+                              ([riskName, riskVal]) => {
+                                items.push(
+                                  <div
+                                    key={`risk|${procName}|${subName}|${actName}|${riskName}`}
+                                    className="pl-6"
+                                  >
+                                    <div className="text-sm font-medium text-red-800">
+                                      {riskName}
+                                    </div>
+                                    {Array.isArray(riskVal?.controls) &&
+                                      riskVal.controls.length > 0 &&
+                                      renderControls(
+                                        riskVal.controls,
+                                        `${procName}|${subName}|${actName}|${riskName}`,
+                                      )}
+                                  </div>,
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    );
                   });
                   return <div className="mt-1 space-y-1">{items}</div>;
                 })()}
@@ -1350,20 +2013,33 @@ export default function ProjectManagement() {
 
               <div>
                 <div className="text-sm text-gray-500">Scope Notes</div>
-                <div className="text-sm whitespace-pre-wrap">{selectedProject.details?.scopeNotes || '-'}</div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {selectedProject.details?.scopeNotes || "-"}
+                </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-500">Link References</div>
                 {(() => {
-                  const raw = (selectedProject as any).details?.references || '';
-                  const parts = String(raw).split(/\n|,|;|\s+/).map(s => s.trim()).filter(Boolean);
+                  const raw =
+                    (selectedProject as any).details?.references || "";
+                  const parts = String(raw)
+                    .split(/\n|,|;|\s+/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
                   if (!parts.length) return <div className="text-sm">-</div>;
                   return (
                     <div className="mt-1 space-y-1">
                       {parts.map((href, idx) => (
                         <div key={`ref-${idx}`}>
-                          <a href={href} target="_blank" rel="noreferrer noopener" className="text-blue-600 hover:underline break-all">{href}</a>
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="text-blue-600 hover:underline break-all"
+                          >
+                            {href}
+                          </a>
                         </div>
                       ))}
                     </div>
@@ -1380,7 +2056,9 @@ export default function ProjectManagement() {
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         mode="edit"
-        initialData={selectedProject ? mapProjectToFormData(selectedProject) : undefined}
+        initialData={
+          selectedProject ? mapProjectToFormData(selectedProject) : undefined
+        }
         onProjectEdit={handleEditSubmit}
       />
 
