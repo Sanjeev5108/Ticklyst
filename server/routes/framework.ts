@@ -683,26 +683,30 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
         if (!curProc) continue;
         const proc = curProc;
         if (processDesc || procDeps.length) {
-          const bad = procDeps.filter((d) => d && !DEPARTMENTS.includes(d));
-          if (bad.length)
-            result.errors.push({
-              row: rowNum,
-              error: `Invalid department(s) at process: ${bad.join(", ")}`,
-            });
-          const patch = {
-            process_name: processName || proc.name,
-            process_description: processDesc,
-            departments_involved: procDeps.filter((d) =>
-              DEPARTMENTS.includes(d),
-            ),
-          };
-          const next = mergeDetails(proc.details, patch);
-          if (JSON.stringify(next) !== JSON.stringify(proc.details)) {
-            await pool.query(
-              "UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1",
-              [proc.id, next],
-            );
-            proc.details = next;
+          const procKey = `process||${(processName || proc.name || '').toLowerCase()}`;
+          const isExistingInDb = existingProcessKeys.has(procKey);
+          if (!isExistingInDb) {
+            const bad = procDeps.filter((d) => d && !DEPARTMENTS.includes(d));
+            if (bad.length)
+              result.errors.push({
+                row: rowNum,
+                error: `Invalid department(s) at process: ${bad.join(", ")}`,
+              });
+            const patch = {
+              process_name: processName || proc.name,
+              process_description: processDesc,
+              departments_involved: procDeps.filter((d) =>
+                DEPARTMENTS.includes(d),
+              ),
+            };
+            const next = mergeDetails(proc.details, patch);
+            if (JSON.stringify(next) !== JSON.stringify(proc.details)) {
+              await pool.query(
+                "UPDATE framework_nodes SET details=$2, updated_at=now() WHERE id=$1",
+                [proc.id, next],
+              );
+              proc.details = next;
+            }
           }
         }
 
