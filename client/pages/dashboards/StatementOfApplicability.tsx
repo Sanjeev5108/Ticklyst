@@ -109,7 +109,8 @@ export default function StatementOfApplicability() {
   const [industrySelections, setIndustrySelections] = useState<Set<string>>(new Set());
   const [clientSelections, setClientSelections] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [details, setDetails] = useState<Record<string, NodeDetails>>({});
+  const [detailsIndustry, setDetailsIndustry] = useState<Record<string, Record<string, NodeDetails>>>({});
+  const [detailsClient, setDetailsClient] = useState<Record<string, Record<string, NodeDetails>>>({});
   const [openItemPicker, setOpenItemPicker] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [showOnlyUndecided, setShowOnlyUndecided] = useState(false);
