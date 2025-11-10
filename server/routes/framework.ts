@@ -77,7 +77,7 @@ export const createFrameworkNode: RequestHandler = async (req, res) => {
   } catch (e: any) {
     console.error(e);
     if (e && e.code === "23505")
-      return res.status(409).json({ error: "id_exists" });
+      return res.status(409).json({ error: "process_name_exists" });
     if (e && e.code === "23503")
       return res.status(400).json({ error: "invalid_parent" });
     res.status(500).json({ error: e.message || "db_error" });
