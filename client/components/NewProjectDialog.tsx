@@ -1584,78 +1584,99 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{mode === 'edit' ? 'Project - Edit' : 'Project - New'}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">{mode === 'edit' ? 'Project - Edit' : 'Project - New'}</DialogTitle>
+          </DialogHeader>
 
-        {/* Progress Indicator */}
-        <div className="mb-0">
-          <div className="flex items-center mb-0">
-            <span className="text-sm text-gray-600">Step {currentStep} of {steps.length}</span>
+          {/* Progress Indicator */}
+          <div className="mb-0">
+            <div className="flex items-center mb-0">
+              <span className="text-sm text-gray-600">Step {currentStep} of {steps.length}</span>
+            </div>
           </div>
-        </div>
 
-        {/* Step Navigation */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {steps.map((step) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.number;
-            const isCompleted = currentStep > step.number;
+          {/* Step Navigation */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.number;
+              const isCompleted = currentStep > step.number;
 
-            return (
-              <button
-                type="button"
-                onClick={() => setCurrentStep(step.number)}
-                key={step.number}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs cursor-pointer ${
-                  isActive
-                    ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
-                    : isCompleted
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                <Icon className="h-3 w-3" />
-                <span className="hidden sm:inline">{step.title}</span>
-                <span className="sm:hidden">{step.number}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Step Content */}
-        <div className="min-h-[400px]">
-          {renderStepContent()}
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-
-          <div className="flex space-x-2">
-            {currentStep < steps.length ? (
-              <Button onClick={handleNext}>
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
-                Create Project
-                <CheckCircle2 className="h-4 w-4 ml-2" />
-              </Button>
-            )}
+              return (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(step.number)}
+                  key={step.number}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
+                      : isCompleted
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span className="hidden sm:inline">{step.title}</span>
+                  <span className="sm:hidden">{step.number}</span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {/* Step Content */}
+          <div className="min-h-[400px]">
+            {renderStepContent()}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+
+            <div className="flex space-x-2">
+              {currentStep < steps.length ? (
+                <Button onClick={handleNext}>
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
+                  {mode === 'edit' ? 'Save' : 'Create Project'}
+                  <CheckCircle2 className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={missingDialogOpen} onOpenChange={setMissingDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Missing required fields</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please fill the following before saving:
+              <ul className="list-disc pl-5 mt-2">
+                {missingFields.map((f)=> (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={()=>{ setMissingDialogOpen(false); }}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
