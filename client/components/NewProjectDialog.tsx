@@ -1112,12 +1112,14 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
 
   const handleSubmit = () => {
     // Validate required fields first
-    const missingProjectName = !String(formData.projectName || '').trim();
-    const missingClientName = !String(formData.clientName || '').trim();
-    const missingAuditType = !String(formData.auditType || '').trim();
-    if (missingProjectName || missingClientName || missingAuditType) {
+    const missing: string[] = [];
+    if (!String(formData.projectName || '').trim()) missing.push('Project Name');
+    if (!String(formData.clientName || '').trim()) missing.push('Client Name');
+    if (!String(formData.auditType || '').trim()) missing.push('Nature of Assignment');
+    if (missing.length) {
       setCurrentStep(1);
-      alert('Please fill the ("Project Name", "Client Name", "Nature of Assignment")');
+      setMissingFields(missing);
+      setMissingDialogOpen(true);
       return;
     }
 
