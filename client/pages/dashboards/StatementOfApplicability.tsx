@@ -524,7 +524,7 @@ export default function StatementOfApplicability() {
           <Button size="sm" className="flex items-center gap-2" onClick={()=>{
             const rowsBase = renderNodes
               .filter(n=>{
-                const app = details[n.id]?.applicable;
+                const app = activeDetails[n.id]?.applicable;
                 return filterApplicability==='all' ? true : filterApplicability==='app' ? app===true : filterApplicability==='na' ? app===false : app===null || app===undefined;
               })
               .map(n=>{
@@ -541,7 +541,7 @@ export default function StatementOfApplicability() {
                   cur = cur.parentId ? tree.find(x=>x.id===cur!.parentId) || undefined : undefined;
                 }
                 const row: Record<string, any> = {};
-                const app = details[n.id]?.applicable;
+                const app = activeDetails[n.id]?.applicable;
                 if (selectedFields.includes('Process')) row['Process'] = path[0] || '';
                 if (selectedFields.includes('Subprocess')) row['Subprocess'] = path[1] || '';
                 if (selectedFields.includes('Activity')) row['Activity'] = path[2] || '';
