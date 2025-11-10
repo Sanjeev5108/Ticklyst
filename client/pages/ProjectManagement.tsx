@@ -47,6 +47,7 @@ interface ProjectDetails {
   scopeNotes: string;
   reportingFrequency: string;
   emailNotifications: boolean;
+  references?: string;
 }
 
 interface Project {
@@ -409,6 +410,7 @@ export default function ProjectManagement() {
             customChecklistItems: r.data?.customChecklistItems || '',
             selectedChecklistTree: r.data?.selectedChecklistTree || null,
             riskConfig: r.data?.riskConfig || null,
+            references: r.data?.references || '',
           }
         }));
         setProjects(mapped);
