@@ -443,6 +443,9 @@ export const importFrameworkRows: RequestHandler = async (req, res) => {
       arr.push(n);
       childrenByParent.set(n.parent_id || "", arr);
     }
+    const existingProcessKeys = new Set(
+      Array.from(byKey.keys()).filter((k) => k.startsWith("process|"))
+    );
 
     const nextProcessId = (): string => {
       const procs = (childrenByParent.get("") || []).filter(
