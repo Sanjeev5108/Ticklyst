@@ -1663,15 +1663,15 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Missing required fields</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please fill the following before saving:
-              <ul className="list-disc pl-5 mt-2">
-                {missingFields.map((f)=> (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            </AlertDialogDescription>
           </AlertDialogHeader>
+          <div>
+            <AlertDialogDescription>Please fill the following before saving:</AlertDialogDescription>
+            <ul className="list-disc pl-5 mt-2">
+              {missingFields.map((f)=> (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          </div>
           <AlertDialogFooter>
             <AlertDialogAction onClick={()=>{ setMissingDialogOpen(false); }}>OK</AlertDialogAction>
           </AlertDialogFooter>
