@@ -354,23 +354,33 @@ export default function StatementOfApplicability() {
     const ids = [id, ...collectDescendantIds(id)];
     const setIds = new Set(ids);
     setTree(prev => prev.map(n => setIds.has(n.id) ? { ...n, isSelected: checked } : n));
-    setDetails(prev => {
-      const next = { ...prev } as Record<string, NodeDetails>;
-      if (checked) {
-        for (const nid of ids) {
-          if (!next[nid]) {
-            next[nid] = {
-              description: '',
-              industry: selectedIndustry,
-              client: selectedClientId,
-              itemId: '',
-              applicable: null
-            };
+    if (tab === 'industry') {
+      setDetailsIndustry(prev => {
+        const current = prev[selectedIndustry] || {};
+        const next: Record<string, NodeDetails> = { ...current };
+        if (checked) {
+          for (const nid of ids) {
+            if (!next[nid]) {
+              next[nid] = { description: '', industry: selectedIndustry, client: '', itemId: '', applicable: null };
+            }
           }
         }
-      }
-      return next;
-    });
+        return { ...prev, [selectedIndustry]: next };
+      });
+    } else {
+      setDetailsClient(prev => {
+        const current = prev[selectedClientId] || {};
+        const next: Record<string, NodeDetails> = { ...current };
+        if (checked) {
+          for (const nid of ids) {
+            if (!next[nid]) {
+              next[nid] = { description: '', industry: selectedClient?.industry || '', client: selectedClientId, itemId: '', applicable: null };
+            }
+          }
+        }
+        return { ...prev, [selectedClientId]: next };
+      });
+    }
     if (tab === 'industry') {
       setIndustrySelections(prev => {
         const next = new Set(prev);
