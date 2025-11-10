@@ -1108,12 +1108,25 @@ export default function NewProjectDialog({ open, onOpenChange, onProjectCreate, 
   };
 
   const handleSubmit = () => {
+    // Validate required fields first
+    const missingProjectName = !String(formData.projectName || '').trim();
+    const missingClientName = !String(formData.clientName || '').trim();
+    const missingAuditType = !String(formData.auditType || '').trim();
+    if (missingProjectName || missingClientName || missingAuditType) {
+      setCurrentStep(1);
+      alert('Please fill the ("Project Name", "Client Name", "Nature of Assignment")');
+      return;
+    }
+
+    // Validate end date
     if (!formData.endDate || (new Date(formData.endDate).setHours(0,0,0,0) < todayStart.getTime())) {
       setEndDateError('Project end date cannot be earlier than today.');
       setCurrentStep(2);
       return;
     }
+
     setEndDateError(null);
+
     if (mode === 'edit' && onProjectEdit) onProjectEdit(formData); else if (onProjectCreate) onProjectCreate(formData);
     onOpenChange(false);
     setCurrentStep(1);
