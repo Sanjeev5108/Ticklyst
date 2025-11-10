@@ -334,14 +334,15 @@ export default function StatementOfApplicability() {
     for (const c of children) { acc.push(c.id); collectDescendantIds(c.id, acc); }
     return acc;
   };
+  const activeDetails: Record<string, NodeDetails> = tab === 'industry' ? (detailsIndustry[selectedIndustry] || {}) : (detailsClient[selectedClientId] || {});
   const renderNodes = useMemo(() => {
     const selectedProcs = tab === 'industry' ? selectedProcessesIndustry : selectedProcessesClient;
     const baseIds = selectedProcs.length ? selectedProcs : [];
     const ids: string[] = [];
     for (const id of baseIds) ids.push(id, ...collectDescendantIds(id));
     if (!ids.length) return [] as TreeNode[];
-    return visibleNodes.filter(n => ids.includes(n.id)).filter(n => !showOnlyUndecided || ((details[n.id]?.applicable ?? null) === null));
-  }, [visibleNodes, selectedProcessesIndustry, selectedProcessesClient, tab, tree, showOnlyUndecided, details]);
+    return visibleNodes.filter(n => ids.includes(n.id)).filter(n => !showOnlyUndecided || ((activeDetails[n.id]?.applicable ?? null) === null));
+  }, [visibleNodes, selectedProcessesIndustry, selectedProcessesClient, tab, tree, showOnlyUndecided, detailsIndustry, detailsClient, selectedIndustry, selectedClientId]);
   const toggleSelectIndustry = (id: string) => { setIndustrySelections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
   const toggleSelectClient = (id: string) => { setClientSelections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); };
 
