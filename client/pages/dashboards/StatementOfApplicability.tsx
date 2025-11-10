@@ -747,15 +747,28 @@ export default function StatementOfApplicability() {
                             // collect this node and all descendants to cascade
                             const ids = [node.id, ...collectDescendantIds(node.id)];
 
-                            // update details for all ids atomically
-                            setDetails(prev => {
-                              const copy = { ...prev } as Record<string, NodeDetails>;
-                              for (const id of ids) {
-                                const existing = copy[id] || { description: '', industry: selectedIndustry, client: selectedClientId, itemId: '', applicable: null };
-                                copy[id] = { ...existing, applicable: next };
-                              }
-                              return copy;
-                            });
+                            // update details for all ids atomically, scoped to current mapping
+                            if (tab === 'industry') {
+                              setDetailsIndustry(prev => {
+                                const cur = prev[selectedIndustry] || {};
+                                const nextMap: Record<string, NodeDetails> = { ...cur };
+                                for (const id of ids) {
+                                  const existing = nextMap[id] || { description: '', industry: selectedIndustry, client: '', itemId: '', applicable: null };
+                                  nextMap[id] = { ...existing, applicable: next };
+                                }
+                                return { ...prev, [selectedIndustry]: nextMap };
+                              });
+                            } else {
+                              setDetailsClient(prev => {
+                                const cur = prev[selectedClientId] || {};
+                                const nextMap: Record<string, NodeDetails> = { ...cur };
+                                for (const id of ids) {
+                                  const existing = nextMap[id] || { description: '', industry: selectedClient?.industry || '', client: selectedClientId, itemId: '', applicable: null };
+                                  nextMap[id] = { ...existing, applicable: next };
+                                }
+                                return { ...prev, [selectedClientId]: nextMap };
+                              });
+                            }
 
                             // update selection maps so Save buttons continue to work (true => selected)
                             if (tab === 'industry') {
