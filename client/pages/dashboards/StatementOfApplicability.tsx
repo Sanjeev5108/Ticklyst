@@ -398,17 +398,22 @@ export default function StatementOfApplicability() {
 
   const handleSelectNode = (id: string) => {
     setSelectedNodeId(id);
-    if (!details[id]) {
-      setDetails(prev => ({
-        ...prev,
-        [id]: {
-          description: '',
-          industry: selectedIndustry,
-          client: selectedClientId,
-          itemId: '',
-          applicable: null
-        }
-      }));
+    if (tab === 'industry') {
+      const current = detailsIndustry[selectedIndustry] || {};
+      if (!current[id]) {
+        setDetailsIndustry(prev => ({
+          ...prev,
+          [selectedIndustry]: { ...current, [id]: { description: '', industry: selectedIndustry, client: '', itemId: '', applicable: null } }
+        }));
+      }
+    } else {
+      const current = detailsClient[selectedClientId] || {};
+      if (!current[id]) {
+        setDetailsClient(prev => ({
+          ...prev,
+          [selectedClientId]: { ...current, [id]: { description: '', industry: selectedClient?.industry || '', client: selectedClientId, itemId: '', applicable: null } }
+        }));
+      }
     }
   };
 
