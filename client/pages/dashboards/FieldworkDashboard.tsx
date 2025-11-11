@@ -1095,7 +1095,84 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-64">Effect</th>
                     <th className="text-left p-3 w-64">Recommendation</th>
                     <th className="text-left p-3 w-64">Annexure</th>
-                    <th className="text-left p-3 w-64">Submit for review</th>
+                    <th className="text-left p-3 w-64">
+                      <div className="flex flex-col gap-1">
+                        <span>Submit for review</span>
+                        <Button size="xs" variant="outline" onClick={() => {
+                          const cfg = activeCfg;
+                          const all = displayedRows.slice();
+                          for (const row of all) {
+                            const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                            const existing = FieldworkStore.get(recKey);
+                            const statusNow = existing?.status || 'draft';
+                            const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                            if (projectLocked || (cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk)) continue;
+                            FieldworkStore.ensure(recKey, () => ({
+                              controlId: row.id,
+                              projectId: selectedProject || undefined,
+                              status: 'draft',
+                              progress: 0,
+                              activeTab: 0,
+                              env: { alternativeControl: '', altControlCategory: '', responsibility: '', riskAssociated: '', controlNature: '' },
+                              methodology: { methodType: '', procedure: '', verification: '', samplingMethod: '', implementationConclusion: '' },
+                              effectiveness: { effectiveness: '', designConclusion: '', automated: '', rating: '' },
+                              remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
+                              report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
+                            }));
+                            const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                            const baseRemark = (row.auditRemarks || '').trim();
+                            const auditRemarkToSave = revised || baseRemark;
+                            if (statusNow === 'rejected' && auditRemarkToSave) {
+                              FieldworkStore.addAuditRemark(recKey, (user?.username || 'User'), auditRemarkToSave);
+                            }
+                            const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
+                            let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
+                            if (cfg.residualRisk.constraintResidualLEQRisk) {
+                              residual = Math.min(residual, riskValue);
+                            }
+                            const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
+                            const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
+                            FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
+                              arc: {
+                                activity: row.activity,
+                                risk: row.risk,
+                                control: row.control,
+                                testOfControl: row.testOfControl,
+                                substantiveProcedure: row.substantiveProcedure,
+                                samplingApplicable: (row.samplingApplicable as any) || '',
+                                samplingMethodology: (row.samplingMethodology as any) || '',
+                                controlEffective: (row.controlEffectiveness as any) || '',
+                                controlOwner: row.controlOwner || '',
+                                attachments: row.attachments,
+                                auditRemarks: auditRemarkToSave,
+                                redFlag: (row.redFlag as any) || '',
+                                reportable: (row.reportable as any) || '',
+                                observationRanking: row.observationRanking,
+                                auditObservation: row.auditObservation,
+                                effect: row.effect,
+                                recommendation: row.recommendation,
+                                annexure: row.annexure,
+                              },
+                              risk: {
+                                mode: cfg.riskScore.mode,
+                                likelihood: row.likelihood,
+                                consequence: row.consequence,
+                                riskScore: riskValue,
+                                controlScore: row.controlScore,
+                                residualRisk: residual,
+                                riskLevel: rLevel,
+                                residualLevel: rrLevel,
+                                overridden: false,
+                                lastCalculatedAt: new Date().toISOString()
+                              }
+                            });
+                            FieldworkStore.submitForReview(recKey);
+                          }
+                          setRecords(FieldworkStore.getAll());
+                          setSubmitAckOpen(true);
+                        }}>Submit all</Button>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1443,8 +1520,76 @@ export default function FieldworkDashboard() {
                             <CheckCircle2 className="h-3 w-3 mr-2" /> Submitted for Review
                           </Button>
                         ); } if (st === 'approved') { return (
-                          <Button size="sm" variant="outline" className="text-green-700" disabled>
-                            <CheckCircle2 className="h-3 w-3 mr-2" /> Approved
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-gradient-to-b from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 active:scale-[0.98] shadow-md hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 transition"
+                            onClick={() => {
+                              const cfg = RiskConfigStore.getGlobal();
+                              const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                              FieldworkStore.ensure(recKey, () => ({
+                                controlId: row.id,
+                                status: 'draft',
+                                progress: 0,
+                                activeTab: 0,
+                                env: { alternativeControl: '', altControlCategory: '', responsibility: '', riskAssociated: '', controlNature: '' },
+                                methodology: { methodType: '', procedure: '', verification: '', samplingMethod: '', implementationConclusion: '' },
+                                effectiveness: { effectiveness: '', designConclusion: '', automated: '', rating: '' },
+                                remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
+                                report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
+                              }));
+                              const existing = FieldworkStore.get(recKey);
+                              const statusNow = existing?.status || 'draft';
+                              const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
+                              let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
+                              if (cfg.residualRisk.constraintResidualLEQRisk) {
+                                residual = Math.min(residual, riskValue);
+                              }
+                              const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
+                              const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
+                              const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                              const baseRemark = (row.auditRemarks || '').trim();
+                              const auditRemarkToSave = revised || baseRemark;
+                              FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
+                                arc: {
+                                  activity: row.activity,
+                                  risk: row.risk,
+                                  control: row.control,
+                                  testOfControl: row.testOfControl,
+                                  substantiveProcedure: row.substantiveProcedure,
+                                  samplingApplicable: (row.samplingApplicable as any) || '',
+                                  samplingMethodology: (row.samplingMethodology as any) || '',
+                                  controlEffective: (row.controlEffectiveness as any) || '',
+                                  controlOwner: row.controlOwner || '',
+                                  attachments: row.attachments,
+                                  auditRemarks: auditRemarkToSave,
+                                  redFlag: (row.redFlag as any) || '',
+                                  reportable: (row.reportable as any) || '',
+                                  observationRanking: row.observationRanking,
+                                  auditObservation: row.auditObservation,
+                                  effect: row.effect,
+                                  recommendation: row.recommendation,
+                                  annexure: row.annexure,
+                                },
+                                risk: {
+                                  mode: cfg.riskScore.mode,
+                                  likelihood: row.likelihood,
+                                  consequence: row.consequence,
+                                  riskScore: riskValue,
+                                  controlScore: row.controlScore,
+                                  residualRisk: residual,
+                                  riskLevel: rLevel,
+                                  residualLevel: rrLevel,
+                                  overridden: false,
+                                  lastCalculatedAt: new Date().toISOString()
+                                }
+                              });
+                              FieldworkStore.submitForReview(recKey);
+                              setRecords(FieldworkStore.getAll());
+                              setSubmitAckOpen(true);
+                            }}
+                          >
+                            <Share2 className="h-3 w-3 mr-2" /> Resubmit for review
                           </Button>
                         ); } if (projectLocked) { return (
                           <Button size="sm" variant="outline" disabled>
