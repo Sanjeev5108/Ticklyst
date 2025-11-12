@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,6 +45,8 @@ export default function HRDashboard() {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'purge' | 'reactivate'; id: string } | null>(null);
 
   // Form state for adding employee
   const [newEmployee, setNewEmployee] = useState({
@@ -587,7 +590,7 @@ export default function HRDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleRemoveEmployee(employee.id)}
+                            onClick={() => { setConfirmAction({ type: 'purge', id: employee.id }); setConfirmOpen(true); }}
                             title="Purge"
                             aria-label="Purge"
                           >
@@ -597,7 +600,7 @@ export default function HRDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleReactivateEmployee(employee.id)}
+                            onClick={() => { setConfirmAction({ type: 'reactivate', id: employee.id }); setConfirmOpen(true); }}
                             title="Reactivate"
                             aria-label="Reactivate"
                           >
@@ -638,6 +641,33 @@ export default function HRDashboard() {
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'purge' ? 'Confirm Purge' : 'Confirm Reactivation'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === 'purge'
+                ? 'Are you sure you want to purge this employee? This action may remove their access.'
+                : 'Are you sure you want to reactivate this employee?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setConfirmOpen(false); setConfirmAction(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              const action = confirmAction;
+              setConfirmOpen(false);
+              setConfirmAction(null);
+              if (!action) return;
+              if (action.type === 'purge') await handleRemoveEmployee(action.id);
+              else await handleReactivateEmployee(action.id);
+            }}>
+              Yes, Proceed
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">HR Dashboard</h1>
       </div>
