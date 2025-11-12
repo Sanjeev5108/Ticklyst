@@ -390,6 +390,9 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
 };
 
 export default function ClientManagement() {
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  const isValidEmail = (v: string) => emailRegex.test(String(v || '').trim());
+  const isValidMobile = (v: string) => /^\d{10,}$/.test(String(v || '').trim());
   const [clients, setClients] = useState<Client[]>([]);
   const apiEnabled = React.useMemo(() => {
     try {
@@ -406,6 +409,8 @@ export default function ClientManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [newEmailErrors, setNewEmailErrors] = useState<Record<number, string>>({});
+  const [newMobileErrors, setNewMobileErrors] = useState<Record<number, string>>({});
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [filterStateVal, setFilterStateVal] = useState<string>('all');
   const [filterName, setFilterName] = useState<string>('');
@@ -462,6 +467,8 @@ export default function ClientManagement() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedClientDetails, setSelectedClientDetails] = useState<Client | null>(null);
   const [isEditClientOpen, setIsEditClientOpen] = useState(false);
+  const [editEmailErrors, setEditEmailErrors] = useState<Record<number, string>>({});
+  const [editMobileErrors, setEditMobileErrors] = useState<Record<number, string>>({});
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [editClient, setEditClient] = useState<Partial<Client>>({
     name: '',
@@ -521,6 +528,24 @@ export default function ClientManagement() {
   }, []);
 
   const handleAddClient = async () => {
+    // Validate required email/mobile for first contact and any provided others
+    const cps = newClient.contactPersons || [];
+    let hasError = false;
+    const emailErrs: Record<number, string> = {};
+    const mobileErrs: Record<number, string> = {};
+    cps.forEach((cp, idx) => {
+      const email = String(cp.email || '').trim();
+      const mobile = String(cp.mobile || '').trim();
+      const digits = mobile.replace(/\D/g, '');
+      const mustValidate = idx === 0 || !!email || !!mobile;
+      if (mustValidate) {
+        if (!email || !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (!digits || !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+      }
+    });
+    setNewEmailErrors(emailErrs);
+    setNewMobileErrors(mobileErrs);
+    if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
     const firstContactName = (newClient.contactPersons && newClient.contactPersons[0] && newClient.contactPersons[0].name) || '';
     if (!newClient.name || !newClient.industry) return;
 
@@ -630,6 +655,23 @@ export default function ClientManagement() {
   };
 
   const handleUpdateClient = () => {
+    const cps = editClient.contactPersons || [];
+    let hasError = false;
+    const emailErrs: Record<number, string> = {};
+    const mobileErrs: Record<number, string> = {};
+    cps.forEach((cp, idx) => {
+      const email = String(cp.email || '').trim();
+      const mobile = String(cp.mobile || '').trim();
+      const digits = mobile.replace(/\D/g, '');
+      const mustValidate = idx === 0 || !!email || !!mobile;
+      if (mustValidate) {
+        if (!email || !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (!digits || !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+      }
+    });
+    setEditEmailErrors(emailErrs);
+    setEditMobileErrors(mobileErrs);
+    if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
     const firstContactName = (editClient.contactPersons && editClient.contactPersons[0] && editClient.contactPersons[0].name) || '';
     if (!editClientId || !editClient.name || !firstContactName) return;
 
@@ -994,19 +1036,26 @@ export default function ClientManagement() {
                               const next = [...(newClient.contactPersons || [])];
                               next[idx] = { ...next[idx], email: e.target.value };
                               setNewClient({ ...newClient, contactPersons: next, contactPerson: next[0] });
+                              const msg = e.target.value.trim() && !isValidEmail(e.target.value) ? 'Please enter a valid email address (e.g., name@domain.com)' : '';
+                              setNewEmailErrors(prev => ({ ...prev, [idx]: msg }));
                             }}
                           />
+                          {newEmailErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{newEmailErrors[idx]}</div>) : null}
                         </div>
                         <div>
                           <Input
                             placeholder="Mobile"
                             value={cp.mobile}
                             onChange={(e) => {
+                              const onlyDigits = e.target.value.replace(/\D/g, '');
                               const next = [...(newClient.contactPersons || [])];
-                              next[idx] = { ...next[idx], mobile: e.target.value };
+                              next[idx] = { ...next[idx], mobile: onlyDigits };
                               setNewClient({ ...newClient, contactPersons: next, contactPerson: next[0] });
+                              const msg = onlyDigits && !isValidMobile(onlyDigits) ? 'Please enter a valid 10-digit mobile number' : '';
+                              setNewMobileErrors(prev => ({ ...prev, [idx]: msg }));
                             }}
                           />
+                          {newMobileErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{newMobileErrors[idx]}</div>) : null}
                         </div>
                       </div>
                       <div className="mt-2 flex justify-end">
@@ -1029,7 +1078,8 @@ export default function ClientManagement() {
                 </div>
               </div>
 
-              <Button onClick={handleAddClient} className="w-full">
+              <Button onClick={handleAddClient} className="w-full"
+                disabled={(() => { const cp = (newClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!newClient.name && !!newClient.industry; return !ok; })()}>
                 Add Client
               </Button>
             </div>
@@ -1541,19 +1591,26 @@ export default function ClientManagement() {
                             const next = [...(editClient.contactPersons || [])];
                             next[idx] = { ...next[idx], email: e.target.value };
                             setEditClient({ ...editClient, contactPersons: next, contactPerson: next[0] });
+                            const msg = e.target.value.trim() && !isValidEmail(e.target.value) ? 'Please enter a valid email address (e.g., name@domain.com)' : '';
+                            setEditEmailErrors(prev => ({ ...prev, [idx]: msg }));
                           }}
                         />
+                        {editEmailErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{editEmailErrors[idx]}</div>) : null}
                       </div>
                       <div>
                         <Input
                           placeholder="Mobile"
                           value={cp.mobile}
                           onChange={(e) => {
+                            const onlyDigits = e.target.value.replace(/\D/g, '');
                             const next = [...(editClient.contactPersons || [])];
-                            next[idx] = { ...next[idx], mobile: e.target.value };
+                            next[idx] = { ...next[idx], mobile: onlyDigits };
                             setEditClient({ ...editClient, contactPersons: next, contactPerson: next[0] });
+                            const msg = onlyDigits && !isValidMobile(onlyDigits) ? 'Please enter a valid 10-digit mobile number' : '';
+                            setEditMobileErrors(prev => ({ ...prev, [idx]: msg }));
                           }}
                         />
+                        {editMobileErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{editMobileErrors[idx]}</div>) : null}
                       </div>
                     </div>
                     <div className="mt-2 flex justify-end">
@@ -1576,7 +1633,8 @@ export default function ClientManagement() {
               </div>
             </div>
 
-            <Button onClick={handleUpdateClient} className="w-full">
+            <Button onClick={handleUpdateClient} className="w-full"
+              disabled={(() => { const cp = (editClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!editClient.name; return !ok; })()}>
               Save Changes
             </Button>
           </div>
