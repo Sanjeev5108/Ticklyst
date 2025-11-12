@@ -765,6 +765,7 @@ export default function ProjectManagement() {
     };
 
     setProjects((prev) => [...prev, newProject]);
+    try { toast({ title: 'Project created', description: `${projectData.projectName || 'Project'} (${assignedCode})` }); } catch {}
   };
 
   const openDetails = (p: Project) => {
