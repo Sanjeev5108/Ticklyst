@@ -62,6 +62,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface ProjectDetails {
   division: string;
