@@ -2403,11 +2403,6 @@ export default function NewProjectDialog({
                 value={formData.riskConfig || baseCfg}
                 onChange={(next) => updateFormData("riskConfig", next)}
               />
-              <div className="flex justify-end mt-2">
-                <Button size="sm" variant="outline" onClick={() => {
-                  toast({ title: 'Risk settings saved' });
-                }}>Save Settings</Button>
-              </div>
             </div>
           );
         }
