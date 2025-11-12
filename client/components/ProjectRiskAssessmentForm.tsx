@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,9 +11,10 @@ import { RiskAssessmentConfig, RiskCalcMode, RiskScoringModel, clamp } from '@sh
 interface Props {
   value: RiskAssessmentConfig;
   onChange: (cfg: RiskAssessmentConfig) => void;
+  onSave?: (cfg: RiskAssessmentConfig) => void;
 }
 
-export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
+export default function ProjectRiskAssessmentForm({ value, onChange, onSave }: Props) {
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(value);
   const [openColorPickerFor, setOpenColorPickerFor] = React.useState<number | null>(null);
   const [breakpointErrors, setBreakpointErrors] = React.useState<string[]>([]);
@@ -511,7 +513,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                   }) : <div className="text-sm text-gray-500">No breakpoints defined</div>;
                 })()}
               </div>
-              <div>
+              <div className="flex items-center justify-between">
                 <Button size="sm" onClick={() => {
                   setCfg(prev => {
                     const ranges = prev.residualRisk.thresholds.ranges || [];
@@ -537,6 +539,16 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                     return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
                   });
                 }} disabled={isStandard || ((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
+
+                <div className="flex justify-end mt-2">
+                  <Button onClick={() => {
+                    if (onSave) {
+                      onSave(cfg);
+                    } else {
+                      toast({ title: 'Risk Assessment settings saved successfully.' });
+                    }
+                  }}>Save Settings</Button>
+                </div>
               </div>
             </div>
           </CardContent>
