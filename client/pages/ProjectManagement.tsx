@@ -862,6 +862,7 @@ export default function ProjectManagement() {
       });
     } catch {}
     setIsEditOpen(false);
+    try { toast({ title: 'Project updated', description: `${data.projectName || selectedProject.title}` }); } catch {}
   };
 
   const updateProjectStatus = async (
