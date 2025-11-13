@@ -2520,6 +2520,14 @@ export default function ATRDashboard() {
                               Add Row
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteAtrRow(idx)}
+                            title="Delete row"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </td>
                       </tr>
                     );
