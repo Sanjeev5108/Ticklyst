@@ -222,19 +222,18 @@ export default function NewProjectDialog({
     if (h.endsWith(".fly.dev")) return true;
     return true;
   }, []);
-  const [existingProjectCodes, setExistingProjectCodes] = useState<string[]>(
-    [],
-  );
+  const [existingProjectCodes, setExistingProjectCodes] = useState<string[]>([]);
+  const [existingProjectNames, setExistingProjectNames] = useState<string[]>([]);
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/projects");
         if (!res.ok) return;
         const rows = await res.json();
-        const codes: string[] = (rows || []).map((r: any) =>
-          String(r.code || r.data?.projectCode || ""),
-        );
+        const codes: string[] = (rows || []).map((r: any) => String(r.code || r.data?.projectCode || ""));
+        const names: string[] = (rows || []).map((r: any) => String(r.name || r.data?.projectName || ""));
         setExistingProjectCodes(codes.filter(Boolean));
+        setExistingProjectNames(names.filter(Boolean));
       } catch {}
     })();
   }, []);
@@ -1782,6 +1781,11 @@ export default function NewProjectDialog({
 
     setEndDateError(null);
 
+    // Prevent duplicate project names
+    const pname = String(formData.projectName || '').trim().toLowerCase();
+    const isDup = !!pname && existingProjectNames.some(n => String(n||'').trim().toLowerCase() === pname);
+    if (mode === 'new' && isDup) { toast({ title: 'Project already exist' }); setCurrentStep(1); return; }
+
     if (mode === "edit" && onProjectEdit) onProjectEdit(formData);
     else if (onProjectCreate) onProjectCreate(formData);
     onOpenChange(false);
@@ -1838,6 +1842,7 @@ export default function NewProjectDialog({
                 onChange={(e) => updateFormData("projectName", e.target.value)}
                 placeholder="Unique name of the audit project"
               />
+              {(() => { const nm = String(formData.projectName||'').trim().toLowerCase(); const dup = !!nm && existingProjectNames.some(p => String(p||'').trim().toLowerCase() === nm); return dup ? (<div className="text-xs text-red-600 mt-1">Project already exist.</div>) : null; })()}
             </div>
 
             <div>
