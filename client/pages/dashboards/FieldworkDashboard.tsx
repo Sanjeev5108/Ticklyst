@@ -613,7 +613,7 @@ export default function FieldworkDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <FileText className="h-7 w-7 text-orange-600" />
-          Fieldwork Module
+          Fieldwork
         </h1>
         <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
       </div>
