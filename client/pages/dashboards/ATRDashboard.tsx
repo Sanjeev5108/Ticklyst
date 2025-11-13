@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Plus, MessageSquare, Send } from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import { FieldworkStore } from "@/contexts/FieldworkStore";
 import { FieldworkRecord } from "@shared/fieldwork";
 import { useAuth } from "@/contexts/AuthContext";
@@ -956,6 +958,7 @@ export default function ATRDashboard() {
   const [atrGroupBy, setAtrGroupBy] = useState<
     "none" | "status" | "due" | "department" | "person"
   >("none");
+  const [vizGroup, setVizGroup] = useState<"weekly" | "monthly">("monthly");
 
   const atrRowsForProject = useMemo(() => {
     const rows = reportableRows.filter((r) =>
@@ -1069,6 +1072,7 @@ export default function ATRDashboard() {
           <TabsList>
             <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
             <TabsTrigger value="access">ATR Access</TabsTrigger>
+            <TabsTrigger value="visualized">Visualized</TabsTrigger>
           </TabsList>
           <TabsContent value="reportable">
             <Card className="shadow-lg mt-4">
@@ -1160,7 +1164,197 @@ export default function ATRDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="access">
+          <TabsContent value="visualized">
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                  <Label>Project</Label>
+                  <Select value={selectedProjectId || ""} onValueChange={(v)=> setSelectedProjectId(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {reportableProjectOptions.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                  <div>
+                    <Label className="text-xs">Group By</Label>
+                    <Select value={vizGroup} onValueChange={(v:any)=> setVizGroup(v)}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Grouping"/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end justify-end">
+                    <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+                      const wb = XLSX.utils.book_new();
+                      const rows = atrRowsFiltered.map(({a})=>({
+                        "Audit Observation": a.auditObservation||"",
+                        "Action Plan": a.actionPlan||"",
+                        "Responsibility": a.responsibility||"",
+                        "Designation": a.designation||"",
+                        "Due date": a.dueDate||"",
+                        "Actual Completion date": a.actualCompletionDate||"",
+                        "Status": a.status||"",
+                      }));
+                      const ws = XLSX.utils.json_to_sheet(rows);
+                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                      XLSX.writeFile(wb, "atr_visualized.xlsx");
+                    }}>
+                      <Download className="h-4 w-4"/> Export XLSX
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {(() => {
+                const rows = atrRowsFiltered.map(r=>r.a);
+                const today = new Date();
+                const mapStatus = (s?: string) => s === 'Closed' ? 'Completed' : s === 'Open' ? 'Pending' : (s||'');
+                const statusPalette: Record<string, string> = { Completed: '#10B981', "In Progress": '#F59E0B', Overdue: '#EF4444', Pending: '#64748B' };
+
+                const statusCount: Record<string, number> = {};
+                rows.forEach(a => { const k = mapStatus(a.status); statusCount[k] = (statusCount[k]||0)+1; });
+                const statusData = Object.keys(statusPalette).map(k => ({ name: k, value: statusCount[k]||0, fill: statusPalette[k] }));
+
+                const fmtMonth = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const getWeekKey = (d: Date) => {
+                  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                  const day = dt.getUTCDay();
+                  const diff = (day === 0 ? -6 : 1) - day;
+                  const monday = new Date(dt); monday.setUTCDate(dt.getUTCDate()+diff);
+                  const year = monday.getUTCFullYear(); const month = monday.getUTCMonth()+1; const date = monday.getUTCDate();
+                  return `${year}-W${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                };
+                const groupKey = (s?: string) => { if (!s) return 'Unknown'; const d = new Date(s); if (isNaN(d.getTime())) return 'Unknown'; return vizGroup === 'weekly' ? getWeekKey(d) : fmtMonth(d); };
+
+                const dueGroups: Record<string, number> = {};
+                rows.forEach(a => { if (a.dueDate) { const k = groupKey(a.dueDate); dueGroups[k] = (dueGroups[k]||0)+1; }});
+                const dueData = Object.keys(dueGroups).sort().map(k => ({ period: k, count: dueGroups[k] }));
+
+                const respGroups: Record<string, number> = {};
+                rows.forEach(a => { const k = a.responsibility || 'Unassigned'; respGroups[k] = (respGroups[k]||0)+1; });
+                const respData = Object.entries(respGroups).map(([name, count]) => ({ name, count }));
+
+                const deptKeys = Array.from(new Set(rows.map(a => a.designation || 'Unassigned')));
+                const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
+                const deptAgg: Record<string, Record<string, number>> = {};
+                rows.forEach(a => { const d = a.designation || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
+                const deptData = deptKeys.map(d => ({ designation: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
+
+                const compGroups: Record<string, number> = {};
+                rows.forEach(a => { if (a.actualCompletionDate) { const k = groupKey(a.actualCompletionDate); compGroups[k] = (compGroups[k]||0)+1; }});
+                const completionData = Object.keys(compGroups).sort().map(k => ({ period: k, count: compGroups[k] }));
+
+                const total = rows.length;
+                const completed = rows.filter(a => mapStatus(a.status) === 'Completed' || !!a.actualCompletionDate).length;
+                const overdue = rows.filter(a => mapStatus(a.status) === 'Overdue' || (!!a.dueDate && new Date(a.dueDate) < today && mapStatus(a.status) !== 'Completed')).length;
+                const delays: number[] = rows.filter(a => a.actualCompletionDate && a.dueDate).map(a => Math.max(0, Math.ceil((new Date(a.actualCompletionDate!).getTime() - new Date(a.dueDate!).getTime()) / (1000*60*60*24))));
+                const avgDelay = delays.length ? Math.round((delays.reduce((s,n)=>s+n,0)/delays.length)) : 0;
+
+                return (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Total Action Plans</div><div className="text-2xl font-semibold">{total}</div></CardContent></Card>
+                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Completed</div><div className="text-2xl font-semibold text-emerald-600">{completed}</div></CardContent></Card>
+                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Overdue</div><div className="text-2xl font-semibold text-red-600">{overdue}</div></CardContent></Card>
+                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Average Delay (days)</div><div className="text-2xl font-semibold">{avgDelay}</div></CardContent></Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <Card className="shadow-sm">
+                        <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
+                        <CardContent>
+                          <ChartContainer config={{}} className="h-72">
+                            <PieChart>
+                              <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={100} label>
+                                {statusData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                              <ChartLegend content={<ChartLegendContent />} />
+                            </PieChart>
+                          </ChartContainer>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="shadow-sm">
+                        <CardHeader><CardTitle>Upcoming Deadlines ({vizGroup})</CardTitle></CardHeader>
+                        <CardContent>
+                          <ChartContainer config={{}} className="h-72">
+                            <BarChart data={dueData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="period" hide={dueData.length>8} angle={-45} textAnchor="end" interval={0} height={dueData.length>8?0:undefined} />
+                              <YAxis allowDecimals={false} />
+                              <Bar dataKey="count" fill="#6366F1" radius={[4,4,0,0]} />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                            </BarChart>
+                          </ChartContainer>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="shadow-sm">
+                        <CardHeader><CardTitle>Responsibility Load</CardTitle></CardHeader>
+                        <CardContent>
+                          <ChartContainer config={{}} className="h-72">
+                            <BarChart data={respData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" hide={respData.length>8} angle={-45} textAnchor="end" interval={0} height={respData.length>8?0:undefined} />
+                              <YAxis allowDecimals={false} />
+                              <Bar dataKey="count" fill="#0EA5E9" radius={[4,4,0,0]} />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                            </BarChart>
+                          </ChartContainer>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="shadow-sm">
+                        <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
+                        <CardContent>
+                          <ChartContainer config={{}} className="h-72">
+                            <BarChart data={deptData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="designation" hide={deptData.length>6} angle={-45} textAnchor="end" interval={0} height={deptData.length>6?0:undefined} />
+                              <YAxis allowDecimals={false} />
+                              <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
+                              <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
+                              <Bar dataKey="Completed" stackId="a" fill={statusPalette['Completed']} />
+                              <Bar dataKey="Overdue" stackId="a" fill={statusPalette['Overdue']} />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                              <ChartLegend />
+                            </BarChart>
+                          </ChartContainer>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="shadow-sm lg:col-span-2">
+                        <CardHeader><CardTitle>Completion Trend</CardTitle></CardHeader>
+                        <CardContent>
+                          <ChartContainer config={{}} className="h-72">
+                            <LineChart data={completionData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="period" />
+                              <YAxis allowDecimals={false} />
+                              <Line type="monotone" dataKey="count" stroke="#10B981" strokeWidth={2} dot={false} />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                            </LineChart>
+                          </ChartContainer>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                );
+            })()}
+          </div>
+        </TabsContent>
+        <TabsContent value="access">
             <div className="space-y-4 mt-4">
               {/* Toolbar */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
@@ -1608,9 +1802,10 @@ export default function ATRDashboard() {
 
       <Tabs defaultValue="access">
         <TabsList>
-          <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
-          <TabsTrigger value="access">ATR Access</TabsTrigger>
-        </TabsList>
+            <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
+            <TabsTrigger value="access">ATR Access</TabsTrigger>
+            <TabsTrigger value="visualized">Visualized</TabsTrigger>
+          </TabsList>
         <TabsContent value="reportable">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
             <div>
