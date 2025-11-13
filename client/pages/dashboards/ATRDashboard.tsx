@@ -1333,7 +1333,6 @@ export default function ATRDashboard() {
                               <Bar dataKey="Completed" stackId="a" fill={statusPalette['Completed']} />
                               <Bar dataKey="Overdue" stackId="a" fill={statusPalette['Overdue']} />
                               <ChartTooltip content={<ChartTooltipContent />} />
-                              <ChartLegend content={<ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />} />
                             </BarChart>
                           </ChartContainer>
                         </CardContent>
@@ -2095,7 +2094,6 @@ export default function ATRDashboard() {
                             <Bar dataKey="Completed" stackId="a" fill={statusPalette['Completed']} />
                             <Bar dataKey="Overdue" stackId="a" fill={statusPalette['Overdue']} />
                             <ChartTooltip content={<ChartTooltipContent />} />
-                            <ChartLegend content={<ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />} />
                           </BarChart>
                         </ChartContainer>
                       </CardContent>
