@@ -658,6 +658,12 @@ export default function ProjectManagement() {
   );
 
   const handleCreateProject = async (projectData: any) => {
+    // Prevent duplicate project names (case-insensitive)
+    const nm = String(projectData.projectName || '').trim().toLowerCase();
+    if (nm && projects.some(p => String(p.title||'').trim().toLowerCase() === nm)) {
+      try { toast({ title: 'Project already exist' }); } catch {}
+      return;
+    }
     // Build payload and let server assign authoritative project code
     const tempId = `PRJ-${Date.now()}`;
     const payload = { ...projectData, id: tempId, status: "in-progress" };
@@ -806,6 +812,12 @@ export default function ProjectManagement() {
   });
 
   const handleEditSubmit = async (data: any) => {
+    // Prevent renaming to an existing project name (case-insensitive)
+    const nm = String(data.projectName || '').trim().toLowerCase();
+    if (nm && projects.some(p => p.id !== (selectedProject?.id||'') && String(p.title||'').trim().toLowerCase() === nm)) {
+      try { toast({ title: 'Project already exist' }); } catch {}
+      return;
+    }
     if (!selectedProject) return;
     setProjects((prev) =>
       prev.map((p) =>
