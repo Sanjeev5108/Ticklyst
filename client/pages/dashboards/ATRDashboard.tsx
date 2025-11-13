@@ -1272,9 +1272,9 @@ export default function ATRDashboard() {
                         <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
                         <CardContent>
                           <ChartContainer config={{
-                                Pending: { label: 'Pending' },
+                                Pending: { label: 'Open' },
                                 'In Progress': { label: 'In Progress' },
-                                Completed: { label: 'Completed' },
+                                Completed: { label: 'Closed' },
                                 Overdue: { label: 'Overdue' },
                               }} className="h-72">
                             <PieChart>
@@ -1323,7 +1323,12 @@ export default function ATRDashboard() {
                       <Card className="shadow-sm">
                         <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
                         <CardContent>
-                          <ChartContainer config={{}} className="h-72">
+                          <ChartContainer config={{
+                            Pending: { label: 'Open' },
+                            'In Progress': { label: 'In Progress' },
+                            Completed: { label: 'Closed' },
+                            Overdue: { label: 'Overdue' },
+                          }} className="h-72">
                             <BarChart data={deptData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="designation" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
@@ -2033,9 +2038,9 @@ export default function ATRDashboard() {
                       <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
                       <CardContent>
                         <ChartContainer config={{
-                          Pending: { label: 'Pending' },
+                          Pending: { label: 'Open' },
                           'In Progress': { label: 'In Progress' },
-                          Completed: { label: 'Completed' },
+                          Completed: { label: 'Closed' },
                           Overdue: { label: 'Overdue' },
                         }} className="h-72">
                           <PieChart>
@@ -2084,7 +2089,12 @@ export default function ATRDashboard() {
                     <Card className="shadow-sm">
                       <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
                       <CardContent>
-                        <ChartContainer config={{}} className="h-72">
+                        <ChartContainer config={{
+                          Pending: { label: 'Open' },
+                          'In Progress': { label: 'In Progress' },
+                          Completed: { label: 'Closed' },
+                          Overdue: { label: 'Overdue' },
+                        }} className="h-72">
                           <BarChart data={deptData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="designation" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
