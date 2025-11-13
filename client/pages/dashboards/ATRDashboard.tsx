@@ -1296,7 +1296,7 @@ export default function ATRDashboard() {
                           <ChartContainer config={{}} className="h-72">
                             <BarChart data={dueData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="period" hide={dueData.length>8} angle={-45} textAnchor="end" interval={0} height={dueData.length>8?0:undefined} />
+                              <XAxis dataKey="period" angle={dueData.length > 6 ? -45 : 0} textAnchor={dueData.length > 6 ? "end" : "middle"} interval={dueData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={dueData.length > 6 ? undefined : 20} />
                               <YAxis allowDecimals={false} />
                               <Bar dataKey="count" fill="#6366F1" radius={[4,4,0,0]} />
                               <ChartTooltip content={<ChartTooltipContent />} />
@@ -2058,7 +2058,7 @@ export default function ATRDashboard() {
                         <ChartContainer config={{}} className="h-72">
                           <BarChart data={dueData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="period" hide={dueData.length>8} angle={-45} textAnchor="end" interval={0} height={dueData.length>8?0:undefined} />
+                            <XAxis dataKey="period" angle={dueData.length > 6 ? -45 : 0} textAnchor={dueData.length > 6 ? "end" : "middle"} interval={dueData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={dueData.length > 6 ? undefined : 20} />
                             <YAxis allowDecimals={false} />
                             <Bar dataKey="count" fill="#6366F1" radius={[4,4,0,0]} />
                             <ChartTooltip content={<ChartTooltipContent />} />
