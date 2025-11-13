@@ -1311,7 +1311,7 @@ export default function ATRDashboard() {
                           <ChartContainer config={{}} className="h-72">
                             <BarChart data={respData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" hide={respData.length>8} angle={-45} textAnchor="end" interval={0} height={respData.length>8?0:undefined} />
+                              <XAxis dataKey="name" angle={respData.length > 6 ? -45 : 0} textAnchor={respData.length > 6 ? "end" : "middle"} interval={respData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={respData.length > 6 ? undefined : 20} />
                               <YAxis allowDecimals={false} />
                               <Bar dataKey="count" fill="#0EA5E9" radius={[4,4,0,0]} />
                               <ChartTooltip content={<ChartTooltipContent />} />
@@ -1326,7 +1326,7 @@ export default function ATRDashboard() {
                           <ChartContainer config={{}} className="h-72">
                             <BarChart data={deptData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="designation" hide={deptData.length>6} angle={-45} textAnchor="end" interval={0} height={deptData.length>6?0:undefined} />
+                              <XAxis dataKey="designation" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
                               <YAxis allowDecimals={false} />
                               <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
                               <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
@@ -2073,7 +2073,7 @@ export default function ATRDashboard() {
                         <ChartContainer config={{}} className="h-72">
                           <BarChart data={respData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" hide={respData.length>8} angle={-45} textAnchor="end" interval={0} height={respData.length>8?0:undefined} />
+                            <XAxis dataKey="name" angle={respData.length > 6 ? -45 : 0} textAnchor={respData.length > 6 ? "end" : "middle"} interval={respData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={respData.length > 6 ? undefined : 20} />
                             <YAxis allowDecimals={false} />
                             <Bar dataKey="count" fill="#0EA5E9" radius={[4,4,0,0]} />
                             <ChartTooltip content={<ChartTooltipContent />} />
@@ -2088,7 +2088,7 @@ export default function ATRDashboard() {
                         <ChartContainer config={{}} className="h-72">
                           <BarChart data={deptData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="designation" hide={deptData.length>6} angle={-45} textAnchor="end" interval={0} height={deptData.length>6?0:undefined} />
+                            <XAxis dataKey="designation" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
                             <YAxis allowDecimals={false} />
                             <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
                             <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
