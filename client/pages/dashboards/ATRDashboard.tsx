@@ -1033,8 +1033,8 @@ export default function ATRDashboard() {
             </h1>
             <p className="text-gray-600">
               {selectedControl
-                ? `Control ID: ${selectedControl} • ATR Module`
-                : `Client ID: ${selectedClient} • ${client?.industry} • ATR Module`}
+                ? `Control ID: ${selectedControl} • ATR`
+                : `Client ID: ${selectedClient} • ${client?.industry} • ATR`}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -1588,7 +1588,7 @@ export default function ATRDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">ATR Module</h1>
+        <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
         <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
       </div>
 
