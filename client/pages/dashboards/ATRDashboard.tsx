@@ -1050,7 +1050,7 @@ export default function ATRDashboard() {
             </h1>
             <p className="text-gray-600">
               {selectedControl
-                ? `Control ID: ${selectedControl} • ATR`
+                ? `Control ID: ${selectedControl} �� ATR`
                 : `Client ID: ${selectedClient} • ${client?.industry} • ATR`}
             </p>
           </div>
@@ -1271,7 +1271,12 @@ export default function ATRDashboard() {
                       <Card className="shadow-sm">
                         <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
                         <CardContent>
-                          <ChartContainer config={{}} className="h-72">
+                          <ChartContainer config={{
+                                Pending: { label: 'Pending' },
+                                'In Progress': { label: 'In Progress' },
+                                Completed: { label: 'Completed' },
+                                Overdue: { label: 'Overdue' },
+                              }} className="h-72">
                             <PieChart>
                               <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={100} label>
                                 {statusData.map((entry, index) => (
@@ -1279,7 +1284,7 @@ export default function ATRDashboard() {
                                 ))}
                               </Pie>
                               <ChartTooltip content={<ChartTooltipContent />} />
-                              <ChartLegend content={<ChartLegendContent />} />
+                              <ChartLegend content={<ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />} />
                             </PieChart>
                           </ChartContainer>
                         </CardContent>
