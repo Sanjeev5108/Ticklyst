@@ -2561,7 +2561,7 @@ export default function FrameworkDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Framework Module</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
         </div>
 
         <Card className="shadow-lg">
@@ -2574,7 +2574,7 @@ export default function FrameworkDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Framework Module</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
         <Badge className="bg-purple-100 text-purple-800">
           Framework Access
         </Badge>
