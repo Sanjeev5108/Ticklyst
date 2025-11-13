@@ -400,7 +400,7 @@ export default function RiskAssessmentDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Risk Assessment Module</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Risk Assessment</h1>
         <Badge className="bg-emerald-100 text-emerald-800">Configuration</Badge>
       </div>
 
@@ -533,11 +533,11 @@ export default function RiskAssessmentDashboard() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Risk Assessment Module Applicability</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Risk Assessment Applicability</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
             <div>
-              <Label>Enable Risk Assessment Module?</Label>
+              <Label>Enable Risk Assessment?</Label>
               <Select value={cfg.enabled ? 'yes' : 'no'} onValueChange={(v:any)=> setCfg(prev => ({ ...prev, enabled: v === 'yes' }))}>
                 <SelectTrigger><SelectValue placeholder="Select"/></SelectTrigger>
                 <SelectContent>
@@ -1580,7 +1580,7 @@ export default function RiskAssessmentDashboard() {
               <tbody>
                 <tr><td>1</td><td>Rare</td><td>May occur only in exceptional circumstances</td><td>Once in 10+ years, &lt;5%</td></tr>
                 <tr><td>2</td><td>Unlikely</td><td>Could occur, but not expected</td><td>Once in 5–10 years, 5–20%</td></tr>
-                <tr><td>3</td><td>Possible</td><td>Might occur at some time</td><td>Once in 2–5 years, 21–50%</td></tr>
+                <tr><td>3</td><td>Possible</td><td>Might occur at some time</td><td>Once in 2–5 years, 21��50%</td></tr>
                 <tr><td>4</td><td>Likely</td><td>Will probably occur in most circumstances</td><td>Annually or every 1–2 years, 51–80%</td></tr>
                 <tr><td>5</td><td>Almost Certain</td><td>Expected to occur frequently</td><td>More than once a year, &gt;80%</td></tr>
               </tbody>
