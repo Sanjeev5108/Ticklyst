@@ -299,7 +299,7 @@ export default function ReviewDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <FileText className="h-7 w-7 text-blue-600" />
-          Review Module
+          Review
         </h1>
         <Badge className="bg-blue-100 text-blue-800">Review</Badge>
       </div>
