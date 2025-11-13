@@ -1120,7 +1120,7 @@ export default function ATRDashboard() {
                           <tr
                             key={`${r.projectId || "GLOBAL"}|${r.id}`}
                             className="border-t hover:bg-slate-50"
-                            onClick={() => setSelectedControl(r.id)}
+                            
                           >
                             <td className="p-3 text-xs text-slate-600">
                               {r.id}
@@ -1685,7 +1685,7 @@ export default function ATRDashboard() {
                           <tr
                             key={`${r.projectId || "GLOBAL"}|${r.id}`}
                             className="border-t hover:bg-slate-50"
-                            onClick={() => setSelectedControl(r.id)}
+                            
                           >
                             <td className="p-3 text-xs text-slate-600">
                               {r.id}
