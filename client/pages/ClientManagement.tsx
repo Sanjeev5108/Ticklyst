@@ -409,6 +409,11 @@ export default function ClientManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const newClientNameExists = React.useMemo(() => {
+    const name = String(newClient.name || '').trim().toLowerCase();
+    if (!name) return false;
+    return clients.some(c => String(c.name || '').trim().toLowerCase() === name);
+  }, [newClient.name, clients]);
   const [newEmailErrors, setNewEmailErrors] = useState<Record<number, string>>({});
   const [newMobileErrors, setNewMobileErrors] = useState<Record<number, string>>({});
   const [selectedSector, setSelectedSector] = useState<string>('all');
@@ -548,6 +553,7 @@ export default function ClientManagement() {
     if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
     const firstContactName = (newClient.contactPersons && newClient.contactPersons[0] && newClient.contactPersons[0].name) || '';
     if (!newClient.name || !newClient.industry) return;
+    if (newClientNameExists) { toast({ title: 'Client already exist' }); return; }
 
     // Build auditUniverse from auditSections
     const sections = auditSections || [];
@@ -847,6 +853,9 @@ export default function ClientManagement() {
                   placeholder="Enter client name"
                   className="mt-1"
                 />
+                {newClientNameExists ? (
+                  <div className="text-xs text-red-600 mt-1">Client already exist.</div>
+                ) : null}
               </div>
 
               {/* Sector & Industry */}
@@ -1079,7 +1088,7 @@ export default function ClientManagement() {
               </div>
 
               <Button onClick={handleAddClient} className="w-full"
-                disabled={(() => { const cp = (newClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!newClient.name && !!newClient.industry; return !ok; })()}>
+                disabled={(() => { const cp = (newClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!newClient.name && !!newClient.industry && !newClientNameExists; return !ok; })()}>
                 Add Client
               </Button>
             </div>
