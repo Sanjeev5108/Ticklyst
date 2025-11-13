@@ -440,6 +440,12 @@ export default function ClientManagement() {
     }
   });
 
+  const newClientNameExists = React.useMemo(() => {
+    const name = String(newClient.name || '').trim().toLowerCase();
+    if (!name) return false;
+    return clients.some(c => String(c.name || '').trim().toLowerCase() === name);
+  }, [newClient.name, clients]);
+
   const [auditSections, setAuditSections] = useState<{ unit: string[]; departments: string[] }[]>(() => {
     const au = ({} as any) || {};
     try {
