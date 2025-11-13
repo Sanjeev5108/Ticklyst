@@ -78,6 +78,20 @@ interface Comment {
 
 const statuses = ["Open", "In Progress", "Closed", "Overdue"];
 
+// Date helpers: ensure previous due dates are valid and reasonable (year range 1900–2100)
+const isValidISODate = (s: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ""));
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (y < 1900 || y > 2100) return false;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
+  return !isNaN(dt.getTime());
+};
+const sanitizePrevDates = (arr?: string[]) => (arr || []).filter(isValidISODate);
+
 const MultiSelectSimple = ({
   options,
   value,
@@ -451,7 +465,7 @@ export default function ATRDashboard() {
         if (row.id !== id) return row;
         if (field === "dueDate") {
           const prevDate = row.dueDate;
-          if (prevDate && prevDate !== value) {
+          if (prevDate && prevDate !== value && isValidISODate(prevDate)) {
             const prevList = row.previousDueDates
               ? [...row.previousDueDates]
               : [];
@@ -674,7 +688,7 @@ export default function ATRDashboard() {
                       row.previousDueDates.length > 0 && (
                         <div className="mt-1 text-xs text-gray-500">
                           <div>Previous dates:</div>
-                          {row.previousDueDates.map((d, idx) => (
+                          {sanitizePrevDates(row.previousDueDates).map((d, idx) => (
                             <div key={idx}>{d}</div>
                           ))}
                         </div>
@@ -876,10 +890,10 @@ export default function ATRDashboard() {
         const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setAtrRows(data as AuditTrackRow[]);
+          if (Array.isArray(data)) setAtrRows((data as AuditTrackRow[]).map(r => ({ ...r, previousDueDates: sanitizePrevDates(r.previousDueDates) })));
           else if (data && typeof data === "object") {
             const flat = Object.values(data as any).flat() as AuditTrackRow[];
-            setAtrRows(flat);
+            setAtrRows(flat.map(r => ({ ...r, previousDueDates: sanitizePrevDates(r.previousDueDates) })));
           }
         }
       } catch {}
@@ -898,7 +912,7 @@ export default function ATRDashboard() {
       const next: AuditTrackRow = { ...row } as any;
       if (field === "dueDate") {
         const prevDate = row.dueDate;
-        if (prevDate && prevDate !== value)
+        if (prevDate && prevDate !== value && isValidISODate(prevDate))
           next.previousDueDates = [prevDate, ...(row.previousDueDates || [])];
         next.dueDate = value;
       } else {
@@ -1523,7 +1537,7 @@ export default function ATRDashboard() {
                             {a.previousDueDates &&
                               a.previousDueDates.length > 0 && (
                                 <div className="mt-1 text-xs text-gray-500">
-                                  Prev: {a.previousDueDates.join(", ")}
+                                  Prev: {sanitizePrevDates(a.previousDueDates).join(", ")}
                                 </div>
                               )}
                           </td>
@@ -2081,7 +2095,7 @@ export default function ATRDashboard() {
                           {a.previousDueDates &&
                             a.previousDueDates.length > 0 && (
                               <div className="mt-1 text-xs text-gray-500">
-                                Prev: {a.previousDueDates.join(", ")}
+                                Prev: {sanitizePrevDates(a.previousDueDates).join(", ")}
                               </div>
                             )}
                         </td>
