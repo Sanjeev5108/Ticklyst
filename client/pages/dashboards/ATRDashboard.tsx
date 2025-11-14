@@ -1252,7 +1252,7 @@ export default function ATRDashboard() {
                 const deptKeys = Array.from(new Set(rows.map(a => a.department || 'Unassigned')));
                 const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
                 const deptAgg: Record<string, Record<string, number>> = {};
-                rows.forEach(a => { const d = a.designation || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
+                rows.forEach(a => { const d = a.department || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
                 const deptData = deptKeys.map(d => ({ designation: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
 
                 const compGroups: Record<string, number> = {};
