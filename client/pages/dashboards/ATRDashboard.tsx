@@ -2407,7 +2407,7 @@ export default function ATRDashboard() {
                         if (atrGroupBy === "status") return a.status || "";
                         if (atrGroupBy === "due") return a.dueDate || "";
                         if (atrGroupBy === "department")
-                          return a.designation || "";
+                          return a.department || "";
                         return a.responsibility || "";
                       };
                       atrRowsFiltered.forEach((it) => {
