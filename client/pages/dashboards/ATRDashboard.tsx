@@ -1010,7 +1010,7 @@ export default function ATRDashboard() {
           return false;
         if (
           atrDeptFilter.length &&
-          !atrDeptFilter.includes(a.designation || "")
+          !atrDeptFilter.includes(a.department || "")
         )
           return false;
         const q = atrSearch.trim().toLowerCase();
