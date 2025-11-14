@@ -1,5 +1,6 @@
 import React from "react";
 import "./global.css";
+import "./utils/suppressReactWarnings";
 
 import { Toaster } from "@/components/ui/toaster";
 import { createRoot } from "react-dom/client";
