@@ -868,6 +868,7 @@ export default function ATRDashboard() {
     actionPlan: "",
     responsibility: "",
     designation: "",
+    department: "",
     dueDate: "",
     actualCompletionDate: "",
     previousDueDates: [],
