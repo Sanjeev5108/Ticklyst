@@ -981,7 +981,7 @@ export default function ATRDashboard() {
     return uniq(list);
   }, [atrRows]);
   const atrDeptOptions = useMemo(() => {
-    const list = atrRows.map((a) => a.designation);
+    const list = atrRows.map((a) => a.department);
     return uniq(list);
   }, [atrRows]);
 
