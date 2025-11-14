@@ -1623,6 +1623,7 @@ export default function ATRDashboard() {
                         add("Action Plan", a.actionPlan || "");
                         add("Responsibility", a.responsibility || "");
                         add("Designation", a.designation || "");
+                        add("Department", a.department || "");
                         add("Due date", a.dueDate || "");
                         add("Actual Completion date", a.actualCompletionDate || "");
                         add("Status", a.status || "");
