@@ -2105,7 +2105,7 @@ export default function ATRDashboard() {
                         }} className="h-72">
                           <BarChart data={deptData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="designation" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
+                            <XAxis dataKey="department" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
                             <YAxis allowDecimals={false} />
                             <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
                             <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
