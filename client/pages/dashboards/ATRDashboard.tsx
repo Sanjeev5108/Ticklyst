@@ -2524,6 +2524,14 @@ export default function ATRDashboard() {
                         </td>
                         <td className="p-3">
                           <Input
+                            value={a.department || ""}
+                            onChange={(e) =>
+                              updateAtrField(idx, "department", e.target.value)
+                            }
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
                             type="date"
                             value={a.dueDate}
                             onChange={(e) =>
