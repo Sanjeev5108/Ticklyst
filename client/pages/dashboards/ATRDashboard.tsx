@@ -55,6 +55,7 @@ interface AuditTrackRow {
   actionPlan: string;
   responsibility: string;
   designation: string;
+  department: string;
   dueDate: string;
   actualCompletionDate?: string;
   previousDueDates?: string[];
