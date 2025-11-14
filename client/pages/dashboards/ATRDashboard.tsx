@@ -1249,7 +1249,7 @@ export default function ATRDashboard() {
                 rows.forEach(a => { const k = a.responsibility || 'Unassigned'; respGroups[k] = (respGroups[k]||0)+1; });
                 const respData = Object.entries(respGroups).map(([name, count]) => ({ name, count }));
 
-                const deptKeys = Array.from(new Set(rows.map(a => a.designation || 'Unassigned')));
+                const deptKeys = Array.from(new Set(rows.map(a => a.department || 'Unassigned')));
                 const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
                 const deptAgg: Record<string, Record<string, number>> = {};
                 rows.forEach(a => { const d = a.designation || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
