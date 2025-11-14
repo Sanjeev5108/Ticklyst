@@ -1971,6 +1971,7 @@ export default function ATRDashboard() {
                       "Action Plan": a.actionPlan||"",
                       "Responsibility": a.responsibility||"",
                       "Designation": a.designation||"",
+                      "Department": a.department||"",
                       "Due date": a.dueDate||"",
                       "Actual Completion date": a.actualCompletionDate||"",
                       "Status": a.status||"",
