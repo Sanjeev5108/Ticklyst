@@ -683,6 +683,20 @@ export default function ATRDashboard() {
                   </td>
                   <td className="p-3 border-r">
                     <Input
+                      value={row.department || ""}
+                      onChange={(e) =>
+                        updateAuditTrackField(
+                          row.id,
+                          "department",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Enter department"
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                  <td className="p-3 border-r">
+                    <Input
                       type="date"
                       value={row.dueDate}
                       onChange={(e) =>
