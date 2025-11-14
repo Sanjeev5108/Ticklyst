@@ -1020,6 +1020,7 @@ export default function ATRDashboard() {
           a.actionPlan,
           a.responsibility,
           a.designation,
+          a.department,
           a.status,
           a.dueDate,
           a.actualCompletionDate,
