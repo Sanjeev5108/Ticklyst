@@ -617,6 +617,7 @@ export default function ATRDashboard() {
                 <th className="text-left p-3 border-r">Action Plan</th>
                 <th className="text-left p-3 border-r">Responsibility</th>
                 <th className="text-left p-3 border-r">Designation</th>
+                <th className="text-left p-3 border-r">Department</th>
                 <th className="text-left p-3 border-r">Due date</th>
                 <th className="text-left p-3">Status</th>
               </tr>
