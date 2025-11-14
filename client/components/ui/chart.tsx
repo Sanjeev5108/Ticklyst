@@ -1,4 +1,5 @@
 import * as React from "react";
+import "@/utils/suppressReactWarnings";
 import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
