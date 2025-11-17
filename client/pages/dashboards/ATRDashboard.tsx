@@ -200,11 +200,13 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
         </CardHeader>
         <CardContent>{children("h-72")}</CardContent>
       </Card>
-      <DialogContent className="max-w-5xl w-[95vw]">
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="mt-2 h-[60vh]">{children("h-full")}</div>
+        <div className="mt-2 h-[60vh] w-full overflow-auto">
+          {children("h-full")}
+        </div>
       </DialogContent>
     </Dialog>
   );
