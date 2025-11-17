@@ -1410,28 +1410,53 @@ export default function ATRDashboard() {
                         )}
                       </ExpandableChartCard>
 
-                      <Card className="shadow-sm">
-                        <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
-                        <CardContent>
-                          <ChartContainer config={{
-                            Pending: { label: 'Open' },
-                            'In Progress': { label: 'In Progress' },
-                            Completed: { label: 'Closed' },
-                            Overdue: { label: 'Overdue' },
-                          }} className="h-72">
+                      <ExpandableChartCard title="Department-wise Status">
+                        {(innerClassName) => (
+                          <ChartContainer
+                            config={{
+                              Pending: { label: "Open" },
+                              "In Progress": { label: "In Progress" },
+                              Completed: { label: "Closed" },
+                              Overdue: { label: "Overdue" },
+                            }}
+                            className={innerClassName}
+                          >
                             <BarChart data={deptData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="department" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
+                              <XAxis
+                                dataKey="department"
+                                angle={deptData.length > 6 ? -45 : 0}
+                                textAnchor={deptData.length > 6 ? "end" : "middle"}
+                                interval={deptData.length > 6 ? 0 : "preserveStartEnd"}
+                                tickMargin={8}
+                                height={deptData.length > 6 ? undefined : 20}
+                              />
                               <YAxis allowDecimals={false} />
-                              <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
-                              <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
-                              <Bar dataKey="Completed" stackId="a" fill={statusPalette['Completed']} />
-                              <Bar dataKey="Overdue" stackId="a" fill={statusPalette['Overdue']} />
+                              <Bar
+                                dataKey="Pending"
+                                stackId="a"
+                                fill={statusPalette["Pending"]}
+                              />
+                              <Bar
+                                dataKey="In Progress"
+                                stackId="a"
+                                fill={statusPalette["In Progress"]}
+                              />
+                              <Bar
+                                dataKey="Completed"
+                                stackId="a"
+                                fill={statusPalette["Completed"]}
+                              />
+                              <Bar
+                                dataKey="Overdue"
+                                stackId="a"
+                                fill={statusPalette["Overdue"]}
+                              />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </BarChart>
                           </ChartContainer>
-                        </CardContent>
-                      </Card>
+                        )}
+                      </ExpandableChartCard>
 
                       <Card className="shadow-sm lg:col-span-2">
                         <CardHeader><CardTitle>Completion Trend</CardTitle></CardHeader>
