@@ -2042,11 +2042,11 @@ export default function ATRDashboard() {
               rows.forEach(a => { const k = a.responsibility || 'Unassigned'; respGroups[k] = (respGroups[k]||0)+1; });
               const respData = Object.entries(respGroups).map(([name, count]) => ({ name, count }));
 
-              const deptKeys = Array.from(new Set(rows.map(a => a.designation || 'Unassigned')));
+              const deptKeys = Array.from(new Set(rows.map(a => a.department || 'Unassigned')));
               const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
               const deptAgg: Record<string, Record<string, number>> = {};
-              rows.forEach(a => { const d = a.designation || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
-              const deptData = deptKeys.map(d => ({ designation: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
+              rows.forEach(a => { const d = a.department || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
+              const deptData = deptKeys.map(d => ({ department: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
 
               const compGroups: Record<string, number> = {};
               rows.forEach(a => { if (a.actualCompletionDate) { const k = groupKey(a.actualCompletionDate); compGroups[k] = (compGroups[k]||0)+1; }});
