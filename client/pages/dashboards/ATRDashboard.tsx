@@ -2124,95 +2124,152 @@ export default function ATRDashboard() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <Card className="shadow-sm">
-                      <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
-                      <CardContent>
-                        <ChartContainer config={{
-                          Pending: { label: 'Open' },
-                          'In Progress': { label: 'In Progress' },
-                          Completed: { label: 'Closed' },
-                          Overdue: { label: 'Overdue' },
-                        }} className="h-72">
+                    <ExpandableChartCard title="Status Overview">
+                      {(innerClassName) => (
+                        <ChartContainer
+                          config={{
+                            Pending: { label: "Open" },
+                            "In Progress": { label: "In Progress" },
+                            Completed: { label: "Closed" },
+                            Overdue: { label: "Overdue" },
+                          }}
+                          className={innerClassName}
+                        >
                           <PieChart>
-                            <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={100} label>
+                            <Pie
+                              data={statusData}
+                              dataKey="value"
+                              nameKey="name"
+                              outerRadius={100}
+                              label
+                            >
                               {statusData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                               ))}
                             </Pie>
                             <ChartTooltip content={<ChartTooltipContent />} />
-                            <ChartLegend content={<ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />} />
+                            <ChartLegend
+                              content={
+                                <ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />
+                              }
+                            />
                           </PieChart>
                         </ChartContainer>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </ExpandableChartCard>
 
-                    <Card className="shadow-sm">
-                      <CardHeader><CardTitle>Upcoming Deadlines ({vizGroup})</CardTitle></CardHeader>
-                      <CardContent>
-                        <ChartContainer config={{}} className="h-72">
+                    <ExpandableChartCard title={`Upcoming Deadlines (${vizGroup})`}>
+                      {(innerClassName) => (
+                        <ChartContainer config={{}} className={innerClassName}>
                           <BarChart data={dueData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="period" angle={dueData.length > 6 ? -45 : 0} textAnchor={dueData.length > 6 ? "end" : "middle"} interval={dueData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={dueData.length > 6 ? undefined : 20} />
+                            <XAxis
+                              dataKey="period"
+                              angle={dueData.length > 6 ? -45 : 0}
+                              textAnchor={dueData.length > 6 ? "end" : "middle"}
+                              interval={dueData.length > 6 ? 0 : "preserveStartEnd"}
+                              tickMargin={8}
+                              height={dueData.length > 6 ? undefined : 20}
+                            />
                             <YAxis allowDecimals={false} />
-                            <Bar dataKey="count" fill="#6366F1" radius={[4,4,0,0]} />
+                            <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </ExpandableChartCard>
 
-                    <Card className="shadow-sm">
-                      <CardHeader><CardTitle>Responsibility Load</CardTitle></CardHeader>
-                      <CardContent>
-                        <ChartContainer config={{}} className="h-72">
+                    <ExpandableChartCard title="Responsibility Load">
+                      {(innerClassName) => (
+                        <ChartContainer config={{}} className={innerClassName}>
                           <BarChart data={respData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" angle={respData.length > 6 ? -45 : 0} textAnchor={respData.length > 6 ? "end" : "middle"} interval={respData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={respData.length > 6 ? undefined : 20} />
+                            <XAxis
+                              dataKey="name"
+                              angle={respData.length > 6 ? -45 : 0}
+                              textAnchor={respData.length > 6 ? "end" : "middle"}
+                              interval={respData.length > 6 ? 0 : "preserveStartEnd"}
+                              tickMargin={8}
+                              height={respData.length > 6 ? undefined : 20}
+                            />
                             <YAxis allowDecimals={false} />
-                            <Bar dataKey="count" fill="#0EA5E9" radius={[4,4,0,0]} />
+                            <Bar dataKey="count" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </ExpandableChartCard>
 
-                    <Card className="shadow-sm">
-                      <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
-                      <CardContent>
-                        <ChartContainer config={{
-                          Pending: { label: 'Open' },
-                          'In Progress': { label: 'In Progress' },
-                          Completed: { label: 'Closed' },
-                          Overdue: { label: 'Overdue' },
-                        }} className="h-72">
+                    <ExpandableChartCard title="Department-wise Status">
+                      {(innerClassName) => (
+                        <ChartContainer
+                          config={{
+                            Pending: { label: "Open" },
+                            "In Progress": { label: "In Progress" },
+                            Completed: { label: "Closed" },
+                            Overdue: { label: "Overdue" },
+                          }}
+                          className={innerClassName}
+                        >
                           <BarChart data={deptData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="department" angle={deptData.length > 6 ? -45 : 0} textAnchor={deptData.length > 6 ? "end" : "middle"} interval={deptData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={deptData.length > 6 ? undefined : 20} />
+                            <XAxis
+                              dataKey="department"
+                              angle={deptData.length > 6 ? -45 : 0}
+                              textAnchor={deptData.length > 6 ? "end" : "middle"}
+                              interval={deptData.length > 6 ? 0 : "preserveStartEnd"}
+                              tickMargin={8}
+                              height={deptData.length > 6 ? undefined : 20}
+                            />
                             <YAxis allowDecimals={false} />
-                            <Bar dataKey="Pending" stackId="a" fill={statusPalette['Pending']} />
-                            <Bar dataKey="In Progress" stackId="a" fill={statusPalette['In Progress']} />
-                            <Bar dataKey="Completed" stackId="a" fill={statusPalette['Completed']} />
-                            <Bar dataKey="Overdue" stackId="a" fill={statusPalette['Overdue']} />
+                            <Bar
+                              dataKey="Pending"
+                              stackId="a"
+                              fill={statusPalette["Pending"]}
+                            />
+                            <Bar
+                              dataKey="In Progress"
+                              stackId="a"
+                              fill={statusPalette["In Progress"]}
+                            />
+                            <Bar
+                              dataKey="Completed"
+                              stackId="a"
+                              fill={statusPalette["Completed"]}
+                            />
+                            <Bar
+                              dataKey="Overdue"
+                              stackId="a"
+                              fill={statusPalette["Overdue"]}
+                            />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </ExpandableChartCard>
 
-                    <Card className="shadow-sm lg:col-span-2">
-                      <CardHeader><CardTitle>Completion Trend</CardTitle></CardHeader>
-                      <CardContent>
-                        <ChartContainer config={{}} className="h-72">
+                    <ExpandableChartCard
+                      title="Completion Trend"
+                      cardClassName="lg:col-span-2"
+                    >
+                      {(innerClassName) => (
+                        <ChartContainer config={{}} className={innerClassName}>
                           <LineChart data={completionData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="period" />
                             <YAxis allowDecimals={false} />
-                            <Line type="monotone" dataKey="count" stroke="#10B981" strokeWidth={2} dot={false} />
+                            <Line
+                              type="monotone"
+                              dataKey="count"
+                              stroke="#10B981"
+                              strokeWidth={2}
+                              dot={false}
+                            />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </LineChart>
                         </ChartContainer>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </ExpandableChartCard>
                   </div>
                 </>
               );
