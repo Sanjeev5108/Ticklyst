@@ -1458,20 +1458,28 @@ export default function ATRDashboard() {
                         )}
                       </ExpandableChartCard>
 
-                      <Card className="shadow-sm lg:col-span-2">
-                        <CardHeader><CardTitle>Completion Trend</CardTitle></CardHeader>
-                        <CardContent>
-                          <ChartContainer config={{}} className="h-72">
+                      <ExpandableChartCard
+                        title="Completion Trend"
+                        cardClassName="lg:col-span-2"
+                      >
+                        {(innerClassName) => (
+                          <ChartContainer config={{}} className={innerClassName}>
                             <LineChart data={completionData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="period" />
                               <YAxis allowDecimals={false} />
-                              <Line type="monotone" dataKey="count" stroke="#10B981" strokeWidth={2} dot={false} />
+                              <Line
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#10B981"
+                                strokeWidth={2}
+                                dot={false}
+                              />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </LineChart>
                           </ChartContainer>
-                        </CardContent>
-                      </Card>
+                        )}
+                      </ExpandableChartCard>
                     </div>
                   </>
                 );
