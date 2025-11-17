@@ -1334,27 +1334,39 @@ export default function ATRDashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <Card className="shadow-sm">
-                        <CardHeader><CardTitle>Status Overview</CardTitle></CardHeader>
-                        <CardContent>
-                          <ChartContainer config={{
-                                Pending: { label: 'Open' },
-                                'In Progress': { label: 'In Progress' },
-                                Completed: { label: 'Closed' },
-                                Overdue: { label: 'Overdue' },
-                              }} className="h-72">
+                      <ExpandableChartCard title="Status Overview">
+                        {(innerClassName) => (
+                          <ChartContainer
+                            config={{
+                              Pending: { label: "Open" },
+                              "In Progress": { label: "In Progress" },
+                              Completed: { label: "Closed" },
+                              Overdue: { label: "Overdue" },
+                            }}
+                            className={innerClassName}
+                          >
                             <PieChart>
-                              <Pie data={statusData} dataKey="value" nameKey="name" outerRadius={100} label>
+                              <Pie
+                                data={statusData}
+                                dataKey="value"
+                                nameKey="name"
+                                outerRadius={100}
+                                label
+                              >
                                 {statusData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
                               </Pie>
                               <ChartTooltip content={<ChartTooltipContent />} />
-                              <ChartLegend content={<ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />} />
+                              <ChartLegend
+                                content={
+                                  <ChartLegendContent className="flex flex-wrap justify-center gap-3 text-xs" />
+                                }
+                              />
                             </PieChart>
                           </ChartContainer>
-                        </CardContent>
-                      </Card>
+                        )}
+                      </ExpandableChartCard>
 
                       <Card className="shadow-sm">
                         <CardHeader><CardTitle>Upcoming Deadlines ({vizGroup})</CardTitle></CardHeader>
