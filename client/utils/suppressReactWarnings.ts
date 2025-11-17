@@ -4,13 +4,8 @@
   const shouldDrop = (args: unknown[]) => {
     try {
       const msg = String(args?.[0] ?? "");
-      // React logs with format strings, e.g. "Warning: %s: Support for defaultProps... %s", componentName, extra
-      return (
-        msg.includes("Support for defaultProps will be removed from function components") &&
-        (String(args?.[1] ?? "").includes("XAxis") ||
-          String(args?.[1] ?? "").includes("YAxis") ||
-          msg.includes("XAxis") ||
-          msg.includes("YAxis"))
+      return msg.includes(
+        "Support for defaultProps will be removed from function components",
       );
     } catch {
       return false;
