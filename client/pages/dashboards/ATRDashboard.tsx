@@ -167,6 +167,49 @@ const MultiSelectSimple = ({
   );
 };
 
+interface ExpandableChartCardProps {
+  title: React.ReactNode;
+  cardClassName?: string;
+  children: (innerClassName: string) => React.ReactNode;
+}
+
+const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
+  title,
+  cardClassName,
+  children,
+}) => {
+  const cardClasses = ["shadow-sm", cardClassName]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <Dialog>
+      <Card className={cardClasses}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span className="sr-only">Expand chart</span>
+            </Button>
+          </DialogTrigger>
+        </CardHeader>
+        <CardContent>{children("h-72")}</CardContent>
+      </Card>
+      <DialogContent className="max-w-5xl w-[95vw]">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="mt-2 h-[60vh]">{children("h-full")}</div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
