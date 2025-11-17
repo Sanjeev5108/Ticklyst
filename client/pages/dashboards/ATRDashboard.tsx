@@ -40,6 +40,7 @@ import {
   Rows3,
   Download,
   Trash2,
+  Maximize2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Plus, MessageSquare, Send } from "lucide-react";
