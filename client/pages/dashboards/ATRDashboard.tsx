@@ -1389,20 +1389,26 @@ export default function ATRDashboard() {
                         )}
                       </ExpandableChartCard>
 
-                      <Card className="shadow-sm">
-                        <CardHeader><CardTitle>Responsibility Load</CardTitle></CardHeader>
-                        <CardContent>
-                          <ChartContainer config={{}} className="h-72">
+                      <ExpandableChartCard title="Responsibility Load">
+                        {(innerClassName) => (
+                          <ChartContainer config={{}} className={innerClassName}>
                             <BarChart data={respData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" angle={respData.length > 6 ? -45 : 0} textAnchor={respData.length > 6 ? "end" : "middle"} interval={respData.length > 6 ? 0 : "preserveStartEnd"} tickMargin={8} height={respData.length > 6 ? undefined : 20} />
+                              <XAxis
+                                dataKey="name"
+                                angle={respData.length > 6 ? -45 : 0}
+                                textAnchor={respData.length > 6 ? "end" : "middle"}
+                                interval={respData.length > 6 ? 0 : "preserveStartEnd"}
+                                tickMargin={8}
+                                height={respData.length > 6 ? undefined : 20}
+                              />
                               <YAxis allowDecimals={false} />
-                              <Bar dataKey="count" fill="#0EA5E9" radius={[4,4,0,0]} />
+                              <Bar dataKey="count" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </BarChart>
                           </ChartContainer>
-                        </CardContent>
-                      </Card>
+                        )}
+                      </ExpandableChartCard>
 
                       <Card className="shadow-sm">
                         <CardHeader><CardTitle>Department-wise Status</CardTitle></CardHeader>
