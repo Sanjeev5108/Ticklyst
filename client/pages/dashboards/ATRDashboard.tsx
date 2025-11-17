@@ -44,8 +44,25 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Plus, MessageSquare, Send } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  LineChart,
+  Line,
+} from "recharts";
 import { FieldworkStore } from "@/contexts/FieldworkStore";
 import { FieldworkRecord } from "@shared/fieldwork";
 import { useAuth } from "@/contexts/AuthContext";
@@ -94,7 +111,8 @@ const isValidISODate = (s: string) => {
   const dt = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`);
   return !isNaN(dt.getTime());
 };
-const sanitizePrevDates = (arr?: string[]) => (arr || []).filter(isValidISODate);
+const sanitizePrevDates = (arr?: string[]) =>
+  (arr || []).filter(isValidISODate);
 
 const MultiSelectSimple = ({
   options,
@@ -178,9 +196,7 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
   cardClassName,
   children,
 }) => {
-  const cardClasses = ["shadow-sm", cardClassName]
-    .filter(Boolean)
-    .join(" ");
+  const cardClasses = ["shadow-sm", cardClassName].filter(Boolean).join(" ");
 
   return (
     <Dialog>
@@ -639,9 +655,9 @@ export default function ATRDashboard() {
                       auditObservation: "",
                       actionPlan: "",
                       responsibility: "",
-      designation: "",
-      department: "",
-      dueDate: "",
+                      designation: "",
+                      department: "",
+                      dueDate: "",
                       status: "",
                     },
                   ])
@@ -754,9 +770,11 @@ export default function ATRDashboard() {
                       row.previousDueDates.length > 0 && (
                         <div className="mt-1 text-xs text-gray-500">
                           <div>Previous dates:</div>
-                          {sanitizePrevDates(row.previousDueDates).map((d, idx) => (
-                            <div key={idx}>{d}</div>
-                          ))}
+                          {sanitizePrevDates(row.previousDueDates).map(
+                            (d, idx) => (
+                              <div key={idx}>{d}</div>
+                            ),
+                          )}
                         </div>
                       )}
                   </td>
@@ -957,10 +975,21 @@ export default function ATRDashboard() {
         const res = await fetch(`/api/settings/${encodeURIComponent(atrKey)}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setAtrRows((data as AuditTrackRow[]).map(r => ({ ...r, previousDueDates: sanitizePrevDates(r.previousDueDates) })));
+          if (Array.isArray(data))
+            setAtrRows(
+              (data as AuditTrackRow[]).map((r) => ({
+                ...r,
+                previousDueDates: sanitizePrevDates(r.previousDueDates),
+              })),
+            );
           else if (data && typeof data === "object") {
             const flat = Object.values(data as any).flat() as AuditTrackRow[];
-            setAtrRows(flat.map(r => ({ ...r, previousDueDates: sanitizePrevDates(r.previousDueDates) })));
+            setAtrRows(
+              flat.map((r) => ({
+                ...r,
+                previousDueDates: sanitizePrevDates(r.previousDueDates),
+              })),
+            );
           }
         }
       } catch {}
@@ -1069,10 +1098,7 @@ export default function ATRDashboard() {
           !atrRespFilter.includes(a.responsibility || "")
         )
           return false;
-        if (
-          atrDeptFilter.length &&
-          !atrDeptFilter.includes(a.department || "")
-        )
+        if (atrDeptFilter.length && !atrDeptFilter.includes(a.department || ""))
           return false;
         const q = atrSearch.trim().toLowerCase();
         if (!q) return true;
@@ -1205,7 +1231,6 @@ export default function ATRDashboard() {
                           <tr
                             key={`${r.projectId || "GLOBAL"}|${r.id}`}
                             className="border-t hover:bg-slate-50"
-                            
                           >
                             <td className="p-3 text-xs text-slate-600">
                               {r.id}
@@ -1236,13 +1261,18 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label>Project</Label>
-                  <Select value={selectedProjectId || ""} onValueChange={(v)=> setSelectedProjectId(v)}>
+                  <Select
+                    value={selectedProjectId || ""}
+                    onValueChange={(v) => setSelectedProjectId(v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {reportableProjectOptions.map(opt => (
-                        <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                      {reportableProjectOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.title}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1250,8 +1280,13 @@ export default function ATRDashboard() {
                 <div className="grid grid-cols-2 gap-2 md:col-span-2">
                   <div>
                     <Label className="text-xs">Group By</Label>
-                    <Select value={vizGroup} onValueChange={(v:any)=> setVizGroup(v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Grouping"/></SelectTrigger>
+                    <Select
+                      value={vizGroup}
+                      onValueChange={(v: any) => setVizGroup(v)}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Grouping" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
@@ -1259,80 +1294,206 @@ export default function ATRDashboard() {
                     </Select>
                   </div>
                   <div className="flex items-end justify-end">
-                    <Button size="sm" className="flex items-center gap-2" onClick={()=>{
-                      const wb = XLSX.utils.book_new();
-                      const rows = atrRowsFiltered.map(({a})=>({
-                        "Audit Observation": a.auditObservation||"",
-                        "Action Plan": a.actionPlan||"",
-                        "Responsibility": a.responsibility||"",
-                        "Designation": a.designation||"",
-                        "Department": a.department||"",
-                        "Due date": a.dueDate||"",
-                        "Actual Completion date": a.actualCompletionDate||"",
-                        "Status": a.status||"",
-                      }));
-                      const ws = XLSX.utils.json_to_sheet(rows);
-                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
-                      XLSX.writeFile(wb, "atr_visualized.xlsx");
-                    }}>
-                      <Download className="h-4 w-4"/> Export XLSX
+                    <Button
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        const wb = XLSX.utils.book_new();
+                        const rows = atrRowsFiltered.map(({ a }) => ({
+                          "Audit Observation": a.auditObservation || "",
+                          "Action Plan": a.actionPlan || "",
+                          Responsibility: a.responsibility || "",
+                          Designation: a.designation || "",
+                          Department: a.department || "",
+                          "Due date": a.dueDate || "",
+                          "Actual Completion date":
+                            a.actualCompletionDate || "",
+                          Status: a.status || "",
+                        }));
+                        const ws = XLSX.utils.json_to_sheet(rows);
+                        XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                        XLSX.writeFile(wb, "atr_visualized.xlsx");
+                      }}
+                    >
+                      <Download className="h-4 w-4" /> Export XLSX
                     </Button>
                   </div>
                 </div>
               </div>
 
               {(() => {
-                const rows = atrRowsFiltered.map(r=>r.a);
+                const rows = atrRowsFiltered.map((r) => r.a);
                 const today = new Date();
-                const mapStatus = (s?: string) => s === 'Closed' ? 'Completed' : s === 'Open' ? 'Pending' : (s||'');
-                const statusPalette: Record<string, string> = { Completed: '#10B981', "In Progress": '#F59E0B', Overdue: '#EF4444', Pending: '#64748B' };
+                const mapStatus = (s?: string) =>
+                  s === "Closed"
+                    ? "Completed"
+                    : s === "Open"
+                      ? "Pending"
+                      : s || "";
+                const statusPalette: Record<string, string> = {
+                  Completed: "#10B981",
+                  "In Progress": "#F59E0B",
+                  Overdue: "#EF4444",
+                  Pending: "#64748B",
+                };
 
                 const statusCount: Record<string, number> = {};
-                rows.forEach(a => { const k = mapStatus(a.status); statusCount[k] = (statusCount[k]||0)+1; });
-                const statusData = Object.keys(statusPalette).map(k => ({ name: k, value: statusCount[k]||0, fill: statusPalette[k] }));
+                rows.forEach((a) => {
+                  const k = mapStatus(a.status);
+                  statusCount[k] = (statusCount[k] || 0) + 1;
+                });
+                const statusData = Object.keys(statusPalette).map((k) => ({
+                  name: k,
+                  value: statusCount[k] || 0,
+                  fill: statusPalette[k],
+                }));
 
-                const fmtMonth = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const fmtMonth = (d: Date) =>
+                  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
                 const getWeekKey = (d: Date) => {
-                  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                  const dt = new Date(
+                    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+                  );
                   const day = dt.getUTCDay();
                   const diff = (day === 0 ? -6 : 1) - day;
-                  const monday = new Date(dt); monday.setUTCDate(dt.getUTCDate()+diff);
-                  const year = monday.getUTCFullYear(); const month = monday.getUTCMonth()+1; const date = monday.getUTCDate();
-                  return `${year}-W${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                  const monday = new Date(dt);
+                  monday.setUTCDate(dt.getUTCDate() + diff);
+                  const year = monday.getUTCFullYear();
+                  const month = monday.getUTCMonth() + 1;
+                  const date = monday.getUTCDate();
+                  return `${year}-W${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
                 };
-                const groupKey = (s?: string) => { if (!s) return 'Unknown'; const d = new Date(s); if (isNaN(d.getTime())) return 'Unknown'; return vizGroup === 'weekly' ? getWeekKey(d) : fmtMonth(d); };
+                const groupKey = (s?: string) => {
+                  if (!s) return "Unknown";
+                  const d = new Date(s);
+                  if (isNaN(d.getTime())) return "Unknown";
+                  return vizGroup === "weekly" ? getWeekKey(d) : fmtMonth(d);
+                };
 
                 const dueGroups: Record<string, number> = {};
-                rows.forEach(a => { if (a.dueDate) { const k = groupKey(a.dueDate); dueGroups[k] = (dueGroups[k]||0)+1; }});
-                const dueData = Object.keys(dueGroups).sort().map(k => ({ period: k, count: dueGroups[k] }));
+                rows.forEach((a) => {
+                  if (a.dueDate) {
+                    const k = groupKey(a.dueDate);
+                    dueGroups[k] = (dueGroups[k] || 0) + 1;
+                  }
+                });
+                const dueData = Object.keys(dueGroups)
+                  .sort()
+                  .map((k) => ({ period: k, count: dueGroups[k] }));
 
                 const respGroups: Record<string, number> = {};
-                rows.forEach(a => { const k = a.responsibility || 'Unassigned'; respGroups[k] = (respGroups[k]||0)+1; });
-                const respData = Object.entries(respGroups).map(([name, count]) => ({ name, count }));
+                rows.forEach((a) => {
+                  const k = a.responsibility || "Unassigned";
+                  respGroups[k] = (respGroups[k] || 0) + 1;
+                });
+                const respData = Object.entries(respGroups).map(
+                  ([name, count]) => ({ name, count }),
+                );
 
-                const deptKeys = Array.from(new Set(rows.map(a => a.department || 'Unassigned')));
-                const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
+                const deptKeys = Array.from(
+                  new Set(rows.map((a) => a.department || "Unassigned")),
+                );
+                const statusKeys = [
+                  "Pending",
+                  "In Progress",
+                  "Completed",
+                  "Overdue",
+                ];
                 const deptAgg: Record<string, Record<string, number>> = {};
-                rows.forEach(a => { const d = a.department || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
-                const deptData = deptKeys.map(d => ({ department: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
+                rows.forEach((a) => {
+                  const d = a.department || "Unassigned";
+                  const s = mapStatus(a.status);
+                  deptAgg[d] = deptAgg[d] || {};
+                  deptAgg[d][s] = (deptAgg[d][s] || 0) + 1;
+                });
+                const deptData = deptKeys.map((d) => ({
+                  department: d,
+                  ...Object.fromEntries(
+                    statusKeys.map((s) => [s, (deptAgg[d] || {})[s] || 0]),
+                  ),
+                }));
 
                 const compGroups: Record<string, number> = {};
-                rows.forEach(a => { if (a.actualCompletionDate) { const k = groupKey(a.actualCompletionDate); compGroups[k] = (compGroups[k]||0)+1; }});
-                const completionData = Object.keys(compGroups).sort().map(k => ({ period: k, count: compGroups[k] }));
+                rows.forEach((a) => {
+                  if (a.actualCompletionDate) {
+                    const k = groupKey(a.actualCompletionDate);
+                    compGroups[k] = (compGroups[k] || 0) + 1;
+                  }
+                });
+                const completionData = Object.keys(compGroups)
+                  .sort()
+                  .map((k) => ({ period: k, count: compGroups[k] }));
 
                 const total = rows.length;
-                const completed = rows.filter(a => mapStatus(a.status) === 'Completed' || !!a.actualCompletionDate).length;
-                const overdue = rows.filter(a => mapStatus(a.status) === 'Overdue' || (!!a.dueDate && new Date(a.dueDate) < today && mapStatus(a.status) !== 'Completed')).length;
-                const delays: number[] = rows.filter(a => a.actualCompletionDate && a.dueDate).map(a => Math.max(0, Math.ceil((new Date(a.actualCompletionDate!).getTime() - new Date(a.dueDate!).getTime()) / (1000*60*60*24))));
-                const avgDelay = delays.length ? Math.round((delays.reduce((s,n)=>s+n,0)/delays.length)) : 0;
+                const completed = rows.filter(
+                  (a) =>
+                    mapStatus(a.status) === "Completed" ||
+                    !!a.actualCompletionDate,
+                ).length;
+                const overdue = rows.filter(
+                  (a) =>
+                    mapStatus(a.status) === "Overdue" ||
+                    (!!a.dueDate &&
+                      new Date(a.dueDate) < today &&
+                      mapStatus(a.status) !== "Completed"),
+                ).length;
+                const delays: number[] = rows
+                  .filter((a) => a.actualCompletionDate && a.dueDate)
+                  .map((a) =>
+                    Math.max(
+                      0,
+                      Math.ceil(
+                        (new Date(a.actualCompletionDate!).getTime() -
+                          new Date(a.dueDate!).getTime()) /
+                          (1000 * 60 * 60 * 24),
+                      ),
+                    ),
+                  );
+                const avgDelay = delays.length
+                  ? Math.round(
+                      delays.reduce((s, n) => s + n, 0) / delays.length,
+                    )
+                  : 0;
 
                 return (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Total Action Plans</div><div className="text-2xl font-semibold">{total}</div></CardContent></Card>
-                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Completed</div><div className="text-2xl font-semibold text-emerald-600">{completed}</div></CardContent></Card>
-                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Overdue</div><div className="text-2xl font-semibold text-red-600">{overdue}</div></CardContent></Card>
-                      <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Average Delay (days)</div><div className="text-2xl font-semibold">{avgDelay}</div></CardContent></Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="text-xs text-slate-500">
+                            Total Action Plans
+                          </div>
+                          <div className="text-2xl font-semibold">{total}</div>
+                        </CardContent>
+                      </Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="text-xs text-slate-500">
+                            Completed
+                          </div>
+                          <div className="text-2xl font-semibold text-emerald-600">
+                            {completed}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="text-xs text-slate-500">Overdue</div>
+                          <div className="text-2xl font-semibold text-red-600">
+                            {overdue}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="text-xs text-slate-500">
+                            Average Delay (days)
+                          </div>
+                          <div className="text-2xl font-semibold">
+                            {avgDelay}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1356,7 +1517,10 @@ export default function ATRDashboard() {
                                 label
                               >
                                 {statusData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.fill}
+                                  />
                                 ))}
                               </Pie>
                               <ChartTooltip content={<ChartTooltipContent />} />
@@ -1370,21 +1534,34 @@ export default function ATRDashboard() {
                         )}
                       </ExpandableChartCard>
 
-                      <ExpandableChartCard title={`Upcoming Deadlines (${vizGroup})`}>
+                      <ExpandableChartCard
+                        title={`Upcoming Deadlines (${vizGroup})`}
+                      >
                         {(innerClassName) => (
-                          <ChartContainer config={{}} className={innerClassName}>
+                          <ChartContainer
+                            config={{}}
+                            className={innerClassName}
+                          >
                             <BarChart data={dueData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis
                                 dataKey="period"
                                 angle={dueData.length > 6 ? -45 : 0}
-                                textAnchor={dueData.length > 6 ? "end" : "middle"}
-                                interval={dueData.length > 6 ? 0 : "preserveStartEnd"}
+                                textAnchor={
+                                  dueData.length > 6 ? "end" : "middle"
+                                }
+                                interval={
+                                  dueData.length > 6 ? 0 : "preserveStartEnd"
+                                }
                                 tickMargin={8}
                                 height={dueData.length > 6 ? undefined : 20}
                               />
                               <YAxis allowDecimals={false} />
-                              <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                              <Bar
+                                dataKey="count"
+                                fill="#6366F1"
+                                radius={[4, 4, 0, 0]}
+                              />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </BarChart>
                           </ChartContainer>
@@ -1393,19 +1570,30 @@ export default function ATRDashboard() {
 
                       <ExpandableChartCard title="Responsibility Load">
                         {(innerClassName) => (
-                          <ChartContainer config={{}} className={innerClassName}>
+                          <ChartContainer
+                            config={{}}
+                            className={innerClassName}
+                          >
                             <BarChart data={respData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis
                                 dataKey="name"
                                 angle={respData.length > 6 ? -45 : 0}
-                                textAnchor={respData.length > 6 ? "end" : "middle"}
-                                interval={respData.length > 6 ? 0 : "preserveStartEnd"}
+                                textAnchor={
+                                  respData.length > 6 ? "end" : "middle"
+                                }
+                                interval={
+                                  respData.length > 6 ? 0 : "preserveStartEnd"
+                                }
                                 tickMargin={8}
                                 height={respData.length > 6 ? undefined : 20}
                               />
                               <YAxis allowDecimals={false} />
-                              <Bar dataKey="count" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
+                              <Bar
+                                dataKey="count"
+                                fill="#0EA5E9"
+                                radius={[4, 4, 0, 0]}
+                              />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </BarChart>
                           </ChartContainer>
@@ -1428,8 +1616,12 @@ export default function ATRDashboard() {
                               <XAxis
                                 dataKey="department"
                                 angle={deptData.length > 6 ? -45 : 0}
-                                textAnchor={deptData.length > 6 ? "end" : "middle"}
-                                interval={deptData.length > 6 ? 0 : "preserveStartEnd"}
+                                textAnchor={
+                                  deptData.length > 6 ? "end" : "middle"
+                                }
+                                interval={
+                                  deptData.length > 6 ? 0 : "preserveStartEnd"
+                                }
                                 tickMargin={8}
                                 height={deptData.length > 6 ? undefined : 20}
                               />
@@ -1465,7 +1657,10 @@ export default function ATRDashboard() {
                         cardClassName="lg:col-span-2"
                       >
                         {(innerClassName) => (
-                          <ChartContainer config={{}} className={innerClassName}>
+                          <ChartContainer
+                            config={{}}
+                            className={innerClassName}
+                          >
                             <LineChart data={completionData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="period" />
@@ -1485,10 +1680,10 @@ export default function ATRDashboard() {
                     </div>
                   </>
                 );
-            })()}
-          </div>
-        </TabsContent>
-        <TabsContent value="access">
+              })()}
+            </div>
+          </TabsContent>
+          <TabsContent value="access">
             <div className="space-y-4 mt-4">
               {/* Toolbar */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
@@ -1744,7 +1939,10 @@ export default function ATRDashboard() {
                         add("Designation", a.designation || "");
                         add("Department", a.department || "");
                         add("Due date", a.dueDate || "");
-                        add("Actual Completion date", a.actualCompletionDate || "");
+                        add(
+                          "Actual Completion date",
+                          a.actualCompletionDate || "",
+                        );
                         add("Status", a.status || "");
                         return row;
                       };
@@ -1797,7 +1995,9 @@ export default function ATRDashboard() {
                       <th className="text-left p-3 w-40">Designation</th>
                       <th className="text-left p-3 w-40">Department</th>
                       <th className="text-left p-3 w-40">Due date</th>
-                      <th className="text-left p-3 w-44">Actual Completion date</th>
+                      <th className="text-left p-3 w-44">
+                        Actual Completion date
+                      </th>
                       <th className="text-left p-3 w-32">Status</th>
                     </tr>
                   </thead>
@@ -1861,7 +2061,11 @@ export default function ATRDashboard() {
                             <Input
                               value={a.department || ""}
                               onChange={(e) =>
-                                updateAtrField(idx, "department", e.target.value)
+                                updateAtrField(
+                                  idx,
+                                  "department",
+                                  e.target.value,
+                                )
                               }
                             />
                           </td>
@@ -1876,7 +2080,10 @@ export default function ATRDashboard() {
                             {a.previousDueDates &&
                               a.previousDueDates.length > 0 && (
                                 <div className="mt-1 text-xs text-gray-500">
-                                  Prev: {sanitizePrevDates(a.previousDueDates).join(", ")}
+                                  Prev:{" "}
+                                  {sanitizePrevDates(a.previousDueDates).join(
+                                    ", ",
+                                  )}
                                 </div>
                               )}
                           </td>
@@ -1885,7 +2092,11 @@ export default function ATRDashboard() {
                               type="date"
                               value={a.actualCompletionDate || ""}
                               onChange={(e) =>
-                                updateAtrField(idx, "actualCompletionDate", e.target.value)
+                                updateAtrField(
+                                  idx,
+                                  "actualCompletionDate",
+                                  e.target.value,
+                                )
                               }
                             />
                           </td>
@@ -1947,10 +2158,10 @@ export default function ATRDashboard() {
 
       <Tabs defaultValue="access">
         <TabsList>
-            <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
-            <TabsTrigger value="access">ATR Access</TabsTrigger>
-            <TabsTrigger value="visualized">Visualized</TabsTrigger>
-          </TabsList>
+          <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
+          <TabsTrigger value="access">ATR Access</TabsTrigger>
+          <TabsTrigger value="visualized">Visualized</TabsTrigger>
+        </TabsList>
         <TabsContent value="reportable">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
             <div>
@@ -2039,7 +2250,6 @@ export default function ATRDashboard() {
                           <tr
                             key={`${r.projectId || "GLOBAL"}|${r.id}`}
                             className="border-t hover:bg-slate-50"
-                            
                           >
                             <td className="p-3 text-xs text-slate-600">
                               {r.id}
@@ -2071,13 +2281,18 @@ export default function ATRDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div>
                 <Label>Project</Label>
-                <Select value={selectedProjectId || ""} onValueChange={(v)=> setSelectedProjectId(v)}>
+                <Select
+                  value={selectedProjectId || ""}
+                  onValueChange={(v) => setSelectedProjectId(v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {reportableProjectOptions.map(opt => (
-                      <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                    {reportableProjectOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        {opt.title}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -2085,8 +2300,13 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-2 gap-2 md:col-span-2">
                 <div>
                   <Label className="text-xs">Group By</Label>
-                  <Select value={vizGroup} onValueChange={(v:any)=> setVizGroup(v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Grouping"/></SelectTrigger>
+                  <Select
+                    value={vizGroup}
+                    onValueChange={(v: any) => setVizGroup(v)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Grouping" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
@@ -2094,80 +2314,199 @@ export default function ATRDashboard() {
                   </Select>
                 </div>
                 <div className="flex items-end justify-end">
-                  <Button size="sm" className="flex items-center gap-2" onClick={()=>{
-                    const wb = XLSX.utils.book_new();
-                    const rows = atrRowsFiltered.map(({a})=>({
-                      "Audit Observation": a.auditObservation||"",
-                      "Action Plan": a.actionPlan||"",
-                      "Responsibility": a.responsibility||"",
-                      "Designation": a.designation||"",
-                      "Department": a.department||"",
-                      "Due date": a.dueDate||"",
-                      "Actual Completion date": a.actualCompletionDate||"",
-                      "Status": a.status||"",
-                    }));
-                    const ws = XLSX.utils.json_to_sheet(rows);
-                    XLSX.utils.book_append_sheet(wb, ws, "ATR");
-                    XLSX.writeFile(wb, "atr_visualized.xlsx");
-                  }}>
-                    <Download className="h-4 w-4"/> Export XLSX
+                  <Button
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      const wb = XLSX.utils.book_new();
+                      const rows = atrRowsFiltered.map(({ a }) => ({
+                        "Audit Observation": a.auditObservation || "",
+                        "Action Plan": a.actionPlan || "",
+                        Responsibility: a.responsibility || "",
+                        Designation: a.designation || "",
+                        Department: a.department || "",
+                        "Due date": a.dueDate || "",
+                        "Actual Completion date": a.actualCompletionDate || "",
+                        Status: a.status || "",
+                      }));
+                      const ws = XLSX.utils.json_to_sheet(rows);
+                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                      XLSX.writeFile(wb, "atr_visualized.xlsx");
+                    }}
+                  >
+                    <Download className="h-4 w-4" /> Export XLSX
                   </Button>
                 </div>
               </div>
             </div>
 
             {(() => {
-              const rows = atrRowsFiltered.map(r=>r.a);
+              const rows = atrRowsFiltered.map((r) => r.a);
               const today = new Date();
-              const mapStatus = (s?: string) => s === 'Closed' ? 'Completed' : s === 'Open' ? 'Pending' : (s||'');
-              const statusPalette: Record<string, string> = { Completed: '#10B981', "In Progress": '#F59E0B', Overdue: '#EF4444', Pending: '#64748B' };
+              const mapStatus = (s?: string) =>
+                s === "Closed"
+                  ? "Completed"
+                  : s === "Open"
+                    ? "Pending"
+                    : s || "";
+              const statusPalette: Record<string, string> = {
+                Completed: "#10B981",
+                "In Progress": "#F59E0B",
+                Overdue: "#EF4444",
+                Pending: "#64748B",
+              };
 
               const statusCount: Record<string, number> = {};
-              rows.forEach(a => { const k = mapStatus(a.status); statusCount[k] = (statusCount[k]||0)+1; });
-              const statusData = Object.keys(statusPalette).map(k => ({ name: k, value: statusCount[k]||0, fill: statusPalette[k] }));
+              rows.forEach((a) => {
+                const k = mapStatus(a.status);
+                statusCount[k] = (statusCount[k] || 0) + 1;
+              });
+              const statusData = Object.keys(statusPalette).map((k) => ({
+                name: k,
+                value: statusCount[k] || 0,
+                fill: statusPalette[k],
+              }));
 
-              const fmtMonth = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+              const fmtMonth = (d: Date) =>
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
               const getWeekKey = (d: Date) => {
-                const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                const dt = new Date(
+                  Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
+                );
                 const day = dt.getUTCDay();
                 const diff = (day === 0 ? -6 : 1) - day;
-                const monday = new Date(dt); monday.setUTCDate(dt.getUTCDate()+diff);
-                const year = monday.getUTCFullYear(); const month = monday.getUTCMonth()+1; const date = monday.getUTCDate();
-                return `${year}-W${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+                const monday = new Date(dt);
+                monday.setUTCDate(dt.getUTCDate() + diff);
+                const year = monday.getUTCFullYear();
+                const month = monday.getUTCMonth() + 1;
+                const date = monday.getUTCDate();
+                return `${year}-W${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
               };
-              const groupKey = (s?: string) => { if (!s) return 'Unknown'; const d = new Date(s); if (isNaN(d.getTime())) return 'Unknown'; return vizGroup === 'weekly' ? getWeekKey(d) : fmtMonth(d); };
+              const groupKey = (s?: string) => {
+                if (!s) return "Unknown";
+                const d = new Date(s);
+                if (isNaN(d.getTime())) return "Unknown";
+                return vizGroup === "weekly" ? getWeekKey(d) : fmtMonth(d);
+              };
 
               const dueGroups: Record<string, number> = {};
-              rows.forEach(a => { if (a.dueDate) { const k = groupKey(a.dueDate); dueGroups[k] = (dueGroups[k]||0)+1; }});
-              const dueData = Object.keys(dueGroups).sort().map(k => ({ period: k, count: dueGroups[k] }));
+              rows.forEach((a) => {
+                if (a.dueDate) {
+                  const k = groupKey(a.dueDate);
+                  dueGroups[k] = (dueGroups[k] || 0) + 1;
+                }
+              });
+              const dueData = Object.keys(dueGroups)
+                .sort()
+                .map((k) => ({ period: k, count: dueGroups[k] }));
 
               const respGroups: Record<string, number> = {};
-              rows.forEach(a => { const k = a.responsibility || 'Unassigned'; respGroups[k] = (respGroups[k]||0)+1; });
-              const respData = Object.entries(respGroups).map(([name, count]) => ({ name, count }));
+              rows.forEach((a) => {
+                const k = a.responsibility || "Unassigned";
+                respGroups[k] = (respGroups[k] || 0) + 1;
+              });
+              const respData = Object.entries(respGroups).map(
+                ([name, count]) => ({ name, count }),
+              );
 
-              const deptKeys = Array.from(new Set(rows.map(a => a.department || 'Unassigned')));
-              const statusKeys = [ 'Pending', 'In Progress', 'Completed', 'Overdue' ];
+              const deptKeys = Array.from(
+                new Set(rows.map((a) => a.department || "Unassigned")),
+              );
+              const statusKeys = [
+                "Pending",
+                "In Progress",
+                "Completed",
+                "Overdue",
+              ];
               const deptAgg: Record<string, Record<string, number>> = {};
-              rows.forEach(a => { const d = a.department || 'Unassigned'; const s = mapStatus(a.status); deptAgg[d] = deptAgg[d]||{}; deptAgg[d][s] = (deptAgg[d][s]||0)+1; });
-              const deptData = deptKeys.map(d => ({ department: d, ...Object.fromEntries(statusKeys.map(s => [s, (deptAgg[d]||{})[s]||0])) }));
+              rows.forEach((a) => {
+                const d = a.department || "Unassigned";
+                const s = mapStatus(a.status);
+                deptAgg[d] = deptAgg[d] || {};
+                deptAgg[d][s] = (deptAgg[d][s] || 0) + 1;
+              });
+              const deptData = deptKeys.map((d) => ({
+                department: d,
+                ...Object.fromEntries(
+                  statusKeys.map((s) => [s, (deptAgg[d] || {})[s] || 0]),
+                ),
+              }));
 
               const compGroups: Record<string, number> = {};
-              rows.forEach(a => { if (a.actualCompletionDate) { const k = groupKey(a.actualCompletionDate); compGroups[k] = (compGroups[k]||0)+1; }});
-              const completionData = Object.keys(compGroups).sort().map(k => ({ period: k, count: compGroups[k] }));
+              rows.forEach((a) => {
+                if (a.actualCompletionDate) {
+                  const k = groupKey(a.actualCompletionDate);
+                  compGroups[k] = (compGroups[k] || 0) + 1;
+                }
+              });
+              const completionData = Object.keys(compGroups)
+                .sort()
+                .map((k) => ({ period: k, count: compGroups[k] }));
 
               const total = rows.length;
-              const completed = rows.filter(a => mapStatus(a.status) === 'Completed' || !!a.actualCompletionDate).length;
-              const overdue = rows.filter(a => mapStatus(a.status) === 'Overdue' || (!!a.dueDate && new Date(a.dueDate) < today && mapStatus(a.status) !== 'Completed')).length;
-              const delays: number[] = rows.filter(a => a.actualCompletionDate && a.dueDate).map(a => Math.max(0, Math.ceil((new Date(a.actualCompletionDate!).getTime() - new Date(a.dueDate!).getTime()) / (1000*60*60*24))));
-              const avgDelay = delays.length ? Math.round((delays.reduce((s,n)=>s+n,0)/delays.length)) : 0;
+              const completed = rows.filter(
+                (a) =>
+                  mapStatus(a.status) === "Completed" ||
+                  !!a.actualCompletionDate,
+              ).length;
+              const overdue = rows.filter(
+                (a) =>
+                  mapStatus(a.status) === "Overdue" ||
+                  (!!a.dueDate &&
+                    new Date(a.dueDate) < today &&
+                    mapStatus(a.status) !== "Completed"),
+              ).length;
+              const delays: number[] = rows
+                .filter((a) => a.actualCompletionDate && a.dueDate)
+                .map((a) =>
+                  Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(a.actualCompletionDate!).getTime() -
+                        new Date(a.dueDate!).getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    ),
+                  ),
+                );
+              const avgDelay = delays.length
+                ? Math.round(delays.reduce((s, n) => s + n, 0) / delays.length)
+                : 0;
 
               return (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Total Action Plans</div><div className="text-2xl font-semibold">{total}</div></CardContent></Card>
-                    <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Completed</div><div className="text-2xl font-semibold text-emerald-600">{completed}</div></CardContent></Card>
-                    <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Overdue</div><div className="text-2xl font-semibold text-red-600">{overdue}</div></CardContent></Card>
-                    <Card className="shadow-sm"><CardContent className="p-4"><div className="text-xs text-slate-500">Average Delay (days)</div><div className="text-2xl font-semibold">{avgDelay}</div></CardContent></Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="text-xs text-slate-500">
+                          Total Action Plans
+                        </div>
+                        <div className="text-2xl font-semibold">{total}</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="text-xs text-slate-500">Completed</div>
+                        <div className="text-2xl font-semibold text-emerald-600">
+                          {completed}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="text-xs text-slate-500">Overdue</div>
+                        <div className="text-2xl font-semibold text-red-600">
+                          {overdue}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="text-xs text-slate-500">
+                          Average Delay (days)
+                        </div>
+                        <div className="text-2xl font-semibold">{avgDelay}</div>
+                      </CardContent>
+                    </Card>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -2205,7 +2544,9 @@ export default function ATRDashboard() {
                       )}
                     </ExpandableChartCard>
 
-                    <ExpandableChartCard title={`Upcoming Deadlines (${vizGroup})`}>
+                    <ExpandableChartCard
+                      title={`Upcoming Deadlines (${vizGroup})`}
+                    >
                       {(innerClassName) => (
                         <ChartContainer config={{}} className={innerClassName}>
                           <BarChart data={dueData}>
@@ -2214,12 +2555,18 @@ export default function ATRDashboard() {
                               dataKey="period"
                               angle={dueData.length > 6 ? -45 : 0}
                               textAnchor={dueData.length > 6 ? "end" : "middle"}
-                              interval={dueData.length > 6 ? 0 : "preserveStartEnd"}
+                              interval={
+                                dueData.length > 6 ? 0 : "preserveStartEnd"
+                              }
                               tickMargin={8}
                               height={dueData.length > 6 ? undefined : 20}
                             />
                             <YAxis allowDecimals={false} />
-                            <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                            <Bar
+                              dataKey="count"
+                              fill="#6366F1"
+                              radius={[4, 4, 0, 0]}
+                            />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
@@ -2234,13 +2581,21 @@ export default function ATRDashboard() {
                             <XAxis
                               dataKey="name"
                               angle={respData.length > 6 ? -45 : 0}
-                              textAnchor={respData.length > 6 ? "end" : "middle"}
-                              interval={respData.length > 6 ? 0 : "preserveStartEnd"}
+                              textAnchor={
+                                respData.length > 6 ? "end" : "middle"
+                              }
+                              interval={
+                                respData.length > 6 ? 0 : "preserveStartEnd"
+                              }
                               tickMargin={8}
                               height={respData.length > 6 ? undefined : 20}
                             />
                             <YAxis allowDecimals={false} />
-                            <Bar dataKey="count" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
+                            <Bar
+                              dataKey="count"
+                              fill="#0EA5E9"
+                              radius={[4, 4, 0, 0]}
+                            />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
@@ -2263,8 +2618,12 @@ export default function ATRDashboard() {
                             <XAxis
                               dataKey="department"
                               angle={deptData.length > 6 ? -45 : 0}
-                              textAnchor={deptData.length > 6 ? "end" : "middle"}
-                              interval={deptData.length > 6 ? 0 : "preserveStartEnd"}
+                              textAnchor={
+                                deptData.length > 6 ? "end" : "middle"
+                              }
+                              interval={
+                                deptData.length > 6 ? 0 : "preserveStartEnd"
+                              }
                               tickMargin={8}
                               height={deptData.length > 6 ? undefined : 20}
                             />
@@ -2579,7 +2938,10 @@ export default function ATRDashboard() {
                       add("Designation", a.designation || "");
                       add("Department", a.department || "");
                       add("Due date", a.dueDate || "");
-                      add("Actual Completion date", a.actualCompletionDate || "");
+                      add(
+                        "Actual Completion date",
+                        a.actualCompletionDate || "",
+                      );
                       add("Status", a.status || "");
                       return row;
                     };
@@ -2632,7 +2994,9 @@ export default function ATRDashboard() {
                     <th className="text-left p-3 w-40">Designation</th>
                     <th className="text-left p-3 w-40">Department</th>
                     <th className="text-left p-3 w-40">Due date</th>
-                    <th className="text-left p-3 w-44">Actual Completion date</th>
+                    <th className="text-left p-3 w-44">
+                      Actual Completion date
+                    </th>
                     <th className="text-left p-3 w-32">Status</th>
                   </tr>
                 </thead>
@@ -2703,7 +3067,10 @@ export default function ATRDashboard() {
                           {a.previousDueDates &&
                             a.previousDueDates.length > 0 && (
                               <div className="mt-1 text-xs text-gray-500">
-                                Prev: {sanitizePrevDates(a.previousDueDates).join(", ")}
+                                Prev:{" "}
+                                {sanitizePrevDates(a.previousDueDates).join(
+                                  ", ",
+                                )}
                               </div>
                             )}
                         </td>
@@ -2712,7 +3079,11 @@ export default function ATRDashboard() {
                             type="date"
                             value={a.actualCompletionDate || ""}
                             onChange={(e) =>
-                              updateAtrField(idx, "actualCompletionDate", e.target.value)
+                              updateAtrField(
+                                idx,
+                                "actualCompletionDate",
+                                e.target.value,
+                              )
                             }
                           />
                         </td>
