@@ -185,6 +185,89 @@ const MultiSelectSimple = ({
   );
 };
 
+const ProjectMultiSelect = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: { value: string; label: string }[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const labelFor = (val: string) =>
+    options.find((opt) => opt.value === val)?.label || val;
+  const selectedLabels = (value || []).map(labelFor).filter(Boolean);
+  const display =
+    selectedLabels && selectedLabels.length
+      ? selectedLabels.length <= 2
+        ? selectedLabels.join(", ")
+        : `${selectedLabels.slice(0, 2).join(", ")} (+${
+            selectedLabels.length - 2
+          })`
+      : placeholder || "Select";
+  const toggle = (opt: string) => {
+    let next = Array.isArray(value) ? [...value] : [];
+    const has = next.includes(opt);
+    if (has) next = next.filter((x) => x !== opt);
+    else next.push(opt);
+    onChange(next);
+  };
+  const stop = (e: any) => {
+    e.stopPropagation();
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="truncate">{display}</span>
+          <span className="ml-2 text-xs text-muted-foreground">Select</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0 z-[80]">
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>No results.</CommandEmpty>
+          <CommandList className="max-h-60 overflow-y-auto">
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.value}
+                  value={opt.label}
+                  onSelect={() => toggle(opt.value)}
+                >
+                  <Checkbox
+                    className="mr-2"
+                    checked={value?.includes(opt.value)}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    onClick={stop}
+                    onCheckedChange={() => toggle(opt.value)}
+                  />{" "}
+                  {opt.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        <div className="border-t p-2 flex justify-between">
+          <Button size="sm" variant="ghost" onClick={() => onChange([])}>
+            Clear
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => onChange(options.map((opt) => opt.value))}
+          >
+            Select All
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 interface ExpandableChartCardProps {
   title: React.ReactNode;
   cardClassName?: string;
