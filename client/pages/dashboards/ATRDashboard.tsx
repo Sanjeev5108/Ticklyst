@@ -314,6 +314,7 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [vizSelectedProjectIds, setVizSelectedProjectIds] = useState<string[]>([]);
   const [newComment, setNewComment] = useState("");
   const [commentType, setCommentType] = useState<
     "note" | "issue" | "resolution"
