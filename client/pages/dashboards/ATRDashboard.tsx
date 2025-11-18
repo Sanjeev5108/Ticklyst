@@ -1139,6 +1139,61 @@ export default function ATRDashboard() {
   >("none");
   const [vizGroup, setVizGroup] = useState<"weekly" | "monthly">("monthly");
 
+  const [vizAtrByProject, setVizAtrByProject] = useState<
+    Record<string, AuditTrackRow[]>
+  >({});
+
+  useEffect(() => {
+    const targetProjectIds = vizSelectedProjectIds.length
+      ? vizSelectedProjectIds
+      : reportableProjectOptions.map((p) => p.id);
+
+    if (!targetProjectIds.length) {
+      setVizAtrByProject({});
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const entries = await Promise.all(
+        targetProjectIds.map(async (projectId) => {
+          const key = `atr:project:${projectId}`;
+          try {
+            const res = await fetch(`/api/settings/${encodeURIComponent(key)}`);
+            if (!res.ok) return [projectId, []] as const;
+            const data = await res.json();
+            let rows: AuditTrackRow[] = [];
+            if (Array.isArray(data)) {
+              rows = data as AuditTrackRow[];
+            } else if (data && typeof data === "object") {
+              rows = (Object.values(data as any).flat() as AuditTrackRow[]);
+            }
+            const cleaned = rows.map((r) => ({
+              ...r,
+              previousDueDates: sanitizePrevDates(r.previousDueDates),
+            }));
+            return [projectId, cleaned] as const;
+          } catch {
+            return [projectId, []] as const;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      const next: Record<string, AuditTrackRow[]> = {};
+      for (const [projectId, rows] of entries) {
+        next[projectId] = rows;
+      }
+      setVizAtrByProject(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vizSelectedProjectIds, reportableProjectOptions]);
+
   const atrRowsForProject = useMemo(() => {
     const rows = reportableRows.filter((r) =>
       selectedProjectId ? r.projectId === selectedProjectId : true,
@@ -1203,6 +1258,73 @@ export default function ATRDashboard() {
     return filtered;
   }, [
     atrRows,
+    atrStatusFilter,
+    atrDueFrom,
+    atrDueTo,
+    atrRespFilter,
+    atrDeptFilter,
+    atrSearch,
+  ]);
+
+  const vizAtrRowsFiltered = useMemo(() => {
+    const targetProjectIds = vizSelectedProjectIds.length
+      ? vizSelectedProjectIds
+      : reportableProjectOptions.map((p) => p.id);
+
+    const combined: AuditTrackRow[] = [];
+    targetProjectIds.forEach((projectId) => {
+      const rows = vizAtrByProject[projectId];
+      if (rows && rows.length) {
+        combined.push(...rows);
+      }
+    });
+
+    const filtered = combined
+      .map((a, idx) => ({ a, idx }))
+      .filter(({ a }) => {
+        if (atrStatusFilter !== "all" && (a.status || "") !== atrStatusFilter)
+          return false;
+        if (
+          atrDueFrom &&
+          (a.dueDate || "") &&
+          new Date(a.dueDate) < new Date(atrDueFrom)
+        )
+          return false;
+        if (
+          atrDueTo &&
+          (a.dueDate || "") &&
+          new Date(a.dueDate) > new Date(atrDueTo)
+        )
+          return false;
+        if (
+          atrRespFilter.length &&
+          !atrRespFilter.includes(a.responsibility || "")
+        )
+          return false;
+        if (atrDeptFilter.length && !atrDeptFilter.includes(a.department || ""))
+          return false;
+        const q = atrSearch.trim().toLowerCase();
+        if (!q) return true;
+        const hay = [
+          a.auditObservation,
+          a.actionPlan,
+          a.responsibility,
+          a.designation,
+          a.department,
+          a.status,
+          a.dueDate,
+          a.actualCompletionDate,
+        ]
+          .filter(Boolean)
+          .map((s) => String(s).toLowerCase());
+        return hay.some((s) => s.includes(q));
+      });
+
+    return filtered;
+  }, [
+    vizSelectedProjectIds,
+    vizAtrByProject,
+    reportableProjectOptions,
     atrStatusFilter,
     atrDueFrom,
     atrDueTo,
