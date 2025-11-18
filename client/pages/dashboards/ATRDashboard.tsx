@@ -1467,21 +1467,15 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label>Project</Label>
-                  <Select
-                    value={selectedProjectId || ""}
-                    onValueChange={(v) => setSelectedProjectId(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reportableProjectOptions.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ProjectMultiSelect
+                    options={reportableProjectOptions.map((opt) => ({
+                      value: opt.id,
+                      label: opt.title,
+                    }))}
+                    value={vizSelectedProjectIds}
+                    onChange={setVizSelectedProjectIds}
+                    placeholder="All projects"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2 md:col-span-2">
                   <div>
@@ -1505,7 +1499,7 @@ export default function ATRDashboard() {
                       className="flex items-center gap-2"
                       onClick={() => {
                         const wb = XLSX.utils.book_new();
-                        const rows = atrRowsFiltered.map(({ a }) => ({
+                        const rows = vizAtrRowsFiltered.map(({ a }) => ({
                           "Audit Observation": a.auditObservation || "",
                           "Action Plan": a.actionPlan || "",
                           Responsibility: a.responsibility || "",
@@ -1528,7 +1522,7 @@ export default function ATRDashboard() {
               </div>
 
               {(() => {
-                const rows = atrRowsFiltered.map((r) => r.a);
+                const rows = vizAtrRowsFiltered.map((r) => r.a);
                 const today = new Date();
                 const mapStatus = (s?: string) =>
                   s === "Closed"
