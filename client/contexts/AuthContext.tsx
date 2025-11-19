@@ -96,9 +96,10 @@ const rolePermissions: Record<UserRole, string[]> = {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const stored = typeof window !== "undefined"
-        ? window.localStorage.getItem("currentUser")
-        : null;
+      const stored =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("currentUser")
+          : null;
       return stored ? (JSON.parse(stored) as User) : null;
     } catch {
       return null;

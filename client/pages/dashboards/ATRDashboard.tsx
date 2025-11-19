@@ -315,7 +315,9 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
 export default function ATRDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [vizSelectedProjectIds, setVizSelectedProjectIds] = useState<string[]>([]);
+  const [vizSelectedProjectIds, setVizSelectedProjectIds] = useState<string[]>(
+    [],
+  );
   const [newComment, setNewComment] = useState("");
   const [commentType, setCommentType] = useState<
     "note" | "issue" | "resolution"
@@ -1179,7 +1181,7 @@ export default function ATRDashboard() {
             if (Array.isArray(data)) {
               rows = data as AuditTrackRow[];
             } else if (data && typeof data === "object") {
-              rows = (Object.values(data as any).flat() as AuditTrackRow[]);
+              rows = Object.values(data as any).flat() as AuditTrackRow[];
             }
             const cleaned = rows.map((r) => ({
               ...r,
