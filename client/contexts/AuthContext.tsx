@@ -131,14 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("users", JSON.stringify(users));
   };
 
-  useEffect(() => {
-    // Check for stored authentication
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/login", {
