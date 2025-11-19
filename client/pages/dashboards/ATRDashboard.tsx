@@ -1104,6 +1104,8 @@ export default function ATRDashboard() {
     });
   };
 
+  const { toast } = useToast();
+
   const saveAtr = async () => {
     if (!selectedProjectId) return;
     try {
@@ -1112,7 +1114,16 @@ export default function ATRDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(atrRows),
       });
-    } catch {}
+      toast({
+        title: "Saved Successfully",
+        description: "ATR Access has been saved.",
+      });
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "Could not save ATR Access. Please try again.",
+      });
+    }
   };
 
   // Toolbar: filters, fields, export
