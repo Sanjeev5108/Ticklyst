@@ -1312,6 +1312,26 @@ export default function FrameworkDashboard() {
   const renderFrameworkEditor = () => {
     const isReadOnly = false;
 
+    const processStats = (() => {
+      if (!selectedProcessId) return null;
+      const scopeIds = new Set<string>([
+        selectedProcessId,
+        ...collectDescendantIds(selectedProcessId),
+      ]);
+      let subprocessCount = 0;
+      let activityCount = 0;
+      let riskCount = 0;
+      let controlCount = 0;
+      for (const n of nodes) {
+        if (!scopeIds.has(n.id)) continue;
+        if (n.type === "subprocess") subprocessCount += 1;
+        else if (n.type === "activity") activityCount += 1;
+        else if (n.type === "risk") riskCount += 1;
+        else if (n.type === "control") controlCount += 1;
+      }
+      return { subprocessCount, activityCount, riskCount, controlCount };
+    })();
+
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center mb-4">
@@ -1797,8 +1817,17 @@ export default function FrameworkDashboard() {
             <Card className="h-[520px] overflow-hidden">
               <CardHeader>
                 <CardTitle>
-                  Process &rarr; Subprocess &rarr; Activity &rarr; Risk &rarr;
-                  Control
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Process &rarr; Subprocess &rarr; Activity &rarr; Risk &rarr;
+                      Control
+                    </span>
+                    {processStats && (
+                      <span className="text-xs sm:text-sm font-normal text-slate-600">
+                        Subprocess: {processStats.subprocessCount}  b Activity: {processStats.activityCount}  b Risk: {processStats.riskCount}  b Control: {processStats.controlCount}
+                      </span>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 h-full">
