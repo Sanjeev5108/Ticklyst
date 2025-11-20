@@ -984,15 +984,30 @@ export default function ProjectManagement() {
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div>
-                <div className="text-xs text-gray-500">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                {project.clientLogo ? (
+                  <img
+                    src={project.clientLogo}
+                    alt={project.client || "Client logo"}
+                    className="h-full w-full object-contain p-1"
+                  />
+                ) : (
+                  <span className="text-xs font-semibold text-gray-500">
+                    {project.client?.charAt(0) || "C"}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500 truncate">
                   {project.projectCode}
                 </div>
                 <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
                   {project.title}
                 </h4>
-                <p className="text-xs text-gray-600 mt-1">{project.client}</p>
+                <p className="text-xs text-gray-600 mt-1 truncate">
+                  {project.client}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
