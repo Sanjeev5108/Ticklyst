@@ -441,6 +441,8 @@ export default function FieldworkDashboard() {
       const controlEffective = a.controlEffective || (r.effectiveness?.effectiveness === 'Effective' ? 'Yes' : r.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
       return {
         id: r.controlId,
+        process: ctrl?.process || '',
+        subprocess: ctrl?.subprocess || '',
         activity: a.activity || ctrl?.activity || '',
         risk: a.risk || ctrl?.risk || '',
         control: a.control || ctrl?.name || '',
@@ -472,6 +474,8 @@ export default function FieldworkDashboard() {
       const controlEffective = a.controlEffective || (r.effectiveness?.effectiveness === 'Effective' ? 'Yes' : r.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
       return {
         id: r.controlId,
+        process: ctrl?.process || '',
+        subprocess: ctrl?.subprocess || '',
         activity: a.activity || ctrl?.activity || '',
         risk: a.risk || ctrl?.risk || '',
         control: a.control || ctrl?.name || '',
