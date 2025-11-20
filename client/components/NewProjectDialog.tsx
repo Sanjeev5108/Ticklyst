@@ -300,10 +300,12 @@ export default function NewProjectDialog({
       const cached = localStorage.getItem("clients");
       if (cached) {
         const parsed = JSON.parse(cached) as any[];
-        const mapped = (parsed || []).map((r) => ({
-          id: String((r as any).id),
-          name: String((r as any).name),
-        })) as ClientOption[];
+        const mapped = (parsed || [])
+          .filter((r) => !(r as any).isPurged)
+          .map((r) => ({
+            id: String((r as any).id),
+            name: String((r as any).name),
+          })) as ClientOption[];
         if (mapped.length) setClientOptions(mapped);
       }
     } catch {}
