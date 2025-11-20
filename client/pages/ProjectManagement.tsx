@@ -1752,11 +1752,24 @@ export default function ProjectManagement() {
                   }`}
                 >
                   <div className="flex items-center space-x-4 flex-1">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {project.clientLogo ? (
+                        <img
+                          src={project.clientLogo}
+                          alt={project.client || "Client logo"}
+                          className="h-full w-full object-contain p-1"
+                        />
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-500">
+                          {project.client?.charAt(0) || "C"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">
                         {project.title}
                       </h3>
-                      <p className="text-sm text-gray-500">{project.client}</p>
+                      <p className="text-sm text-gray-500 truncate">{project.client}</p>
                     </div>
                     <div className="w-32">
                       <Progress value={project.progress} className="h-2" />
