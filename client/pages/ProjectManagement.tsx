@@ -84,6 +84,7 @@ interface Project {
   projectCode: string;
   title: string;
   client: string;
+  clientLogo?: string;
   status: "todo" | "in-progress" | "hold";
   progress: number;
   totalTasks: number;
