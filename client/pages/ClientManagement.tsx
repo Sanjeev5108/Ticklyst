@@ -1373,10 +1373,35 @@ export default function ClientManagement() {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-8">
+            <div className="flex items-center justify-between pr-8 gap-2">
               <DialogTitle>Client Details</DialogTitle>
               {selectedClientDetails && (
-                <Button size="sm" className="mr-2" onClick={() => openEditClient(selectedClientDetails)}>Edit</Button>
+                <div className="flex items-center gap-2">
+                  {selectedClientDetails.isPurged ? (
+                    <Badge variant="destructive" className="text-xs">
+                      Purged
+                    </Badge>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant={selectedClientDetails.isPurged ? "outline" : "destructive"}
+                    onClick={() =>
+                      handleSetClientPurged(
+                        selectedClientDetails,
+                        !selectedClientDetails.isPurged,
+                      )
+                    }
+                  >
+                    {selectedClientDetails.isPurged ? "Restore" : "Purge"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="mr-2"
+                    onClick={() => openEditClient(selectedClientDetails)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               )}
             </div>
           </DialogHeader>
