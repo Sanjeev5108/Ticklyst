@@ -269,15 +269,17 @@ export default function StatementOfApplicability() {
         const res = await fetch("/api/clients");
         if (res.ok) {
           const data = await res.json();
-          const mapped: SoAClient[] = (data || []).map((r: any) => ({
-            id: r.id,
-            name: r.name,
-            industry: r.industry,
-          }));
+          const mapped: SoAClient[] = (data || [])
+            .filter((r: any) => !r.isPurged)
+            .map((r: any) => ({
+              id: r.id,
+              name: r.name,
+              industry: r.industry,
+            }));
           if (mapped.length) {
             setClients(mapped);
             try {
-              localStorage.setItem("clients", JSON.stringify(mapped));
+              localStorage.setItem("clients", JSON.stringify(data));
             } catch {}
             if (!selectedClientId) setSelectedClientId(mapped[0].id);
           }
