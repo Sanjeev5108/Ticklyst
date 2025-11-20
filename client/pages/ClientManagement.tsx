@@ -771,6 +771,55 @@ export default function ClientManagement() {
     toast({ title: 'All clients deleted' });
   };
 
+  const handleSetClientPurged = async (client: Client, isPurged: boolean) => {
+    const prev = clients;
+    const next = clients.map((c) =>
+      c.id === client.id ? { ...c, isPurged } : c,
+    );
+    setClients(next);
+    setSelectedClientDetails((curr) =>
+      curr && curr.id === client.id ? { ...curr, isPurged } : curr,
+    );
+    try {
+      try {
+        localStorage.setItem("clients", JSON.stringify(next));
+      } catch {}
+      if (apiEnabled) {
+        const res = await fetch(
+          `/api/clients/${encodeURIComponent(client.id)}/purge`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPurged }),
+          },
+        );
+        if (!res.ok) {
+          setClients(prev);
+          setSelectedClientDetails(client);
+          toast({ title: "Failed to update client status" });
+        } else {
+          const saved = await res.json();
+          const norm = normalizeClient(saved);
+          setClients((curr) => {
+            const updated = curr.map((c) => (c.id === norm.id ? norm : c));
+            try {
+              localStorage.setItem("clients", JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+          setSelectedClientDetails(norm);
+          toast({
+            title: isPurged ? "Client purged" : "Client restored",
+          });
+        }
+      }
+    } catch {
+      setClients(prev);
+      setSelectedClientDetails(client);
+      toast({ title: "Error updating client status" });
+    }
+  };
+
   const ClientCard = ({ client }: { client: Client }) => {
     const stats = client.stats || defaultStats;
     return (
