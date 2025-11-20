@@ -80,12 +80,14 @@ function normalizeClient(c: any): Client {
     : (c?.contactPerson ? [c.contactPerson] : [{ name: '', designation: '', email: '', mobile: '' }]);
   const contactPerson = c?.contactPerson || contactPersons[0] || { name: '', designation: '', email: '', mobile: '' };
   const au = c?.auditUniverse || { units: [], departments: [], additionalDepartments: {} };
+  const isPurged = !!(c?.isPurged || (c?.details && (c as any).details?.isPurged));
   return {
     id: String(c?.id ?? ''),
     name: c?.name || '',
     industry: c?.industry || c?.sector || '',
     sector: c?.sector || c?.industry || '',
     location: c?.location || `${c?.city || ''}${c?.city ? ', ' : ''}${c?.state || ''}`,
+    isPurged,
     city: c?.city || '',
     state: c?.state || '',
     pincode: c?.pincode || '',
