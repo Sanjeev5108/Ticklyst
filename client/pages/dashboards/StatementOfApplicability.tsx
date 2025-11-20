@@ -250,11 +250,13 @@ export default function StatementOfApplicability() {
           if (cached) {
             const parsed = JSON.parse(cached) as any[];
             const mappedCached: SoAClient[] = Array.isArray(parsed)
-              ? parsed.map((r) => ({
-                  id: r.id,
-                  name: r.name,
-                  industry: r.industry || r.sector || "",
-                }))
+              ? parsed
+                  .filter((r: any) => !r.isPurged)
+                  .map((r) => ({
+                    id: r.id,
+                    name: r.name,
+                    industry: r.industry || r.sector || "",
+                  }))
               : [];
             if (mappedCached.length) {
               setClients(mappedCached);
