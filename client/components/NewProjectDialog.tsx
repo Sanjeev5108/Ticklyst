@@ -315,10 +315,12 @@ export default function NewProjectDialog({
         const res = await fetch("/api/clients");
         if (!res.ok) return;
         const data = await res.json();
-        const mapped: ClientOption[] = (data || []).map((r: any) => ({
-          id: String(r.id),
-          name: String(r.name),
-        }));
+        const mapped: ClientOption[] = (data || [])
+          .filter((r: any) => !r.isPurged)
+          .map((r: any) => ({
+            id: String(r.id),
+            name: String(r.name),
+          }));
         setClientOptions(mapped);
         try {
           localStorage.setItem("clients", JSON.stringify(data));
