@@ -113,9 +113,10 @@ export const DEFAULT_GLOBAL_RISK_CONFIG = (): RiskAssessmentConfig => ({
   controlScore: {
     scale: { min: 1, max: 5 },
     labels: [
-      { value: 1, label: 'Effective', color: 'Green' },
-      { value: 3, label: 'Ineffective', color: 'Orange' },
-      { value: 5, label: 'Not Implemented', color: 'Red' }
+      { value: 1, label: 'Very High', color: '#EF4444' },
+      { value: 2, label: 'High', color: '#F97316' },
+      { value: 3, label: 'Moderate', color: '#F59E0B' },
+      { value: 4, label: 'Low', color: '#10B981' }
     ],
     constraintControlLEQRisk: true
   },
