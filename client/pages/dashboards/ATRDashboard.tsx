@@ -2315,15 +2315,9 @@ export default function ATRDashboard() {
                                 updateAtrField(idx, "dueDate", e.target.value)
                               }
                             />
-                            {a.previousDueDates &&
-                              a.previousDueDates.length > 0 && (
-                                <div className="mt-1 text-xs text-gray-500">
-                                  Prev:{" "}
-                                  {sanitizePrevDates(a.previousDueDates).join(
-                                    ", ",
-                                  )}
-                                </div>
-                              )}
+                            <PrevDatesBubble
+                              dates={sanitizePrevDates(a.previousDueDates)}
+                            />
                           </td>
                           <td className="p-3">
                             <Input
