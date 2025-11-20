@@ -508,6 +508,12 @@ export default function NewProjectDialog({
   const buildSoaNodes = React.useCallback(
     (procs: string[]): SoaNode[] => {
       const out: SoaNode[] = [];
+      const added = new Set<string>();
+      const pushNode = (node: SoaNode) => {
+        if (added.has(node.id)) return;
+        added.add(node.id);
+        out.push(node);
+      };
       if (!frameworkNodesFlat.length) return out;
       const byId: Record<string, any> = {};
       frameworkNodesFlat.forEach((n: any) => {
@@ -530,7 +536,7 @@ export default function NewProjectDialog({
         const procKey = findMatchingKey(frameworkTree, proc);
         if (!procKey) continue;
         const procId = `proc|${procKey}`;
-        out.push({
+        pushNode({
           id: procId,
           type: "process",
           name: frameworkTree[procKey]?.name || procKey,
@@ -551,7 +557,7 @@ export default function NewProjectDialog({
         );
         for (const sp of subs) {
           const spId = `sub|${procKey}|${sp.name}`;
-          out.push({
+          pushNode({
             id: spId,
             type: "subprocess",
             name: sp.name,
@@ -571,7 +577,7 @@ export default function NewProjectDialog({
           );
           for (const ac of acts) {
             const acId = `act|${procKey}|${sp.name}|${ac.name}`;
-            out.push({
+            pushNode({
               id: acId,
               type: "activity",
               name: ac.name,
@@ -592,7 +598,7 @@ export default function NewProjectDialog({
             );
             for (const rk of risks) {
               const rkId = `risk|${procKey}|${sp.name}|${ac.name}|${rk.name}`;
-              out.push({
+              pushNode({
                 id: rkId,
                 type: "risk",
                 name: rk.name,
@@ -621,7 +627,7 @@ export default function NewProjectDialog({
               );
               ctrls.forEach((cNode, idx) => {
                 const ctrlId = `ctrl|${procKey}|${sp.name}|${ac.name}|${rk.name}|${idx}`;
-                out.push({
+                pushNode({
                   id: ctrlId,
                   type: "control",
                   name: cNode.name,
