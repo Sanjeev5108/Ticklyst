@@ -537,7 +537,7 @@ export default function ClientManagement() {
   }, []);
 
   const handleAddClient = async () => {
-    // Validate required email/mobile for first contact and any provided others
+    // Validate email/mobile only when provided (no longer mandatory)
     const cps = newClient.contactPersons || [];
     let hasError = false;
     const emailErrs: Record<number, string> = {};
@@ -546,10 +546,10 @@ export default function ClientManagement() {
       const email = String(cp.email || '').trim();
       const mobile = String(cp.mobile || '').trim();
       const digits = mobile.replace(/\D/g, '');
-      const mustValidate = idx === 0 || !!email || !!mobile;
+      const mustValidate = !!email || !!mobile; // only validate if a value is present
       if (mustValidate) {
-        if (!email || !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
-        if (!digits || !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+        if (email && !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (mobile && !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
       }
     });
     setNewEmailErrors(emailErrs);
