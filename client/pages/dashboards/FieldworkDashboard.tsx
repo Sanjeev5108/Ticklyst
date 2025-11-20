@@ -100,7 +100,7 @@ const SelectOrInput = ({ options, value, onChange, placeholder }: { options: str
 export default function FieldworkDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [matrixRows, setMatrixRows] = useState<{ id: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
+  const [matrixRows, setMatrixRows] = useState<{ id: string; process: string; subprocess: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
   const [search, setSearch] = useState('');
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   const [records, setRecords] = useState<Record<string, FieldworkRecord>>({});
@@ -336,7 +336,7 @@ export default function FieldworkDashboard() {
               const ctrls: string[] = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
               ctrls.forEach((ctrl, idx) => {
                 const id = mkId([procName, subName, actName, riskName, String(idx+1)]);
-                const row: any = { id, activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' };
+                const row: any = { id, process: procName || '', subprocess: subName || '', activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' };
                 row.department = procName || '';
                 row.process = procName || '';
                 row.subprocess = subName || '';
@@ -385,7 +385,7 @@ export default function FieldworkDashboard() {
     if (allowed.size === 0) { setMatrixRows([]); return; }
     const rows = controls
       .filter(c => allowed.has(c.process || ''))
-      .map(c => { const row: any = { id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }; row.department = c.process || ''; row.process = c.process || ''; row.subprocess = c.subprocess || ''; return row; })
+      .map(c => { const row: any = { id: c.id, process: c.process || '', subprocess: c.subprocess || '', activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }; row.department = c.process || ''; row.process = c.process || ''; row.subprocess = c.subprocess || ''; return row; })
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
@@ -582,7 +582,7 @@ export default function FieldworkDashboard() {
 
   // Export toolbar state
   const fwAllFields = [
-    'Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
+    'Process','Subprocess','Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
   ] as const;
   const [fwSelectedFields, setFwSelectedFields] = useState<string[]>([...fwAllFields]);
   const fwGroupOptions = [
@@ -812,6 +812,8 @@ export default function FieldworkDashboard() {
               const resid = Math.round((computeResidual(activeCfg.residualRisk.formula, riskVal, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100;
               const riskLevel = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.level || '';
               const color = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.color || '';
+              if (fwSelectedFields.includes('Process')) f['Process'] = r.process;
+              if (fwSelectedFields.includes('Subprocess')) f['Subprocess'] = r.subprocess;
               if (fwSelectedFields.includes('Activity')) f['Activity'] = r.activity;
               if (fwSelectedFields.includes('Risk')) f['Risk'] = r.risk;
               if (fwSelectedFields.includes('Control')) f['Control'] = r.control;
@@ -1070,6 +1072,8 @@ export default function FieldworkDashboard() {
               <table className="w-full text-sm table-fixed">
                 <thead className="bg-slate-50 sticky top-0 z-10">
                   <tr>
+                    <th className="text-left p-3 w-64">Process</th>
+                    <th className="text-left p-3 w-64">Subprocess</th>
                     <th className="text-left p-3 w-64">Activity</th>
                     <th className="text-left p-3 w-64">Risk</th>
                     <th className="text-left p-3 w-64">Control</th>
@@ -1178,6 +1182,8 @@ export default function FieldworkDashboard() {
                 <tbody>
                   {displayedRows.map((row, idx) => (
                     <tr key={`${selectedProject || 'GLOBAL'}|${row.id}|${idx}`} className={`border-t ${(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'bg-red-50' : ''}`}>
+                      <td className="p-3 align-top w-64 break-words">{row.process || '-'}</td>
+                      <td className="p-3 align-top w-64 break-words">{row.subprocess || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
@@ -1714,7 +1720,7 @@ export default function FieldworkDashboard() {
                   ))}
                   {displayedRows.length === 0 && (
                     <tr>
-                      <td colSpan={25} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected project'}</td>
+                      <td colSpan={27} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected project'}</td>
                     </tr>
                   )}
                 </tbody>
