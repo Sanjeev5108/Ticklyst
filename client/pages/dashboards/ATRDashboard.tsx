@@ -186,6 +186,30 @@ const MultiSelectSimple = ({
   );
 };
 
+const PrevDatesBubble = ({ dates }: { dates: string[] }) => {
+  if (!dates.length) return null;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="mt-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700 hover:bg-gray-200"
+        >
+          Prev ({dates.length})
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2 text-xs">
+        <div className="font-semibold mb-1">Previous due dates</div>
+        <ul className="space-y-0.5 max-h-40 overflow-auto">
+          {dates.map((d, i) => (
+            <li key={i}>{d}</li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 const ProjectMultiSelect = ({
   options,
   value,
