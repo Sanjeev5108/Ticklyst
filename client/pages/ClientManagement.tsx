@@ -830,7 +830,9 @@ export default function ClientManagement() {
                 {client.logo ? (
                   <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
                 ) : (
-                  <Building2 className="h-6 w-6 text-gray-600" />
+                  <span className="text-lg font-semibold text-gray-600">
+                    {(client.name || '').trim().charAt(0) || 'C'}
+                  </span>
                 )}
               </div>
               <div>
@@ -1372,7 +1374,9 @@ export default function ClientManagement() {
                       {client.logo ? (
                         <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
                       ) : (
-                        <Building2 className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm font-semibold text-gray-600">
+                          {(client.name || '').trim().charAt(0) || 'C'}
+                        </span>
                       )}
                     </div>
                     <div>
