@@ -496,6 +496,7 @@ export default function ProjectManagement() {
           projectCode: r.code || r.data?.projectCode || "",
           title: r.name || r.data?.projectName || "",
           client: r.clientName || r.data?.clientName || "",
+          clientLogo: r.data?.clientLogo || r.data?.client?.logo || undefined,
           status: (r.status as any) || "todo",
           progress: 0,
           totalTasks: 1,
