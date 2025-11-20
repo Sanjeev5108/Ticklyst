@@ -1824,7 +1824,7 @@ export default function FrameworkDashboard() {
                     </span>
                     {processStats && (
                       <span className="text-xs sm:text-sm font-normal text-slate-600">
-                        Subprocess: {processStats.subprocessCount}  b Activity: {processStats.activityCount}  b Risk: {processStats.riskCount}  b Control: {processStats.controlCount}
+                        Subprocess: {processStats.subprocessCount}  b7 Activity: {processStats.activityCount}  b7 Risk: {processStats.riskCount}  b7 Control: {processStats.controlCount}
                       </span>
                     )}
                   </div>
