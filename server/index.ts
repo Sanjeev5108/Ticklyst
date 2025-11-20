@@ -18,7 +18,8 @@ import {
   createProject,
   deleteAllProjects,
   addComment,
-  updateClient
+  updateClient,
+  setClientPurgeStatus
 } from "./routes/auditing";
 import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEmployeeStatus } from "./routes/employees";
 import { login, forgotPassword, resetPassword } from "./routes/auth";
