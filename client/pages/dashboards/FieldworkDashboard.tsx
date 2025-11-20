@@ -99,6 +99,7 @@ const SelectOrInput = ({ options, value, onChange, placeholder }: { options: str
 
 export default function FieldworkDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [matrixRows, setMatrixRows] = useState<{ id: string; process: string; subprocess: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
   const [search, setSearch] = useState('');
@@ -237,14 +238,25 @@ export default function FieldworkDashboard() {
 
 
   // Projects (loaded from API) with access filtering
-  const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string; client?: string; raw?: any }[]>([]);
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/projects');
         if (!res.ok) throw new Error('load_failed');
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.data?.project_name || r.code || r.data?.title || 'Untitled Project', raw: r }));
+        const mapped = (rows || []).map((r: any) => ({
+          id: r.id,
+          title:
+            r.name ||
+            r.data?.projectName ||
+            r.data?.project_name ||
+            r.code ||
+            r.data?.title ||
+            'Untitled Project',
+          client: r.clientName || r.data?.clientName || r.data?.client_name || '',
+          raw: r,
+        }));
 
         // determine scope
         const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
@@ -269,6 +281,29 @@ export default function FieldworkDashboard() {
       }
     })();
   }, [user]);
+
+  const clientOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects
+            .map((p) => (p.client || '').trim())
+            .filter((name) => name && name.length > 0),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [projects],
+  );
+
+  const projectsForClient = useMemo(
+    () => {
+      if (!selectedClient) return [] as { id: string; title: string; client?: string; raw?: any }[];
+      const norm = selectedClient.trim().toLowerCase();
+      return projects.filter(
+        (p) => (p.client || '').trim().toLowerCase() === norm,
+      );
+    },
+    [projects, selectedClient],
+  );
 
   const riskDisabled = useMemo(() => {
     if (!selectedProject) return false;
@@ -624,21 +659,54 @@ export default function FieldworkDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
-          <Label>Project</Label>
-          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); }}>
+          <Label>Client</Label>
+          <Select
+            value={selectedClient}
+            onValueChange={(v) => {
+              const nv = v === '__CLEAR__' ? '' : v;
+              setSelectedClient(nv);
+              setSelectedProject(null);
+            }}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select project" />
+              <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__CLEAR__">Clear</SelectItem>
               <SelectSeparator />
-              {projects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              {clientOptions.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="md:col-span-2 flex justify-end">
+        <div>
+          <Label>Project</Label>
+          <Select
+            value={selectedProject || ''}
+            onValueChange={(v) => {
+              const nv = v === '__CLEAR__' ? null : v;
+              setSelectedProject(nv);
+            }}
+            disabled={!selectedClient}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={selectedClient ? 'Select project' : 'Select client first'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__CLEAR__">Clear</SelectItem>
+              <SelectSeparator />
+              {projectsForClient.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex justify-end">
           <Button variant="outline" onClick={() => setProjDetailsOpen(true)} disabled={!selectedProject}>View details</Button>
         </div>
       </div>
