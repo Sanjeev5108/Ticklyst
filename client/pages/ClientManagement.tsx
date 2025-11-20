@@ -673,17 +673,16 @@ export default function ClientManagement() {
       const email = String(cp.email || '').trim();
       const mobile = String(cp.mobile || '').trim();
       const digits = mobile.replace(/\D/g, '');
-      const mustValidate = idx === 0 || !!email || !!mobile;
+      const mustValidate = !!email || !!mobile;
       if (mustValidate) {
-        if (!email || !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
-        if (!digits || !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+        if (email && !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (mobile && !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
       }
     });
     setEditEmailErrors(emailErrs);
     setEditMobileErrors(mobileErrs);
     if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
-    const firstContactName = (editClient.contactPersons && editClient.contactPersons[0] && editClient.contactPersons[0].name) || '';
-    if (!editClientId || !editClient.name || !firstContactName) return;
+    if (!editClientId || !editClient.name) return;
 
     const sections = auditSections || [];
     const units = Array.from(new Set(sections.flatMap(s => s.unit || [])));
@@ -1124,6 +1123,26 @@ export default function ClientManagement() {
                         <Button variant="ghost" size="sm" onClick={() => {
                           const next = (newClient.contactPersons || []).filter((_, i) => i !== idx);
                           setNewClient({ ...newClient, contactPersons: next.length ? next : [{ name: '', designation: '', email: '', mobile: '' }], contactPerson: (next[0] || { name: '', designation: '', email: '', mobile: '' }) });
+                          setNewEmailErrors(prev => {
+                            const updated: Record<number, string> = {};
+                            Object.entries(prev).forEach(([key, value]) => {
+                              const oldIndex = Number(key);
+                              if (oldIndex === idx) return;
+                              const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                              if (value) updated[newIndex] = value as string;
+                            });
+                            return updated;
+                          });
+                          setNewMobileErrors(prev => {
+                            const updated: Record<number, string> = {};
+                            Object.entries(prev).forEach(([key, value]) => {
+                              const oldIndex = Number(key);
+                              if (oldIndex === idx) return;
+                              const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                              if (value) updated[newIndex] = value as string;
+                            });
+                            return updated;
+                          });
                         }} disabled={(newClient.contactPersons || []).length <= 1}>
                           Remove
                         </Button>
@@ -1141,7 +1160,12 @@ export default function ClientManagement() {
               </div>
 
               <Button onClick={handleAddClient} className="w-full"
-                disabled={(() => { const cp = (newClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!newClient.name && !!newClient.industry && !newClientNameExists; return !ok; })()}>
+                disabled={(() => {
+                  const hasEmailError = Object.values(newEmailErrors).some(Boolean);
+                  const hasMobileError = Object.values(newMobileErrors).some(Boolean);
+                  const hasRequired = !!newClient.name && !!newClient.industry && !newClientNameExists;
+                  return !(hasRequired && !hasEmailError && !hasMobileError);
+                })()}>
                 Add Client
               </Button>
             </div>
@@ -1704,6 +1728,26 @@ export default function ClientManagement() {
                       <Button variant="ghost" size="sm" onClick={() => {
                         const next = (editClient.contactPersons || []).filter((_, i) => i !== idx);
                         setEditClient({ ...editClient, contactPersons: next.length ? next : [{ name: '', designation: '', email: '', mobile: '' }], contactPerson: (next[0] || { name: '', designation: '', email: '', mobile: '' }) });
+                        setEditEmailErrors(prev => {
+                          const updated: Record<number, string> = {};
+                          Object.entries(prev).forEach(([key, value]) => {
+                            const oldIndex = Number(key);
+                            if (oldIndex === idx) return;
+                            const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                            if (value) updated[newIndex] = value as string;
+                          });
+                          return updated;
+                        });
+                        setEditMobileErrors(prev => {
+                          const updated: Record<number, string> = {};
+                          Object.entries(prev).forEach(([key, value]) => {
+                            const oldIndex = Number(key);
+                            if (oldIndex === idx) return;
+                            const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                            if (value) updated[newIndex] = value as string;
+                          });
+                          return updated;
+                        });
                       }} disabled={(editClient.contactPersons || []).length <= 1}>
                         Remove
                       </Button>
@@ -1721,7 +1765,12 @@ export default function ClientManagement() {
             </div>
 
             <Button onClick={handleUpdateClient} className="w-full"
-              disabled={(() => { const cp = (editClient.contactPersons || [])[0]; const ok = cp && isValidEmail(cp.email) && isValidMobile(String(cp.mobile||'').replace(/\D/g, '')) && !!editClient.name; return !ok; })()}>
+              disabled={(() => {
+                const hasEmailError = Object.values(editEmailErrors).some(Boolean);
+                const hasMobileError = Object.values(editMobileErrors).some(Boolean);
+                const hasRequired = !!editClient.name;
+                return !(hasRequired && !hasEmailError && !hasMobileError);
+              })()}>
               Save Changes
             </Button>
           </div>
