@@ -358,6 +358,58 @@ export const updateClient: RequestHandler = async (req, res) => {
   }
 };
 
+export const setClientPurgeStatus: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const { isPurged } = req.body || {};
+  try {
+    const q = await pool.query('SELECT id, name, industry, details, created_at FROM clients WHERE id=$1', [id]);
+    if (!q.rows.length) return res.status(404).json({ error: 'not_found' });
+    const row = q.rows[0];
+    const base = typeof row.details === 'object' && row.details ? { ...row.details } : {};
+    (base as any).isPurged = !!isPurged;
+
+    await pool.query('UPDATE clients SET details=$1, updated_at=now() WHERE id=$2', [base, id]);
+
+    let stats = { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 };
+    try {
+      const pq = await pool.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'in-progress')::int AS in_progress
+         FROM projects
+         WHERE COALESCE(client_name,'') = $1`,
+        [row.name || ''],
+      );
+      if (pq.rows.length) {
+        const r2 = pq.rows[0];
+        stats = {
+          projects: r2.total || 0,
+          ongoing: r2.in_progress || 0,
+          revenue: (base as any)?.stats?.revenue ?? '$0',
+          rating: (base as any)?.stats?.rating ?? 0,
+          progressPercentage: (base as any)?.stats?.progressPercentage ?? 0,
+        };
+      }
+    } catch {}
+
+    const response = {
+      id: row.id,
+      name: row.name,
+      industry: row.industry,
+      isPurged: !!(base as any).isPurged,
+      ...base,
+      stats,
+      createdAt: row.created_at,
+    };
+
+    res.json(response);
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'db_error' });
+  }
+};
+
 export const deleteAllClients: RequestHandler = async (_req, res) => {
   if (!connectionString) return res.status(500).json({ error: 'DATABASE_URL not configured' });
   try {
