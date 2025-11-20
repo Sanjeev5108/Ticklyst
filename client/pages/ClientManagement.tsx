@@ -44,6 +44,7 @@ interface Client {
   sector?: string;
   industry?: string;
   location: string;
+  isPurged?: boolean;
   city: string;
   state: string;
   pincode: string;
