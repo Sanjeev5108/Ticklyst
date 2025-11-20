@@ -217,31 +217,6 @@ export default function ModularDashboard() {
     };
   }, []);
 
-  // Mock data for status cards
-  const statusCards = [
-    {
-      title: "Ongoing Audits",
-      value: "12",
-      icon: TrendingUp,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-    {
-      title: "Pending Comments",
-      value: "8",
-      icon: MessageSquare,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      title: "Upcoming Deadlines",
-      value: "5",
-      icon: Calendar,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -250,27 +225,6 @@ export default function ModularDashboard() {
           Welcome, {user?.username}
         </h1>
         <Badge className="bg-blue-100 text-blue-800">{user?.role}</Badge>
-      </div>
-
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statusCards.map((card, index) => (
-          <Card key={index} className={`${card.bgColor} border-0`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {card.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {card.value}
-                  </p>
-                </div>
-                <card.icon className={`h-8 w-8 ${card.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
       </div>
 
       {/* Module Cards */}
