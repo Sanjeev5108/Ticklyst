@@ -308,7 +308,8 @@ export const getClients: RequestHandler = async (_req, res) => {
         rating: base?.stats?.rating ?? 0,
         progressPercentage: base?.stats?.progressPercentage ?? 0,
       };
-      return { id: r.id, name: r.name, industry: r.industry, ...base, stats, createdAt: r.created_at };
+      const isPurged = !!(base as any).isPurged;
+      return { id: r.id, name: r.name, industry: r.industry, isPurged, ...base, stats, createdAt: r.created_at };
     });
     res.json(rows);
   } catch (e: any) {
