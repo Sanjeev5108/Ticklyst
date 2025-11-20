@@ -477,6 +477,17 @@ export default function ProjectManagement() {
     );
   };
 
+  const buildClientLogoMap = (rows: any[]): Record<string, string> => {
+    const map: Record<string, string> = {};
+    if (!Array.isArray(rows)) return map;
+    rows.forEach((c: any) => {
+      const name = String(c?.name || "").trim().toLowerCase();
+      const logo = c?.logo || c?.details?.logo;
+      if (name && logo) map[name] = logo;
+    });
+    return map;
+  };
+
   React.useEffect(() => {
     const unsub = FieldworkStore.subscribe(() =>
       setFwRecords(FieldworkStore.getAll()),
@@ -488,81 +499,108 @@ export default function ProjectManagement() {
   React.useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/projects");
-        if (!res.ok) throw new Error("load_failed");
-        const rows = await res.json();
-        const mapped: Project[] = rows.map((r: any) => ({
-          id: r.id,
-          projectCode: r.code || r.data?.projectCode || "",
-          title: r.name || r.data?.projectName || "",
-          client: r.clientName || r.data?.clientName || "",
-          clientLogo: r.data?.clientLogo || r.data?.client?.logo || undefined,
-          status: (r.status as any) || "todo",
-          progress: 0,
-          totalTasks: 1,
-          completedTasks: 0,
-          startDate: r.startDate || r.data?.startDate || "",
-          endDate: r.endDate || r.data?.endDate || "",
-          teamMembers: (r.data?.divisionHeads || [])
-            .map((name: string, i: number) => ({
-              id: `dh-${i}`,
-              name,
-              initials: name
-                .split(" ")
-                .map((n: string) => n[0])
-                .join(""),
-            }))
-            .concat(
-              (r.data?.partners || []).map((name: string, i: number) => ({
-                id: `p-${i}`,
+        const [projRes, clientsRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/clients").catch(() => null),
+        ]);
+        if (!projRes.ok) throw new Error("load_failed");
+        const rows = await projRes.json();
+
+        let clientLogoMap: Record<string, string> = {};
+        try {
+          if (clientsRes && (clientsRes as Response).ok) {
+            const clientRows = await (clientsRes as Response).json();
+            clientLogoMap = buildClientLogoMap(clientRows);
+          } else if (typeof window !== "undefined") {
+            const cached = window.localStorage.getItem("clients");
+            if (cached) {
+              const parsed = JSON.parse(cached) as any[];
+              clientLogoMap = buildClientLogoMap(parsed);
+            }
+          }
+        } catch {}
+
+        const mapped: Project[] = rows.map((r: any) => {
+          const clientName = r.clientName || r.data?.clientName || "";
+          const normName = String(clientName || "").trim().toLowerCase();
+          const logoFromClients = clientLogoMap[normName];
+          return {
+            id: r.id,
+            projectCode: r.code || r.data?.projectCode || "",
+            title: r.name || r.data?.projectName || "",
+            client: clientName,
+            clientLogo:
+              r.data?.clientLogo ||
+              r.data?.client?.logo ||
+              logoFromClients ||
+              undefined,
+            status: (r.status as any) || "todo",
+            progress: 0,
+            totalTasks: 1,
+            completedTasks: 0,
+            startDate: r.startDate || r.data?.startDate || "",
+            endDate: r.endDate || r.data?.endDate || "",
+            teamMembers: (r.data?.divisionHeads || [])
+              .map((name: string, i: number) => ({
+                id: `dh-${i}`,
                 name,
                 initials: name
                   .split(" ")
                   .map((n: string) => n[0])
                   .join(""),
-              })),
-            )
-            .concat(
-              (r.data?.teamLeaders || []).map((name: string, i: number) => ({
-                id: `tl-${i}`,
-                name,
-                initials: name
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join(""),
-              })),
-            )
-            .concat(
-              (r.data?.teamMembers || []).map((name: string, i: number) => ({
-                id: `tm-${i}`,
-                name,
-                initials: name
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join(""),
-              })),
-            ),
-          category: r.data?.auditType || "General",
-          priority: "medium",
-          details: {
-            division: r.data?.division || "",
-            auditType: r.data?.auditType || "",
-            description: r.data?.projectDescription || "",
-            divisionHeads: r.data?.divisionHeads || [],
-            partners: r.data?.partners || [],
-            teamLeaders: r.data?.teamLeaders || [],
-            teamMembers: r.data?.teamMembers || [],
-            auditUniverse: r.data?.auditUniverse || [],
-            scopeNotes: r.data?.scopeNotes || "",
-            reportingFrequency: r.data?.reportingFrequency || "",
-            emailNotifications: !!r.data?.emailNotifications,
-            checklistTemplate: r.data?.checklistTemplate || [],
-            customChecklistItems: r.data?.customChecklistItems || "",
-            selectedChecklistTree: r.data?.selectedChecklistTree || null,
-            riskConfig: r.data?.riskConfig || null,
-            references: r.data?.references || "",
-          },
-        }));
+              }))
+              .concat(
+                (r.data?.partners || []).map((name: string, i: number) => ({
+                  id: `p-${i}`,
+                  name,
+                  initials: name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join(""),
+                })),
+              )
+              .concat(
+                (r.data?.teamLeaders || []).map((name: string, i: number) => ({
+                  id: `tl-${i}`,
+                  name,
+                  initials: name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join(""),
+                })),
+              )
+              .concat(
+                (r.data?.teamMembers || []).map((name: string, i: number) => ({
+                  id: `tm-${i}`,
+                  name,
+                  initials: name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join(""),
+                })),
+              ),
+            category: r.data?.auditType || "General",
+            priority: "medium",
+            details: {
+              division: r.data?.division || "",
+              auditType: r.data?.auditType || "",
+              description: r.data?.projectDescription || "",
+              divisionHeads: r.data?.divisionHeads || [],
+              partners: r.data?.partners || [],
+              teamLeaders: r.data?.teamLeaders || [],
+              teamMembers: r.data?.teamMembers || [],
+              auditUniverse: r.data?.auditUniverse || [],
+              scopeNotes: r.data?.scopeNotes || "",
+              reportingFrequency: r.data?.reportingFrequency || "",
+              emailNotifications: !!r.data?.emailNotifications,
+              checklistTemplate: r.data?.checklistTemplate || [],
+              customChecklistItems: r.data?.customChecklistItems || "",
+              selectedChecklistTree: r.data?.selectedChecklistTree || null,
+              riskConfig: r.data?.riskConfig || null,
+              references: r.data?.references || "",
+            },
+          };
+        });
         setProjects(mapped);
       } catch {}
     })();
