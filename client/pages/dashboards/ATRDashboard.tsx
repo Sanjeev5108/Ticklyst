@@ -410,9 +410,11 @@ export default function ATRDashboard() {
     {},
   );
   const [projects, setProjects] = useState<
-    { id: string; title: string; raw?: any }[]
+    { id: string; title: string; client?: string; raw?: any }[]
   >([]);
   const [reportableProjectFilter, setReportableProjectFilter] =
+    useState<string>("");
+  const [atrSelectedClientFilter, setAtrSelectedClientFilter] =
     useState<string>("");
   const { user } = useAuth();
 
@@ -430,11 +432,24 @@ export default function ATRDashboard() {
         const res = await fetch("/api/projects");
         if (!res.ok) return;
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({
-          id: r.id,
-          title: r.name || r.data?.projectName || r.code || "Untitled Project",
-          raw: r,
-        }));
+        const mapped = (rows || []).map((r: any) => {
+          const clientName =
+            r.clientName ||
+            r.data?.clientName ||
+            r.data?.client_name ||
+            r.data?.client?.name ||
+            "";
+          return {
+            id: r.id,
+            title:
+              r.name ||
+              r.data?.projectName ||
+              r.code ||
+              "Untitled Project",
+            client: clientName,
+            raw: r,
+          };
+        });
 
         const roleScopeMap = (() => {
           try {
