@@ -2444,6 +2444,34 @@ export default function ATRDashboard() {
         <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div>
+          <Label>Client</Label>
+          <Select
+            value={atrSelectedClientFilter || ""}
+            onValueChange={(v) => {
+              const next = v === "__CLEAR__" ? "" : v;
+              setAtrSelectedClientFilter(next);
+              setSelectedProjectId("");
+              setReportableProjectFilter("");
+              setVizSelectedProjectIds([]);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__CLEAR__">All clients</SelectItem>
+              {atrClientOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <Tabs defaultValue="access">
         <TabsList>
           <TabsTrigger value="reportable">Reportable Controls</TabsTrigger>
