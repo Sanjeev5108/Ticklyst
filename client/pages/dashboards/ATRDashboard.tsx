@@ -305,24 +305,63 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
   children,
 }) => {
   const cardClasses = ["shadow-sm", cardClassName].filter(Boolean).join(" ");
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
+
+  const handleDownload = () => {
+    if (!cardRef.current) return;
+    const svg = cardRef.current.querySelector("svg");
+    if (!svg) return;
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    const blob = new Blob([source], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const baseName =
+      typeof title === "string"
+        ? title
+        : (title as any)?.toString?.() || "chart";
+    const safeName = String(baseName)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "chart";
+    link.href = url;
+    link.download = `${safeName}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Dialog>
       <Card className={cardClasses}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
-          <DialogTrigger asChild>
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={handleDownload}
             >
-              <Maximize2 className="h-3.5 w-3.5" />
-              <span className="sr-only">Expand chart</span>
+              <Download className="h-3.5 w-3.5" />
+              <span className="sr-only">Download chart image</span>
             </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span className="sr-only">Expand chart</span>
+              </Button>
+            </DialogTrigger>
+          </div>
         </CardHeader>
-        <CardContent>{children("h-72")}</CardContent>
+        <CardContent ref={cardRef}>{children("h-72")}</CardContent>
       </Card>
       <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-hidden">
         <DialogHeader>
