@@ -641,10 +641,44 @@ export default function NewProjectDialog({
           }
         }
       }
-      return out;
+
+      const base = soaClientBaseApplicable;
+      const allowedIds = new Set(
+        Object.entries(base)
+          .filter(([, v]) => v === true)
+          .map(([id]) => id),
+      );
+      if (!allowedIds.size) return out;
+
+      const childrenByParent: Record<string, string[]> = {};
+      out.forEach((n) => {
+        if (!n.parentId) return;
+        if (!childrenByParent[n.parentId]) childrenByParent[n.parentId] = [];
+        childrenByParent[n.parentId].push(n.id);
+      });
+
+      const memo: Record<string, boolean> = {};
+      const shouldKeep = (id: string): boolean => {
+        if (memo[id] !== undefined) return memo[id];
+        if (allowedIds.has(id)) {
+          memo[id] = true;
+          return true;
+        }
+        const children = childrenByParent[id] || [];
+        const res = children.some((childId) => shouldKeep(childId));
+        memo[id] = res;
+        return res;
+      };
+
+      const keepSet = new Set<string>();
+      out.forEach((n) => {
+        if (shouldKeep(n.id)) keepSet.add(n.id);
+      });
+
+      return out.filter((n) => keepSet.has(n.id));
     },
-    [frameworkNodesFlat, frameworkTree, findMatchingKey, compareHier],
-  );
+    [frameworkNodesFlat, frameworkTree, findMatchingKey, compareHier, soaClientBaseApplicable],
+   );
 
   const getSoaLevel = (node: SoaNode) => {
     let level = 0;
