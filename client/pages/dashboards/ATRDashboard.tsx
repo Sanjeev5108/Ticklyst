@@ -479,9 +479,38 @@ export default function ATRDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/projects");
-        if (!res.ok) return;
-        const rows = await res.json();
+        const [projRes, clientsRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/clients").catch(() => null),
+        ]);
+        if (!projRes.ok) return;
+        const rows = await projRes.json();
+
+        const buildClientLogoMap = (rowsAny: any[]): Record<string, string> => {
+          const map: Record<string, string> = {};
+          if (!Array.isArray(rowsAny)) return map;
+          rowsAny.forEach((c: any) => {
+            const name = String(c?.name || "").trim().toLowerCase();
+            const logo = c?.logo || c?.details?.logo;
+            if (name && logo) map[name] = logo;
+          });
+          return map;
+        };
+
+        let clientLogoMap: Record<string, string> = {};
+        try {
+          if (clientsRes && (clientsRes as Response).ok) {
+            const clientRows = await (clientsRes as Response).json();
+            clientLogoMap = buildClientLogoMap(clientRows);
+          } else if (typeof window !== "undefined") {
+            const cached = window.localStorage.getItem("clients");
+            if (cached) {
+              const parsed = JSON.parse(cached) as any[];
+              clientLogoMap = buildClientLogoMap(parsed);
+            }
+          }
+        } catch {}
+
         const mapped = (rows || []).map((r: any) => {
           const clientName =
             r.clientName ||
@@ -489,11 +518,14 @@ export default function ATRDashboard() {
             r.data?.client_name ||
             r.data?.client?.name ||
             "";
+          const normName = String(clientName || "").trim().toLowerCase();
+          const logoFromClients = clientLogoMap[normName];
           const clientLogo =
             r.data?.clientLogo ||
             r.data?.client?.logo ||
             r.clientLogo ||
             r.client?.logo ||
+            logoFromClients ||
             undefined;
           return {
             id: r.id,
@@ -2508,7 +2540,7 @@ export default function ATRDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
           {atrSelectedClientFilter && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
                 {(() => {
                   const norm = atrSelectedClientFilter.trim().toLowerCase();
                   const proj = projects.find(
@@ -2528,9 +2560,6 @@ export default function ATRDashboard() {
                   );
                 })()}
               </Avatar>
-              <span className="text-sm text-gray-600 max-w-xs truncate">
-                {atrSelectedClientFilter}
-              </span>
             </div>
           )}
         </div>
