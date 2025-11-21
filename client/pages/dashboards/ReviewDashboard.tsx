@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ export default function ReviewDashboard() {
     id: string;
     title: string;
     client?: string;
+    clientLogo?: string;
     raw?: any;
   }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -186,6 +188,12 @@ export default function ReviewDashboard() {
             r.clientName ||
             r.client ||
             "",
+          clientLogo:
+            r.data?.clientLogo ||
+            r.data?.client?.logo ||
+            r.clientLogo ||
+            r.client?.logo ||
+            undefined,
           raw: r,
         }));
 
@@ -345,10 +353,37 @@ export default function ReviewDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="h-7 w-7 text-blue-600" />
-          Review
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="h-7 w-7 text-blue-600" />
+            Review
+          </h1>
+          {selectedClientFilter && (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+                {(() => {
+                  const norm = selectedClientFilter.trim().toLowerCase();
+                  const proj = projects.find(
+                    (p) => (p.client || "").trim().toLowerCase() === norm,
+                  );
+                  const logo = proj?.clientLogo;
+                  if (logo) {
+                    return <AvatarImage src={logo} alt={selectedClientFilter} />;
+                  }
+                  const initial = selectedClientFilter.trim()[0] || "?";
+                  return (
+                    <AvatarFallback className="bg-blue-100 text-blue-800 font-semibold">
+                      {initial.toUpperCase()}
+                    </AvatarFallback>
+                  );
+                })()}
+              </Avatar>
+              <span className="text-sm text-gray-600 max-w-xs truncate">
+                {selectedClientFilter}
+              </span>
+            </div>
+          )}
+        </div>
         <Badge className="bg-blue-100 text-blue-800">Review</Badge>
       </div>
 
