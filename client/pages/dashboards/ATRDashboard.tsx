@@ -2536,8 +2536,9 @@ export default function ATRDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
+          <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
           {atrSelectedClientFilter && (
             <div className="flex items-center gap-2">
               {(() => {
@@ -2572,7 +2573,6 @@ export default function ATRDashboard() {
             </div>
           )}
         </div>
-        <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
