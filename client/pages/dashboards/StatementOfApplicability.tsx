@@ -185,6 +185,8 @@ export default function StatementOfApplicability() {
   const [clientNodeMap, setClientNodeMap] = useState<Record<string, string[]>>(
     {},
   );
+  const [industryNodeApplicabilityByIndustry, setIndustryNodeApplicabilityByIndustry] =
+    useState<Record<string, Record<string, boolean | null>>>({});
   const [industrySelections, setIndustrySelections] = useState<Set<string>>(
     new Set(),
   );
@@ -311,6 +313,10 @@ export default function StatementOfApplicability() {
           ) {
             const appMap: Record<string, boolean | null> =
               saved.nodeApplicability;
+            setIndustryNodeApplicabilityByIndustry((prev) => ({
+              ...prev,
+              [selectedIndustry]: appMap,
+            }));
             setDetailsIndustry((prev) => {
               const current = prev[selectedIndustry] || {};
               const next: Record<string, NodeDetails> = { ...current };
@@ -370,6 +376,17 @@ export default function StatementOfApplicability() {
         setClientNeedsIndustryMapping(null);
         setIndustryProcessMap((prev) => ({ ...prev, [ind]: saved.processes }));
         setSelectedProcessesClient(saved.processes);
+        if (
+          saved.nodeApplicability &&
+          typeof saved.nodeApplicability === "object"
+        ) {
+          const appMap: Record<string, boolean | null> =
+            saved.nodeApplicability;
+          setIndustryNodeApplicabilityByIndustry((prev) => ({
+            ...prev,
+            [ind]: appMap,
+          }));
+        }
 
         // Load client-specific mapping if available
         let savedClient: any = null;
@@ -473,6 +490,17 @@ export default function StatementOfApplicability() {
           const procs = (saved as any).processes as string[];
           setIndustryProcessMap((prev) => ({ ...prev, [ind]: procs }));
           setSelectedProcessesClient(procs);
+          if (
+            (saved as any).nodeApplicability &&
+            typeof (saved as any).nodeApplicability === "object"
+          ) {
+            const appMap: Record<string, boolean | null> =
+              (saved as any).nodeApplicability;
+            setIndustryNodeApplicabilityByIndustry((prev) => ({
+              ...prev,
+              [ind]: appMap,
+            }));
+          }
         }
       }
     })();
@@ -583,6 +611,7 @@ export default function StatementOfApplicability() {
     tab === "industry"
       ? detailsIndustry[selectedIndustry] || {}
       : detailsClient[selectedClientId] || {};
+  const clientIndustry = selectedClient?.industry || "";
   const renderNodes = useMemo(() => {
     const selectedProcs =
       tab === "industry" ? selectedProcessesIndustry : selectedProcessesClient;
@@ -593,24 +622,34 @@ export default function StatementOfApplicability() {
     return visibleNodes
       .filter((n) => ids.includes(n.id))
       .filter((n) => {
+        if (tab !== "client") return true;
+        const industryAppMap =
+          industryNodeApplicabilityByIndustry[clientIndustry || selectedIndustry] ||
+          {};
+        if (!Object.keys(industryAppMap).length) return true;
+        return industryAppMap[n.id] === true;
+      })
+      .filter((n) => {
         const app = activeDetails[n.id]?.applicable ?? null;
         if (treeApplicabilityFilter === "all") return true;
         if (treeApplicabilityFilter === "app") return app === true;
         if (treeApplicabilityFilter === "na") return app === false;
         return app === null;
       });
-  }, [
-    visibleNodes,
-    selectedProcessesIndustry,
-    selectedProcessesClient,
-    tab,
-    tree,
-    treeApplicabilityFilter,
-    detailsIndustry,
-    detailsClient,
-    selectedIndustry,
-    selectedClientId,
-  ]);
+   }, [
+     visibleNodes,
+     selectedProcessesIndustry,
+     selectedProcessesClient,
+     tab,
+     tree,
+     treeApplicabilityFilter,
+     industryNodeApplicabilityByIndustry,
+     clientIndustry,
+     detailsIndustry,
+     detailsClient,
+     selectedIndustry,
+     selectedClientId,
+   ]);
   const toggleSelectIndustry = (id: string) => {
     setIndustrySelections((prev) => {
       const next = new Set(prev);
