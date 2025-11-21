@@ -52,6 +52,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
+import html2canvas from "html2canvas";
 import {
   PieChart,
   Pie,
@@ -307,65 +308,38 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
   const cardClasses = ["shadow-sm", cardClassName].filter(Boolean).join(" ");
   const cardRef = React.useRef<HTMLDivElement | null>(null);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!cardRef.current) return;
-    const svg = cardRef.current.querySelector("svg");
-    if (!svg) return;
 
-    const serializer = new XMLSerializer();
-    const source = serializer.serializeToString(svg);
-    const svgBlob = new Blob([source], {
-      type: "image/svg+xml;charset=utf-8",
+    const baseName =
+      typeof title === "string"
+        ? title
+        : (title as any)?.toString?.() || "chart";
+    const safeName = String(baseName)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "chart";
+
+    const canvas = await html2canvas(cardRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
     });
-    const url = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = () => {
-      const rect = svg.getBoundingClientRect();
-      const width = rect.width || svg.clientWidth || 800;
-      const height = rect.height || svg.clientHeight || 450;
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        URL.revokeObjectURL(url);
-        return;
-      }
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
 
-      const baseName =
-        typeof title === "string"
-          ? title
-          : (title as any)?.toString?.() || "chart";
-      const safeName = String(baseName)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "chart";
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-          const jpgUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = jpgUrl;
-          link.download = `${safeName}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(jpgUrl);
-        },
-        "image/jpeg",
-        0.92,
-      );
-
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const jpgUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = jpgUrl;
+        link.download = `${safeName}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(jpgUrl);
+      },
+      "image/jpeg",
+      0.92,
+    );
   };
 
   return (
