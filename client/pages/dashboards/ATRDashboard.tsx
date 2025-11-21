@@ -1996,21 +1996,19 @@ export default function ATRDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div>
                   <Label>Project</Label>
-                  <Select
-                    value={selectedProjectId || ""}
-                    onValueChange={(v) => setSelectedProjectId(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reportableProjectOptionsForClient.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ProjectMultiSelect
+                    options={reportableProjectOptionsForClient.map((opt) => ({
+                      value: opt.id,
+                      label: opt.title,
+                    }))}
+                    value={vizSelectedProjectIds}
+                    onChange={(ids) => {
+                      setVizSelectedProjectIds(ids);
+                      const first = ids[0] || "";
+                      setSelectedProjectId(first);
+                    }}
+                    placeholder="All projects"
+                  />
                 </div>
                 <div className="flex justify-end gap-2 md:col-span-2">
                   <Popover>
@@ -3009,21 +3007,19 @@ export default function ATRDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div>
                 <Label>Project</Label>
-                <Select
-                  value={selectedProjectId || ""}
-                  onValueChange={(v) => setSelectedProjectId(v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {reportableProjectOptionsForClient.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {opt.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ProjectMultiSelect
+                  options={reportableProjectOptionsForClient.map((opt) => ({
+                    value: opt.id,
+                    label: opt.title,
+                  }))}
+                  value={vizSelectedProjectIds}
+                  onChange={(ids) => {
+                    setVizSelectedProjectIds(ids);
+                    const first = ids[0] || "";
+                    setSelectedProjectId(first);
+                  }}
+                  placeholder="All projects"
+                />
               </div>
               <div className="flex justify-end gap-2 md:col-span-2">
                 <Popover>
