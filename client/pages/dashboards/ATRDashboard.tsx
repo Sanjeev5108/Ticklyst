@@ -2491,7 +2491,7 @@ export default function ATRDashboard() {
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {reportableProjectOptions.map((opt) => (
+                        {reportableProjectOptionsForClient.map((opt) => (
                           <SelectItem key={opt.id} value={opt.id}>
                             {opt.title}
                           </SelectItem>
