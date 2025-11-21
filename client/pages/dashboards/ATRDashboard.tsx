@@ -2540,26 +2540,35 @@ export default function ATRDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
           {atrSelectedClientFilter && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
-                {(() => {
-                  const norm = atrSelectedClientFilter.trim().toLowerCase();
-                  const proj = projects.find(
-                    (p) => (p.client || "").trim().toLowerCase() === norm,
-                  );
-                  const logo = proj?.clientLogo;
-                  if (logo) {
-                    return (
-                      <AvatarImage src={logo} alt={atrSelectedClientFilter} />
-                    );
-                  }
-                  const initial = atrSelectedClientFilter.trim()[0] || "?";
+              {(() => {
+                const norm = atrSelectedClientFilter.trim().toLowerCase();
+                const proj = projects.find(
+                  (p) => (p.client || "").trim().toLowerCase() === norm,
+                );
+                const logo = proj?.clientLogo;
+                if (logo) {
                   return (
+                    <div className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center" aria-label="Client logo">
+                      <img
+                        src={logo}
+                        alt={atrSelectedClientFilter}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  );
+                }
+                const initial = atrSelectedClientFilter.trim()[0] || "?";
+                return (
+                  <Avatar
+                    className="h-9 w-9 border border-gray-200 bg-white"
+                    aria-label="Client initial"
+                  >
                     <AvatarFallback className="bg-green-100 text-green-800 font-semibold">
                       {initial.toUpperCase()}
                     </AvatarFallback>
-                  );
-                })()}
-              </Avatar>
+                  </Avatar>
+                );
+              })()}
             </div>
           )}
         </div>

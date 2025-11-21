@@ -2595,20 +2595,31 @@ export default function FrameworkDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
             {client && (
               <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
-                  {(() => {
-                    const logo = (client as any)?.logo || (client as any)?.details?.logo;
-                    if (logo) {
-                      return <AvatarImage src={logo} alt={client.name} />;
-                    }
-                    const initial = (client.name || "?")[0];
+                {(() => {
+                  const logo = (client as any)?.logo || (client as any)?.details?.logo;
+                  if (logo) {
                     return (
+                      <div className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center" aria-label="Client logo">
+                        <img
+                          src={logo}
+                          alt={client.name}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    );
+                  }
+                  const initial = (client.name || "?")[0];
+                  return (
+                    <Avatar
+                      className="h-9 w-9 border border-gray-200 bg-white"
+                      aria-label="Client initial"
+                    >
                       <AvatarFallback className="bg-purple-100 text-purple-800 font-semibold">
                         {initial.toUpperCase()}
                       </AvatarFallback>
-                    );
-                  })()}
-                </Avatar>
+                    </Avatar>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -2628,22 +2639,33 @@ export default function FrameworkDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
           {selectedClient && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
-                {(() => {
-                  const client = clients.find((c) => c.id === selectedClient);
-                  const logo = (client as any)?.logo || (client as any)?.details?.logo;
-                  const name = client?.name || "";
-                  if (logo) {
-                    return <AvatarImage src={logo} alt={name} />;
-                  }
-                  const initial = (name || selectedClient)[0] || "?";
+              {(() => {
+                const client = clients.find((c) => c.id === selectedClient);
+                const logo = (client as any)?.logo || (client as any)?.details?.logo;
+                const name = client?.name || "";
+                if (logo) {
                   return (
+                    <div className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center" aria-label="Client logo">
+                      <img
+                        src={logo}
+                        alt={name}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  );
+                }
+                const initial = (name || selectedClient)[0] || "?";
+                return (
+                  <Avatar
+                    className="h-9 w-9 border border-gray-200 bg-white"
+                    aria-label="Client initial"
+                  >
                     <AvatarFallback className="bg-purple-100 text-purple-800 font-semibold">
                       {initial.toUpperCase()}
                     </AvatarFallback>
-                  );
-                })()}
-              </Avatar>
+                  </Avatar>
+                );
+              })()}
             </div>
           )}
         </div>

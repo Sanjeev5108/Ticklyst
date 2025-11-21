@@ -396,24 +396,35 @@ export default function ReviewDashboard() {
           </h1>
           {selectedClientFilter && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
-                {(() => {
-                  const norm = selectedClientFilter.trim().toLowerCase();
-                  const proj = projects.find(
-                    (p) => (p.client || "").trim().toLowerCase() === norm,
-                  );
-                  const logo = proj?.clientLogo;
-                  if (logo) {
-                    return <AvatarImage src={logo} alt={selectedClientFilter} />;
-                  }
-                  const initial = selectedClientFilter.trim()[0] || "?";
+              {(() => {
+                const norm = selectedClientFilter.trim().toLowerCase();
+                const proj = projects.find(
+                  (p) => (p.client || "").trim().toLowerCase() === norm,
+                );
+                const logo = proj?.clientLogo;
+                if (logo) {
                   return (
+                    <div className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center" aria-label="Client logo">
+                      <img
+                        src={logo}
+                        alt={selectedClientFilter}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  );
+                }
+                const initial = selectedClientFilter.trim()[0] || "?";
+                return (
+                  <Avatar
+                    className="h-9 w-9 border border-gray-200 bg-white"
+                    aria-label="Client initial"
+                  >
                     <AvatarFallback className="bg-blue-100 text-blue-800 font-semibold">
                       {initial.toUpperCase()}
                     </AvatarFallback>
-                  );
-                })()}
-              </Avatar>
+                  </Avatar>
+                );
+              })()}
             </div>
           )}
         </div>
