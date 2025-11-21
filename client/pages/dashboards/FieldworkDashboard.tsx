@@ -703,11 +703,12 @@ export default function FieldworkDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <FileText className="h-7 w-7 text-orange-600" />
+          Fieldwork
+        </h1>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="h-7 w-7 text-orange-600" />
-            Fieldwork
-          </h1>
+          <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
           {selectedClient && (
             <div className="flex items-center gap-2">
               {selectedClientLogo ? (
@@ -734,7 +735,6 @@ export default function FieldworkDashboard() {
             </div>
           )}
         </div>
-        <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
