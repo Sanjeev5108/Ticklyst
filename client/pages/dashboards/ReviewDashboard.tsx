@@ -394,7 +394,6 @@ export default function ReviewDashboard() {
           Review
         </h1>
         <div className="flex items-center gap-3">
-          <Badge className="bg-blue-100 text-blue-800">Review</Badge>
           {selectedClientFilter && (
             <div className="flex items-center gap-2">
               {(() => {
