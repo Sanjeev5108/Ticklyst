@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 export interface IndustrySelectProps {
   value: string;
@@ -12,6 +13,7 @@ export interface IndustrySelectProps {
 }
 
 export function IndustrySelect({ value, onChange, placeholder, baseOptions = [] }: IndustrySelectProps) {
+  const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [newIndustry, setNewIndustry] = React.useState('');
@@ -57,15 +59,33 @@ export function IndustrySelect({ value, onChange, placeholder, baseOptions = [] 
   const addNew = async () => {
     const name = newIndustry.trim();
     if (!name) return;
-    if (!options.some(o => o.toLowerCase() === name.toLowerCase())) {
-      const next = [...options, name];
-      setOptions(next);
+    const existing = options.find(o => o.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      toast({ title: 'Industry already exists.' });
+      onChange(existing);
+      setNewIndustry('');
+      setOpen(false);
+      return;
     }
+    const next = [...options, name];
+    setOptions(next);
     onChange(name);
     setNewIndustry('');
     setOpen(false);
     try {
-      await fetch('/api/industries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: '', departments: [] }) });
+      const res = await fetch('/api/industries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: '', departments: [] }),
+      });
+      if (!res.ok) {
+        try {
+          const data = await res.json();
+          if (data && data.error === 'industry_exists') {
+            toast({ title: 'Industry already exists.' });
+          }
+        } catch {}
+      }
     } catch {}
   };
 
