@@ -239,25 +239,71 @@ export default function FieldworkDashboard() {
 
 
   // Projects (loaded from API) with access filtering
-  const [projects, setProjects] = useState<{ id: string; title: string; client?: string; raw?: any }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string; client?: string; clientLogo?: string; raw?: any }[]>([]);
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/projects');
-        if (!res.ok) throw new Error('load_failed');
-        const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({
-          id: r.id,
-          title:
-            r.name ||
-            r.data?.projectName ||
-            r.data?.project_name ||
-            r.code ||
-            r.data?.title ||
-            'Untitled Project',
-          client: r.clientName || r.data?.clientName || r.data?.client_name || '',
-          raw: r,
-        }));
+        const [projRes, clientsRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/clients').catch(() => null),
+        ]);
+        if (!projRes.ok) throw new Error('load_failed');
+        const rows = await projRes.json();
+
+        const buildClientLogoMap = (rowsAny: any[]): Record<string, string> => {
+          const map: Record<string, string> = {};
+          if (!Array.isArray(rowsAny)) return map;
+          rowsAny.forEach((c: any) => {
+            const name = String(c?.name || '').trim().toLowerCase();
+            const logo = c?.logo || c?.details?.logo;
+            if (name && logo) map[name] = logo;
+          });
+          return map;
+        };
+
+        let clientLogoMap: Record<string, string> = {};
+        try {
+          if (clientsRes && (clientsRes as Response).ok) {
+            const clientRows = await (clientsRes as Response).json();
+            clientLogoMap = buildClientLogoMap(clientRows);
+          } else if (typeof window !== 'undefined') {
+            const cached = window.localStorage.getItem('clients');
+            if (cached) {
+              const parsed = JSON.parse(cached) as any[];
+              clientLogoMap = buildClientLogoMap(parsed);
+            }
+          }
+        } catch {}
+
+        const mapped = (rows || []).map((r: any) => {
+          const clientName =
+            r.clientName ||
+            r.data?.clientName ||
+            r.data?.client_name ||
+            '';
+          const normName = String(clientName || '').trim().toLowerCase();
+          const logoFromClients = clientLogoMap[normName];
+          const clientLogo =
+            r.data?.clientLogo ||
+            r.data?.client?.logo ||
+            r.clientLogo ||
+            r.client?.logo ||
+            logoFromClients ||
+            undefined;
+          return {
+            id: r.id,
+            title:
+              r.name ||
+              r.data?.projectName ||
+              r.data?.project_name ||
+              r.code ||
+              r.data?.title ||
+              'Untitled Project',
+            client: clientName,
+            clientLogo,
+            raw: r,
+          };
+        });
 
         // determine scope
         const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
@@ -648,16 +694,9 @@ export default function FieldworkDashboard() {
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const selectedClientLogo = useMemo(() => {
     if (!selectedClient) return undefined;
-    const proj = projects.find(p => (p.client || '').trim().toLowerCase() === selectedClient.trim().toLowerCase());
-    const raw = proj?.raw as any;
-    const data = raw?.data || raw || {};
-    return (
-      data.clientLogo ||
-      data.client?.logo ||
-      raw?.clientLogo ||
-      raw?.client?.logo ||
-      undefined
-    );
+    const norm = selectedClient.trim().toLowerCase();
+    const proj = projects.find(p => (p.client || '').trim().toLowerCase() === norm);
+    return proj?.clientLogo;
   }, [projects, selectedClient]);
   const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
 
