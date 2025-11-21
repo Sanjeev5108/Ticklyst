@@ -174,28 +174,64 @@ export default function ReviewDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/projects');
-        if (!res.ok) return;
-        const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({
-          id: r.id,
-          title: r.name || r.data?.projectName || r.code || "Untitled Project",
-          client:
+        const [projRes, clientsRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/clients').catch(() => null),
+        ]);
+        if (!projRes.ok) return;
+        const rows = await projRes.json();
+
+        const buildClientLogoMap = (rowsAny: any[]): Record<string, string> => {
+          const map: Record<string, string> = {};
+          if (!Array.isArray(rowsAny)) return map;
+          rowsAny.forEach((c: any) => {
+            const name = String(c?.name || '').trim().toLowerCase();
+            const logo = c?.logo || c?.details?.logo;
+            if (name && logo) map[name] = logo;
+          });
+          return map;
+        };
+
+        let clientLogoMap: Record<string, string> = {};
+        try {
+          if (clientsRes && (clientsRes as Response).ok) {
+            const clientRows = await (clientsRes as Response).json();
+            clientLogoMap = buildClientLogoMap(clientRows);
+          } else if (typeof window !== 'undefined') {
+            const cached = window.localStorage.getItem('clients');
+            if (cached) {
+              const parsed = JSON.parse(cached) as any[];
+              clientLogoMap = buildClientLogoMap(parsed);
+            }
+          }
+        } catch {}
+
+        const mapped = (rows || []).map((r: any) => {
+          const clientName =
             r.data?.clientName ||
             r.data?.client ||
             r.data?.client_name ||
             r.data?.clientTitle ||
             r.clientName ||
             r.client ||
-            "",
-          clientLogo:
+            '';
+          const normName = String(clientName || '').trim().toLowerCase();
+          const logoFromClients = clientLogoMap[normName];
+          const clientLogo =
             r.data?.clientLogo ||
             r.data?.client?.logo ||
             r.clientLogo ||
             r.client?.logo ||
-            undefined,
-          raw: r,
-        }));
+            logoFromClients ||
+            undefined;
+          return {
+            id: r.id,
+            title: r.name || r.data?.projectName || r.code || "Untitled Project",
+            client: clientName,
+            clientLogo,
+            raw: r,
+          };
+        });
 
         const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
         const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
@@ -360,7 +396,7 @@ export default function ReviewDashboard() {
           </h1>
           {selectedClientFilter && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
                 {(() => {
                   const norm = selectedClientFilter.trim().toLowerCase();
                   const proj = projects.find(
@@ -378,9 +414,6 @@ export default function ReviewDashboard() {
                   );
                 })()}
               </Avatar>
-              <span className="text-sm text-gray-600 max-w-xs truncate">
-                {selectedClientFilter}
-              </span>
             </div>
           )}
         </div>
