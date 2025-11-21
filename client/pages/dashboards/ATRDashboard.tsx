@@ -631,6 +631,18 @@ export default function ATRDashboard() {
     })();
   }, [controls.length]);
 
+  const atrClientOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects
+            .map((p) => (p.client || "").trim())
+            .filter((name) => name && name.length > 0),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [projects],
+  );
+
   const [auditTrackData, setAuditTrackData] = useState<AuditTrackRow[]>([
     {
       id: "at1",
@@ -1063,6 +1075,22 @@ export default function ATRDashboard() {
       title: projects.find((p) => p.id === id)?.title || id,
     }));
   }, [reportableRows, projects]);
+
+  const reportableProjectOptionsForClient = useMemo(
+    () => {
+      if (!atrSelectedClientFilter) return reportableProjectOptions;
+      const norm = atrSelectedClientFilter.trim().toLowerCase();
+      const allowedIds = projects
+        .filter(
+          (p) => (p.client || "").trim().toLowerCase() === norm,
+        )
+        .map((p) => p.id);
+      if (!allowedIds.length) return [];
+      const allowed = new Set(allowedIds);
+      return reportableProjectOptions.filter((opt) => allowed.has(opt.id));
+    },
+    [atrSelectedClientFilter, reportableProjectOptions, projects],
+  );
 
   // ATR Access data per project (not linked to controls)
   const [atrRows, setAtrRows] = useState<AuditTrackRow[]>([]);
