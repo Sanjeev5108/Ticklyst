@@ -44,8 +44,14 @@ export default function ReviewDashboard() {
   const [riskConfigVersion, setRiskConfigVersion] = useState(0);
   const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   const [ackMsg, setAckMsg] = useState('');
-  const [projects, setProjects] = useState<{ id: string; title: string; raw?: any }[]>([]);
+  const [projects, setProjects] = useState<{
+    id: string;
+    title: string;
+    client?: string;
+    raw?: any;
+  }[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [selectedClientFilter, setSelectedClientFilter] = useState<string>("");
   const [projDetailsOpen, setProjDetailsOpen] = useState(false);
 
   // Export toolbar state
@@ -76,9 +82,39 @@ export default function ReviewDashboard() {
     return counts;
   }, [records]);
 
+  const clientOptions = useMemo(() => {
+    const names = new Set<string>();
+    projects.forEach((p) => {
+      const raw = p.raw?.data || p.raw || {};
+      const name =
+        raw.clientName ||
+        raw.client ||
+        raw.client_name ||
+        raw.clientTitle ||
+        p.client ||
+        "";
+      if (!name) return;
+      names.add(String(name));
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [projects]);
+
   const projectsForReview = useMemo(() => {
-    return projects.filter(p => (submittedCounts[p.id] || 0) > 0);
-  }, [projects, submittedCounts]);
+    const list = projects.filter((p) => (submittedCounts[p.id] || 0) > 0);
+    if (!selectedClientFilter) return list;
+    const norm = selectedClientFilter.trim().toLowerCase();
+    return list.filter((p) => {
+      const raw = p.raw?.data || p.raw || {};
+      const name =
+        raw.clientName ||
+        raw.client ||
+        raw.client_name ||
+        raw.clientTitle ||
+        p.client ||
+        "";
+      return String(name).trim().toLowerCase() === norm;
+    });
+  }, [projects, submittedCounts, selectedClientFilter]);
 
   useEffect(() => {
     if (selectedProject && !projectsForReview.some(p => p.id === selectedProject)) {
@@ -139,7 +175,19 @@ export default function ReviewDashboard() {
         const res = await fetch('/api/projects');
         if (!res.ok) return;
         const rows = await res.json();
-        const mapped = (rows || []).map((r: any) => ({ id: r.id, title: r.name || r.data?.projectName || r.code || 'Untitled Project', raw: r }));
+        const mapped = (rows || []).map((r: any) => ({
+          id: r.id,
+          title: r.name || r.data?.projectName || r.code || "Untitled Project",
+          client:
+            r.data?.clientName ||
+            r.data?.client ||
+            r.data?.client_name ||
+            r.data?.clientTitle ||
+            r.clientName ||
+            r.client ||
+            "",
+          raw: r,
+        }));
 
         const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
         const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
@@ -304,19 +352,49 @@ export default function ReviewDashboard() {
         <Badge className="bg-blue-100 text-blue-800">Review</Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div>
+          <Label>Client</Label>
+          <Select
+            value={selectedClientFilter || ""}
+            onValueChange={(v) => {
+              const next = v === "__CLEAR__" ? "" : v;
+              setSelectedClientFilter(next);
+              setSelectedProject(null);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__CLEAR__">All clients</SelectItem>
+              {clientOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <Label>Project</Label>
-          <Select value={selectedProject || ''} onValueChange={(v)=> setSelectedProject(v === '__CLEAR__' ? null : v)}>
+          <Select
+            value={selectedProject || ""}
+            onValueChange={(v) => setSelectedProject(v === "__CLEAR__" ? null : v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
               {projectsForReview.length === 0 && (
-                <SelectItem value="__NONE__" disabled>No projects with submissions</SelectItem>
+                <SelectItem value="__NONE__" disabled>
+                  No projects with submissions
+                </SelectItem>
               )}
-              {projectsForReview.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.title} ({submittedCounts[p.id] || 0})</SelectItem>
+              {projectsForReview.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.title} ({submittedCounts[p.id] || 0})
+                </SelectItem>
               ))}
               <SelectItem value="__CLEAR__">Clear</SelectItem>
             </SelectContent>
