@@ -2570,7 +2570,7 @@ export default function ATRDashboard() {
               <div>
                 <Label>Project</Label>
                 <ProjectMultiSelect
-                  options={reportableProjectOptions.map((opt) => ({
+                  options={reportableProjectOptionsForClient.map((opt) => ({
                     value: opt.id,
                     label: opt.title,
                   }))}
