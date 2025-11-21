@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -2590,7 +2591,30 @@ export default function FrameworkDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+            {client && (
+              <div className="flex items-center gap-2">
+                <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+                  {(() => {
+                    const logo = (client as any)?.logo || (client as any)?.details?.logo;
+                    if (logo) {
+                      return <AvatarImage src={logo} alt={client.name} />;
+                    }
+                    const initial = (client.name || "?")[0];
+                    return (
+                      <AvatarFallback className="bg-purple-100 text-purple-800 font-semibold">
+                        {initial.toUpperCase()}
+                      </AvatarFallback>
+                    );
+                  })()}
+                </Avatar>
+                <span className="text-sm text-gray-600 max-w-xs truncate">
+                  {client.name}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         <Card className="shadow-lg">
@@ -2603,7 +2627,32 @@ export default function FrameworkDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+          {selectedClient && (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+                {(() => {
+                  const client = clients.find((c) => c.id === selectedClient);
+                  const logo = (client as any)?.logo || (client as any)?.details?.logo;
+                  const name = client?.name || "";
+                  if (logo) {
+                    return <AvatarImage src={logo} alt={name} />;
+                  }
+                  const initial = (name || selectedClient)[0] || "?";
+                  return (
+                    <AvatarFallback className="bg-purple-100 text-purple-800 font-semibold">
+                      {initial.toUpperCase()}
+                    </AvatarFallback>
+                  );
+                })()}
+              </Avatar>
+              <span className="text-sm text-gray-600 max-w-xs truncate">
+                {clients.find((c) => c.id === selectedClient)?.name}
+              </span>
+            </div>
+          )}
+        </div>
         <Badge className="bg-purple-100 text-purple-800">
           Framework Access
         </Badge>
