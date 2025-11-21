@@ -23,6 +23,17 @@ function getTransporter() {
 async function ensure() {
   if (!connectionString) return;
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS industries (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      departments TEXT[] NOT NULL DEFAULT '{}'::text[],
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS clients (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -189,45 +200,151 @@ let projects: Project[] = [];
 // API Handlers
 
 // Industries
-export const getIndustries: RequestHandler = (req, res) => {
-  res.json(industries);
-};
-
-export const createIndustry: RequestHandler = (req, res) => {
-  const { name, description, departments } = req.body;
-  const newIndustry: Industry = {
-    id: Date.now().toString(),
-    name,
-    description,
-    departments: departments || [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  industries.push(newIndustry);
-  res.status(201).json(newIndustry);
-};
-
-export const updateIndustry: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const industryIndex = industries.findIndex(i => i.id === id);
-  
-  if (industryIndex === -1) {
-    return res.status(404).json({ error: "Industry not found" });
+export const getIndustries: RequestHandler = async (req, res) => {
+  if (!connectionString) return res.json(industries);
+  try {
+    const q = await pool.query(
+      "SELECT id, name, description, departments, created_by AS \"createdBy\", created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM industries ORDER BY name",
+    );
+    return res.json(q.rows);
+  } catch (e) {
+    console.error("getIndustries failed", e);
+    return res.status(500).json({ error: "server_error" });
   }
-  
-  industries[industryIndex] = {
-    ...industries[industryIndex],
-    ...req.body,
-    updatedAt: new Date().toISOString()
-  };
-  
-  res.json(industries[industryIndex]);
 };
 
-export const deleteIndustry: RequestHandler = (req, res) => {
+export const createIndustry: RequestHandler = async (req, res) => {
+  const { name, description, departments, createdBy } = req.body || {};
+  const normName = typeof name === "string" ? name.trim() : "";
+  if (!normName) return res.status(400).json({ error: "missing_name" });
+
+  if (!connectionString) {
+    const exists = industries.some(
+      (i) => i.name.trim().toLowerCase() === normName.toLowerCase(),
+    );
+    if (exists) return res.status(400).json({ error: "industry_exists" });
+    const newIndustry: Industry = {
+      id: Date.now().toString(),
+      name: normName,
+      description: description || "",
+      departments: Array.isArray(departments) ? departments : [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    industries.push(newIndustry);
+    return res.status(201).json(newIndustry);
+  }
+
+  try {
+    const dup = await pool.query(
+      "SELECT id FROM industries WHERE lower(name) = lower($1) LIMIT 1",
+      [normName],
+    );
+    if (dup.rows.length)
+      return res.status(400).json({ error: "industry_exists" });
+
+    const id = `IND-${Date.now()}`;
+    const deptArr = Array.isArray(departments) ? departments : [];
+    const createdByValue =
+      createdBy || (req as any).user?.email || (req as any).user?.id || null;
+
+    const q = await pool.query(
+      `INSERT INTO industries (id, name, description, departments, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, description, departments, created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [id, normName, description || "", deptArr, createdByValue],
+    );
+
+    return res.status(201).json(q.rows[0]);
+  } catch (e) {
+    console.error("createIndustry failed", e);
+    return res.status(500).json({ error: "server_error" });
+  }
+};
+
+export const updateIndustry: RequestHandler = async (req, res) => {
   const { id } = req.params;
-  industries = industries.filter(i => i.id !== id);
-  res.status(204).send();
+  const { name, description, departments } = req.body || {};
+
+  if (!connectionString) {
+    const industryIndex = industries.findIndex((i) => i.id === id);
+    if (industryIndex === -1)
+      return res.status(404).json({ error: "Industry not found" });
+    const normName =
+      typeof name === "string" && name.trim().length
+        ? name.trim()
+        : industries[industryIndex].name;
+    const exists = industries.some(
+      (i) =>
+        i.id !== id && i.name.trim().toLowerCase() === normName.toLowerCase(),
+    );
+    if (exists) return res.status(400).json({ error: "industry_exists" });
+    industries[industryIndex] = {
+      ...industries[industryIndex],
+      name: normName,
+      description:
+        typeof description === "string"
+          ? description
+          : industries[industryIndex].description,
+      departments: Array.isArray(departments)
+        ? departments
+        : industries[industryIndex].departments,
+      updatedAt: new Date().toISOString(),
+    };
+    return res.json(industries[industryIndex]);
+  }
+
+  try {
+    const normName = typeof name === "string" ? name.trim() : undefined;
+    if (normName && normName.length) {
+      const dup = await pool.query(
+        "SELECT id FROM industries WHERE lower(name) = lower($1) AND id <> $2 LIMIT 1",
+        [normName, id],
+      );
+      if (dup.rows.length)
+        return res.status(400).json({ error: "industry_exists" });
+    }
+
+    const deptArr = Array.isArray(departments) ? departments : undefined;
+
+    const q = await pool.query(
+      `UPDATE industries
+       SET
+         name = COALESCE($2, name),
+         description = COALESCE($3, description),
+         departments = COALESCE($4, departments),
+         updated_at = now()
+       WHERE id = $1
+       RETURNING id, name, description, departments, created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [
+        id,
+        normName && normName.length ? normName : null,
+        typeof description === "string" ? description : null,
+        deptArr || null,
+      ],
+    );
+    if (!q.rows.length)
+      return res.status(404).json({ error: "Industry not found" });
+    return res.json(q.rows[0]);
+  } catch (e) {
+    console.error("updateIndustry failed", e);
+    return res.status(500).json({ error: "server_error" });
+  }
+};
+
+export const deleteIndustry: RequestHandler = async (req, res) => {
+  const { id } = req.params;
+  if (!connectionString) {
+    industries = industries.filter((i) => i.id !== id);
+    return res.status(204).send();
+  }
+  try {
+    await pool.query("DELETE FROM industries WHERE id = $1", [id]);
+    return res.status(204).send();
+  } catch (e) {
+    console.error("deleteIndustry failed", e);
+    return res.status(500).json({ error: "server_error" });
+  }
 };
 
 // Departments
