@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Plus, MessageSquare, Send } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ChartContainer,
   ChartTooltip,
@@ -457,7 +458,7 @@ export default function ATRDashboard() {
     {},
   );
   const [projects, setProjects] = useState<
-    { id: string; title: string; client?: string; raw?: any }[]
+    { id: string; title: string; client?: string; clientLogo?: string; raw?: any }[]
   >([]);
   const [reportableProjectFilter, setReportableProjectFilter] =
     useState<string>("");
@@ -488,6 +489,12 @@ export default function ATRDashboard() {
             r.data?.client_name ||
             r.data?.client?.name ||
             "";
+          const clientLogo =
+            r.data?.clientLogo ||
+            r.data?.client?.logo ||
+            r.clientLogo ||
+            r.client?.logo ||
+            undefined;
           return {
             id: r.id,
             title:
@@ -496,6 +503,7 @@ export default function ATRDashboard() {
               r.code ||
               "Untitled Project",
             client: clientName,
+            clientLogo,
             raw: r,
           };
         });
@@ -2496,7 +2504,36 @@ export default function ATRDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">ATR</h1>
+          {atrSelectedClientFilter && (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+                {(() => {
+                  const norm = atrSelectedClientFilter.trim().toLowerCase();
+                  const proj = projects.find(
+                    (p) => (p.client || "").trim().toLowerCase() === norm,
+                  );
+                  const logo = proj?.clientLogo;
+                  if (logo) {
+                    return (
+                      <AvatarImage src={logo} alt={atrSelectedClientFilter} />
+                    );
+                  }
+                  const initial = atrSelectedClientFilter.trim()[0] || "?";
+                  return (
+                    <AvatarFallback className="bg-green-100 text-green-800 font-semibold">
+                      {initial.toUpperCase()}
+                    </AvatarFallback>
+                  );
+                })()}
+              </Avatar>
+              <span className="text-sm text-gray-600 max-w-xs truncate">
+                {atrSelectedClientFilter}
+              </span>
+            </div>
+          )}
+        </div>
         <Badge className="bg-green-100 text-green-800">ATR Access</Badge>
       </div>
 
