@@ -1733,10 +1733,8 @@ export default function ATRDashboard() {
 
                 const total = rows.length;
                 const completed = rows.filter(
-                  (a) =>
-                    mapStatus(a.status) === "Completed" ||
-                    !!a.actualCompletionDate,
-                ).length;
+                (a) => mapStatus(a.status) === "Completed",
+              ).length;
                 const overdue = rows.filter(
                   (a) =>
                     mapStatus(a.status) === "Overdue" ||
@@ -2764,9 +2762,7 @@ export default function ATRDashboard() {
 
               const total = rows.length;
               const completed = rows.filter(
-                (a) =>
-                  mapStatus(a.status) === "Completed" ||
-                  !!a.actualCompletionDate,
+                (a) => mapStatus(a.status) === "Completed",
               ).length;
               const overdue = rows.filter(
                 (a) =>
