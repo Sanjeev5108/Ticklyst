@@ -476,6 +476,9 @@ export default function NewProjectDialog({
   const [soaApplicable, setSoaApplicable] = useState<
     Record<string, boolean | null>
   >({});
+  const [soaClientBaseApplicable, setSoaClientBaseApplicable] = useState<
+    Record<string, boolean | null>
+  >({});
 
   const parseHierId = React.useCallback((id: string) => {
     const parts = id.split("/");
@@ -1072,20 +1075,58 @@ export default function NewProjectDialog({
 
     const readLocal = () => {
       try {
-        if (!clientId) return [] as string[];
+        if (!clientId)
+          return {
+            names: [] as string[],
+            nodeApplicability: null as Record<string, boolean | null> | null,
+          };
         const raw = localStorage.getItem(`soa:client:${clientId}`);
-        if (!raw) return [] as string[];
+        if (!raw)
+          return {
+            names: [] as string[],
+            nodeApplicability: null as Record<string, boolean | null> | null,
+          };
         const json = JSON.parse(raw);
-        if (Array.isArray(json?.processes))
-          return toNames(json.processes as string[]);
-        return [] as string[];
+        const names = Array.isArray(json?.processes)
+          ? toNames(json.processes as string[])
+          : [];
+        const nodeApplicability =
+          json && typeof json.nodeApplicability === "object"
+            ? (json.nodeApplicability as Record<string, boolean | null>)
+            : null;
+        return { names, nodeApplicability };
       } catch {
-        return [] as string[];
+        return {
+          names: [] as string[],
+          nodeApplicability: null as Record<string, boolean | null> | null,
+        };
       }
     };
 
-    const localNames = readLocal();
-    if (localNames.length) setProcessesForClient(localNames);
+    const localData = readLocal();
+    if (localData.names.length) setProcessesForClient(localData.names);
+    if (
+      localData.nodeApplicability &&
+      Object.keys(localData.nodeApplicability).length &&
+      Object.keys(nodeIdToLocalId || {}).length
+    ) {
+      const updates: Record<string, boolean | null> = {};
+      const base: Record<string, boolean | null> = {};
+      for (const [nodeId, val] of Object.entries<any>(
+        localData.nodeApplicability,
+      )) {
+        const localId = (nodeIdToLocalId as any)[nodeId];
+        if (localId) {
+          const v = val as any as boolean | null;
+          updates[localId] = v;
+          base[localId] = v;
+        }
+      }
+      if (Object.keys(updates).length) {
+        setSoaApplicable((prev) => ({ ...prev, ...updates }));
+        setSoaClientBaseApplicable(base);
+      }
+    }
 
     (async () => {
       try {
@@ -1111,14 +1152,21 @@ export default function NewProjectDialog({
               typeof data.nodeApplicability === "object"
             ) {
               const updates: Record<string, boolean | null> = {};
+              const base: Record<string, boolean | null> = {};
               for (const [nodeId, val] of Object.entries<any>(
                 data.nodeApplicability,
               )) {
                 const localId = (nodeIdToLocalId as any)[nodeId];
-                if (localId) updates[localId] = val as any as boolean | null;
+                if (localId) {
+                  const v = val as any as boolean | null;
+                  updates[localId] = v;
+                  base[localId] = v;
+                }
               }
-              if (Object.keys(updates).length)
+              if (Object.keys(updates).length) {
                 setSoaApplicable((prev) => ({ ...prev, ...updates }));
+                setSoaClientBaseApplicable(base);
+              }
             }
             return;
           }
@@ -1151,7 +1199,7 @@ export default function NewProjectDialog({
         }
       } catch {}
     })();
-  }, [formData.clientName, selectedClientId, processIdToName]);
+  }, [formData.clientName, selectedClientId, processIdToName, nodeIdToLocalId]);
 
   // Auto-select mapped processes when available so the Checklist Tree becomes visible immediately
   useEffect(() => {
