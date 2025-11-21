@@ -311,27 +311,61 @@ const ExpandableChartCard: React.FC<ExpandableChartCardProps> = ({
     if (!cardRef.current) return;
     const svg = cardRef.current.querySelector("svg");
     if (!svg) return;
+
     const serializer = new XMLSerializer();
     const source = serializer.serializeToString(svg);
-    const blob = new Blob([source], {
+    const svgBlob = new Blob([source], {
       type: "image/svg+xml;charset=utf-8",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const baseName =
-      typeof title === "string"
-        ? title
-        : (title as any)?.toString?.() || "chart";
-    const safeName = String(baseName)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "chart";
-    link.href = url;
-    link.download = `${safeName}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const rect = svg.getBoundingClientRect();
+      const width = rect.width || svg.clientWidth || 800;
+      const height = rect.height || svg.clientHeight || 450;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const baseName =
+        typeof title === "string"
+          ? title
+          : (title as any)?.toString?.() || "chart";
+      const safeName = String(baseName)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "chart";
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const jpgUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = jpgUrl;
+          link.download = `${safeName}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(jpgUrl);
+        },
+        "image/jpeg",
+        0.92,
+      );
+
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   };
 
   return (
