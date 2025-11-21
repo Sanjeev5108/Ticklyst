@@ -708,7 +708,6 @@ export default function FieldworkDashboard() {
           Fieldwork
         </h1>
         <div className="flex items-center gap-3">
-          <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
           {selectedClient && (
             <div className="flex items-center gap-2">
               {selectedClientLogo ? (
