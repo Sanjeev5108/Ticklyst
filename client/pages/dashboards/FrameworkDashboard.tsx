@@ -2595,7 +2595,7 @@ export default function FrameworkDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
             {client && (
               <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+                <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
                   {(() => {
                     const logo = (client as any)?.logo || (client as any)?.details?.logo;
                     if (logo) {
@@ -2609,9 +2609,6 @@ export default function FrameworkDashboard() {
                     );
                   })()}
                 </Avatar>
-                <span className="text-sm text-gray-600 max-w-xs truncate">
-                  {client.name}
-                </span>
               </div>
             )}
           </div>
@@ -2631,7 +2628,7 @@ export default function FrameworkDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
           {selectedClient && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border border-gray-200 bg-white">
+              <Avatar className="h-9 w-9 border border-gray-200 bg-white" aria-label="Client logo">
                 {(() => {
                   const client = clients.find((c) => c.id === selectedClient);
                   const logo = (client as any)?.logo || (client as any)?.details?.logo;
@@ -2647,9 +2644,6 @@ export default function FrameworkDashboard() {
                   );
                 })()}
               </Avatar>
-              <span className="text-sm text-gray-600 max-w-xs truncate">
-                {clients.find((c) => c.id === selectedClient)?.name}
-              </span>
             </div>
           )}
         </div>
