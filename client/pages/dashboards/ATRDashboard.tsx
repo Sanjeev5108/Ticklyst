@@ -414,6 +414,8 @@ export default function ATRDashboard() {
   >([]);
   const [reportableProjectFilter, setReportableProjectFilter] =
     useState<string>("");
+  const [reportableSelectedProjectIds, setReportableSelectedProjectIds] =
+    useState<string[]>([]);
   const [atrSelectedClientFilter, setAtrSelectedClientFilter] =
     useState<string>("");
   const { user } = useAuth();
@@ -1066,6 +1068,20 @@ export default function ATRDashboard() {
     return rows;
   }, [fwRecords, controls, projects]);
 
+  const reportableRowsForClient = useMemo(() => {
+    if (!atrSelectedClientFilter) return reportableRows;
+    const norm = atrSelectedClientFilter.trim().toLowerCase();
+    const allowedIds = new Set(
+      projects
+        .filter((p) => (p.client || "").trim().toLowerCase() === norm)
+        .map((p) => p.id),
+    );
+    if (!allowedIds.size) return [];
+    return reportableRows.filter(
+      (r) => r.projectId && allowedIds.has(r.projectId),
+    );
+  }, [reportableRows, atrSelectedClientFilter, projects]);
+
   const reportableProjectOptions = useMemo(() => {
     const ids = Array.from(
       new Set(reportableRows.map((r) => r.projectId).filter(Boolean)),
@@ -1472,26 +1488,22 @@ export default function ATRDashboard() {
               <CardContent className="p-6">
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
-                    <Label>Project</Label>
-                    <Select
-                      value={selectedProjectId || reportableProjectFilter}
-                      onValueChange={(v) => {
-                        setReportableProjectFilter(v);
-                        setSelectedProjectId(v);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {reportableProjectOptions.map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Label>Project</Label>
+                  <ProjectMultiSelect
+                    options={reportableProjectOptionsForClient.map((opt) => ({
+                      value: opt.id,
+                      label: opt.title,
+                    }))}
+                    value={reportableSelectedProjectIds}
+                    onChange={(ids) => {
+                      setReportableSelectedProjectIds(ids);
+                      const first = ids[0] || "";
+                      setReportableProjectFilter(first);
+                      setSelectedProjectId(first);
+                    }}
+                    placeholder="All projects"
+                  />
+                </div>
                 </div>
                 <div style={{ maxHeight: 420, overflow: "auto" }}>
                   <table className="w-full text-sm">
@@ -1506,11 +1518,12 @@ export default function ATRDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportableRows
+                      {reportableRowsForClient
                         .filter((r) => {
                           if (
-                            reportableProjectFilter &&
-                            r.projectId !== reportableProjectFilter
+                            reportableSelectedProjectIds.length &&
+                            (!r.projectId ||
+                              !reportableSelectedProjectIds.includes(r.projectId))
                           )
                             return false;
                           const q = controlsSearch.trim().toLowerCase();
@@ -2454,6 +2467,7 @@ export default function ATRDashboard() {
               setAtrSelectedClientFilter(next);
               setSelectedProjectId("");
               setReportableProjectFilter("");
+              setReportableSelectedProjectIds([]);
               setVizSelectedProjectIds([]);
             }}
           >
@@ -2508,24 +2522,20 @@ export default function ATRDashboard() {
                 <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div>
                     <Label>Project</Label>
-                    <Select
-                      value={selectedProjectId || reportableProjectFilter}
-                      onValueChange={(v) => {
-                        setReportableProjectFilter(v);
-                        setSelectedProjectId(v);
+                    <ProjectMultiSelect
+                      options={reportableProjectOptionsForClient.map((opt) => ({
+                        value: opt.id,
+                        label: opt.title,
+                      }))}
+                      value={reportableSelectedProjectIds}
+                      onChange={(ids) => {
+                        setReportableSelectedProjectIds(ids);
+                        const first = ids[0] || "";
+                        setReportableProjectFilter(first);
+                        setSelectedProjectId(first);
                       }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {reportableProjectOptionsForClient.map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="All projects"
+                    />
                   </div>
                 </div>
                 <div style={{ maxHeight: 420, overflow: "auto" }}>
@@ -2541,11 +2551,12 @@ export default function ATRDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportableRows
+                      {reportableRowsForClient
                         .filter((r) => {
                           if (
-                            reportableProjectFilter &&
-                            r.projectId !== reportableProjectFilter
+                            reportableSelectedProjectIds.length &&
+                            (!r.projectId ||
+                              !reportableSelectedProjectIds.includes(r.projectId))
                           )
                             return false;
                           const q = controlsSearch.trim().toLowerCase();
