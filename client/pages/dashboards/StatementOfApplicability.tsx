@@ -200,7 +200,9 @@ export default function StatementOfApplicability() {
   >({});
   const [openItemPicker, setOpenItemPicker] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
-  const [showOnlyUndecided, setShowOnlyUndecided] = useState(false);
+  const [treeApplicabilityFilter, setTreeApplicabilityFilter] = useState<
+    "all" | "app" | "na" | "undecided"
+  >("all");
   const [filterApplicability, setFilterApplicability] = useState<
     "all" | "app" | "na" | "undecided"
   >("all");
@@ -564,10 +566,10 @@ export default function StatementOfApplicability() {
 
   const visibleNodes = React.useMemo(
     () =>
-      (showOnlyUndecided ? tree : tree.filter((n) => isParentExpanded(n))).sort(
-        (a, b) => compareHier(a.id, b.id),
-      ),
-    [tree, compareHier, showOnlyUndecided],
+      tree
+        .filter((n) => isParentExpanded(n))
+        .sort((a, b) => compareHier(a.id, b.id)),
+    [tree, compareHier],
   );
   const collectDescendantIds = (id: string, acc: string[] = []) => {
     const children = tree.filter((n) => n.parentId === id);
@@ -590,18 +592,20 @@ export default function StatementOfApplicability() {
     if (!ids.length) return [] as TreeNode[];
     return visibleNodes
       .filter((n) => ids.includes(n.id))
-      .filter(
-        (n) =>
-          !showOnlyUndecided ||
-          (activeDetails[n.id]?.applicable ?? null) === null,
-      );
+      .filter((n) => {
+        const app = activeDetails[n.id]?.applicable ?? null;
+        if (treeApplicabilityFilter === "all") return true;
+        if (treeApplicabilityFilter === "app") return app === true;
+        if (treeApplicabilityFilter === "na") return app === false;
+        return app === null;
+      });
   }, [
     visibleNodes,
     selectedProcessesIndustry,
     selectedProcessesClient,
     tab,
     tree,
-    showOnlyUndecided,
+    treeApplicabilityFilter,
     detailsIndustry,
     detailsClient,
     selectedIndustry,
@@ -1169,13 +1173,20 @@ export default function StatementOfApplicability() {
             <div className="flex items-center justify-between w-full">
               <CardTitle>Checklist Tree</CardTitle>
               <div className="flex items-center gap-2">
-                <Button
-                  variant={showOnlyUndecided ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowOnlyUndecided((v) => !v)}
+                <Select
+                  value={treeApplicabilityFilter}
+                  onValueChange={(v: any) => setTreeApplicabilityFilter(v)}
                 >
-                  {showOnlyUndecided ? "Show All" : "Show New/Undecided"}
-                </Button>
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue placeholder="Filter by applicability" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[70]">
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="app">Applicable</SelectItem>
+                    <SelectItem value="na">Not Applicable</SelectItem>
+                    <SelectItem value="undecided">Un decided</SelectItem>
+                  </SelectContent>
+                </Select>
                 {tab === "industry" ? (
                   <Button
                     disabled={isSaving}
