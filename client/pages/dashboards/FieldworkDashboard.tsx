@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -645,15 +646,55 @@ export default function FieldworkDashboard() {
   const [fwFilters, setFwFilters] = useState<{ activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
 
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
+  const selectedClientLogo = useMemo(() => {
+    if (!selectedClient) return undefined;
+    const proj = projects.find(p => (p.client || '').trim().toLowerCase() === selectedClient.trim().toLowerCase());
+    const raw = proj?.raw as any;
+    const data = raw?.data || raw || {};
+    return (
+      data.clientLogo ||
+      data.client?.logo ||
+      raw?.clientLogo ||
+      raw?.client?.logo ||
+      undefined
+    );
+  }, [projects, selectedClient]);
   const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="h-7 w-7 text-orange-600" />
-          Fieldwork
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="h-7 w-7 text-orange-600" />
+            Fieldwork
+          </h1>
+          {selectedClient && (
+            <div className="flex items-center gap-2">
+              {selectedClientLogo ? (
+                <div
+                  className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center"
+                  aria-label="Client logo"
+                >
+                  <img
+                    src={selectedClientLogo}
+                    alt={selectedClient}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <Avatar
+                  className="h-9 w-9 border border-gray-200 bg-white"
+                  aria-label="Client initial"
+                >
+                  <AvatarFallback className="bg-orange-100 text-orange-800 font-semibold">
+                    {(selectedClient[0] || "?").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          )}
+        </div>
         <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
       </div>
 
