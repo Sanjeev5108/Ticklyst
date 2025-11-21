@@ -1225,9 +1225,12 @@ export default function ATRDashboard() {
   >({});
 
   useEffect(() => {
+    const baseOptions = atrSelectedClientFilter
+      ? reportableProjectOptionsForClient
+      : reportableProjectOptions;
     const targetProjectIds = vizSelectedProjectIds.length
       ? vizSelectedProjectIds
-      : reportableProjectOptions.map((p) => p.id);
+      : baseOptions.map((p) => p.id);
 
     if (!targetProjectIds.length) {
       setVizAtrByProject({});
@@ -1273,7 +1276,12 @@ export default function ATRDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [vizSelectedProjectIds, reportableProjectOptions]);
+  }, [
+    vizSelectedProjectIds,
+    reportableProjectOptions,
+    reportableProjectOptionsForClient,
+    atrSelectedClientFilter,
+  ]);
 
   const atrRowsForProject = useMemo(() => {
     const rows = reportableRows.filter((r) =>
@@ -1348,9 +1356,12 @@ export default function ATRDashboard() {
   ]);
 
   const vizAtrRowsFiltered = useMemo(() => {
+    const baseOptions = atrSelectedClientFilter
+      ? reportableProjectOptionsForClient
+      : reportableProjectOptions;
     const targetProjectIds = vizSelectedProjectIds.length
       ? vizSelectedProjectIds
-      : reportableProjectOptions.map((p) => p.id);
+      : baseOptions.map((p) => p.id);
 
     const combined: AuditTrackRow[] = [];
     targetProjectIds.forEach((projectId) => {
@@ -1406,6 +1417,8 @@ export default function ATRDashboard() {
     vizSelectedProjectIds,
     vizAtrByProject,
     reportableProjectOptions,
+    reportableProjectOptionsForClient,
+    atrSelectedClientFilter,
     atrStatusFilter,
     atrDueFrom,
     atrDueTo,
