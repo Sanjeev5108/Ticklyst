@@ -2858,46 +2858,29 @@ export default function ATRDashboard() {
                   placeholder="All projects"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2 md:col-span-2">
-                <div>
-                  <Label className="text-xs">Group By</Label>
-                  <Select
-                    value={vizGroup}
-                    onValueChange={(v: any) => setVizGroup(v)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Grouping" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end justify-end">
-                  <Button
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => {
-                      const wb = XLSX.utils.book_new();
-                      const rows = vizAtrRowsFiltered.map(({ a }) => ({
-                        "Audit Observation": a.auditObservation || "",
-                        "Action Plan": a.actionPlan || "",
-                        Responsibility: a.responsibility || "",
-                        Designation: a.designation || "",
-                        Department: a.department || "",
-                        "Due date": a.dueDate || "",
-                        "Actual Completion date": a.actualCompletionDate || "",
-                        Status: a.status || "",
-                      }));
-                      const ws = XLSX.utils.json_to_sheet(rows);
-                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
-                      XLSX.writeFile(wb, "atr_visualized.xlsx");
-                    }}
-                  >
-                    <Download className="h-4 w-4" /> Export XLSX
-                  </Button>
-                </div>
+              <div className="flex items-end justify-end md:col-span-2">
+                <Button
+                  size="sm"
+                  className="flex items-center gap-2 ml-auto"
+                  onClick={() => {
+                    const wb = XLSX.utils.book_new();
+                    const rows = vizAtrRowsFiltered.map(({ a }) => ({
+                      "Audit Observation": a.auditObservation || "",
+                      "Action Plan": a.actionPlan || "",
+                      Responsibility: a.responsibility || "",
+                      Designation: a.designation || "",
+                      Department: a.department || "",
+                      "Due date": a.dueDate || "",
+                      "Actual Completion date": a.actualCompletionDate || "",
+                      Status: a.status || "",
+                    }));
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                    XLSX.writeFile(wb, "atr_visualized.xlsx");
+                  }}
+                >
+                  <Download className="h-4 w-4" /> Export XLSX
+                </Button>
               </div>
             </div>
 
