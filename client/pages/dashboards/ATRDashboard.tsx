@@ -100,7 +100,7 @@ interface Comment {
   type: "note" | "issue" | "resolution";
 }
 
-const statuses = ["Open", "In Progress", "Closed", "Overdue"];
+const statuses = ["Open", "In Progress", "Closed"];
 
 // Date helpers: ensure previous due dates are valid and reasonable (year range 1900–2100)
 const isValidISODate = (s: string) => {
@@ -1723,11 +1723,12 @@ export default function ATRDashboard() {
                     ? "Completed"
                     : s === "Open"
                       ? "Pending"
-                      : s || "";
+                      : s === "In Progress"
+                        ? "In Progress"
+                        : s || "";
                 const statusPalette: Record<string, string> = {
                   Completed: "#10B981",
                   "In Progress": "#F59E0B",
-                  Overdue: "#EF4444",
                   Pending: "#64748B",
                 };
 
@@ -1791,7 +1792,6 @@ export default function ATRDashboard() {
                   "Pending",
                   "In Progress",
                   "Completed",
-                  "Overdue",
                 ];
                 const deptAgg: Record<string, Record<string, number>> = {};
                 rows.forEach((a) => {
@@ -1824,10 +1824,9 @@ export default function ATRDashboard() {
               ).length;
                 const overdue = rows.filter(
                   (a) =>
-                    mapStatus(a.status) === "Overdue" ||
-                    (!!a.dueDate &&
-                      new Date(a.dueDate) < today &&
-                      mapStatus(a.status) !== "Completed"),
+                    !!a.dueDate &&
+                    new Date(a.dueDate) < today &&
+                    mapStatus(a.status) !== "Completed",
                 ).length;
                 const delays: number[] = rows
                   .filter((a) => a.actualCompletionDate && a.dueDate)
@@ -1870,7 +1869,7 @@ export default function ATRDashboard() {
                       </Card>
                       <Card className="shadow-sm">
                         <CardContent className="p-4">
-                          <div className="text-xs text-slate-500">Overdue</div>
+                          <div className="text-xs text-slate-500">Overdue (by due date)</div>
                           <div className="text-2xl font-semibold text-red-600">
                             {overdue}
                           </div>
