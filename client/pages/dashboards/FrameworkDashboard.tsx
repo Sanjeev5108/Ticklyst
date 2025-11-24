@@ -2350,6 +2350,15 @@ export default function FrameworkDashboard() {
                     }
                     if (node.type === "risk") {
                       const det = d as Extract<NodeDetails, { type: "risk" }>;
+                      const activityNode = nodes.find(
+                        (n) => n.id === node.parentId,
+                      );
+                      const subprocessNode = activityNode
+                        ? nodes.find((n) => n.id === activityNode.parentId)
+                        : undefined;
+                      const processNode = subprocessNode
+                        ? nodes.find((n) => n.id === subprocessNode.parentId)
+                        : undefined;
                       return (
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2405,10 +2414,45 @@ export default function FrameworkDashboard() {
                               </Select>
                             </div>
                           </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <Label>Linked Process</Label>
+                              <Input
+                                value={processNode?.name || processNode?.id || ""}
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <Label>Linked Subprocess</Label>
+                              <Input
+                                value={
+                                  subprocessNode?.name || subprocessNode?.id || ""
+                                }
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <Label>Linked Activity</Label>
+                              <Input
+                                value={activityNode?.name || activityNode?.id || ""}
+                                readOnly
+                              />
+                            </div>
+                          </div>
                         </div>
                       );
                     }
                     const det = d as Extract<NodeDetails, { type: "control" }>;
+                    const riskNode = nodes.find((n) => n.id === node.parentId);
+                    const activityNode = riskNode
+                      ? nodes.find((n) => n.id === riskNode.parentId)
+                      : undefined;
+                    const subprocessNode = activityNode
+                      ? nodes.find((n) => n.id === activityNode.parentId)
+                      : undefined;
+                    const processNode = subprocessNode
+                      ? nodes.find((n) => n.id === subprocessNode.parentId)
+                      : undefined;
                     return (
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2449,6 +2493,40 @@ export default function FrameworkDashboard() {
                                 ))}
                               </SelectContent>
                             </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Linked Process</Label>
+                            <Input
+                              value={processNode?.name || processNode?.id || ""}
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label>Linked Subprocess</Label>
+                            <Input
+                              value={
+                                subprocessNode?.name || subprocessNode?.id || ""
+                              }
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Linked Activity</Label>
+                            <Input
+                              value={activityNode?.name || activityNode?.id || ""}
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label>Linked Risk</Label>
+                            <Input
+                              value={riskNode?.name || riskNode?.id || ""}
+                              readOnly
+                            />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
