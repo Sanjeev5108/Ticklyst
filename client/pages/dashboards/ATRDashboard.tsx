@@ -1895,7 +1895,6 @@ export default function ATRDashboard() {
                               Pending: { label: "Open" },
                               "In Progress": { label: "In Progress" },
                               Completed: { label: "Closed" },
-                              Overdue: { label: "Overdue" },
                             }}
                             className={innerClassName}
                           >
@@ -1998,7 +1997,6 @@ export default function ATRDashboard() {
                               Pending: { label: "Open" },
                               "In Progress": { label: "In Progress" },
                               Completed: { label: "Closed" },
-                              Overdue: { label: "Overdue" },
                             }}
                             className={innerClassName}
                           >
@@ -2031,11 +2029,6 @@ export default function ATRDashboard() {
                                 dataKey="Completed"
                                 stackId="a"
                                 fill={statusPalette["Completed"]}
-                              />
-                              <Bar
-                                dataKey="Overdue"
-                                stackId="a"
-                                fill={statusPalette["Overdue"]}
                               />
                               <ChartTooltip content={<ChartTooltipContent />} />
                             </BarChart>
@@ -3077,11 +3070,6 @@ export default function ATRDashboard() {
                               dataKey="Completed"
                               stackId="a"
                               fill={statusPalette["Completed"]}
-                            />
-                            <Bar
-                              dataKey="Overdue"
-                              stackId="a"
-                              fill={statusPalette["Overdue"]}
                             />
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
