@@ -117,6 +117,101 @@ const isValidISODate = (s: string) => {
 const sanitizePrevDates = (arr?: string[]) =>
   (arr || []).filter(isValidISODate);
 
+const ATR_TODAY_DDMMYYYY = "24-11-2025";
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+const isBlankOrZeroDate = (value?: string | null) => {
+  const s = String(value || "").trim();
+  if (!s) return true;
+  if (s === "0" || s === "00-00-0000" || s === "0000-00-00") return true;
+  return false;
+};
+
+const parseAtrDate = (value?: string | null): Date | null => {
+  const s = String(value || "").trim();
+  if (!s || isBlankOrZeroDate(s)) return null;
+  let m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s);
+  if (m) {
+    const [, dd, mm, yyyy] = m;
+    const d = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
+    if (!isNaN(d.getTime())) return d;
+  }
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const [, yyyy, mm, dd] = m;
+    const d = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+};
+
+const ATR_TODAY_DATE =
+  parseAtrDate(ATR_TODAY_DDMMYYYY) ||
+  new Date(Date.UTC(2025, 10, 24));
+
+const computeAtrLeadTime = (
+  dueDate?: string,
+  actualCompletionDate?: string,
+): string | number => {
+  if (isBlankOrZeroDate(dueDate)) {
+    return "Due Date not available";
+  }
+  const due = parseAtrDate(dueDate);
+  if (!due) return "Due Date not available";
+
+  const actualEmpty = isBlankOrZeroDate(actualCompletionDate);
+  if (!actualEmpty && actualCompletionDate) {
+    const actual = parseAtrDate(actualCompletionDate);
+    if (!actual) return "Due Date not available";
+    const diffDays = Math.round(
+      (actual.getTime() - due.getTime()) / DAY_MS,
+    );
+    return diffDays;
+  }
+
+  const today = ATR_TODAY_DATE;
+  if (due.getTime() > today.getTime()) {
+    return "Task Not yet Due";
+  }
+  if (due.getTime() < today.getTime()) {
+    return "Past Due Date";
+  }
+  return "Past Due Date";
+};
+
+const computeAtrCondition = (
+  dueDate?: string,
+  actualCompletionDate?: string,
+): string => {
+  if (isBlankOrZeroDate(dueDate)) {
+    return "Due Date not available";
+  }
+  const due = parseAtrDate(dueDate);
+  if (!due) return "Due Date not available";
+
+  const actualEmpty = isBlankOrZeroDate(actualCompletionDate);
+  if (!actualEmpty && actualCompletionDate) {
+    const actual = parseAtrDate(actualCompletionDate);
+    if (!actual) return "Due Date not available";
+    if (actual.getTime() > due.getTime()) {
+      return "Delay beyond due date";
+    }
+    if (actual.getTime() < due.getTime()) {
+      return "Completed before due date";
+    }
+    return "Delay beyond due date";
+  }
+
+  const today = ATR_TODAY_DATE;
+  if (due.getTime() > today.getTime()) {
+    return "Due date ahead of current date";
+  }
+  if (due.getTime() < today.getTime()) {
+    return "Past Due Date";
+  }
+  return "Past Due Date";
+};
+
 const MultiSelectSimple = ({
   options,
   value,
@@ -1307,6 +1402,8 @@ export default function ATRDashboard() {
     "Department",
     "Due date",
     "Actual Completion date",
+    "Condition",
+    "Lead Time",
     "Status",
   ] as const;
   const [atrSelectedFields, setAtrSelectedFields] = useState<string[]>([
@@ -1442,6 +1539,8 @@ export default function ATRDashboard() {
           a.status,
           a.dueDate,
           a.actualCompletionDate,
+          computeAtrCondition(a.dueDate, a.actualCompletionDate),
+          String(computeAtrLeadTime(a.dueDate, a.actualCompletionDate)),
         ]
           .filter(Boolean)
           .map((s) => String(s).toLowerCase());
@@ -1509,6 +1608,8 @@ export default function ATRDashboard() {
           a.status,
           a.dueDate,
           a.actualCompletionDate,
+          computeAtrCondition(a.dueDate, a.actualCompletionDate),
+          String(computeAtrLeadTime(a.dueDate, a.actualCompletionDate)),
         ]
           .filter(Boolean)
           .map((s) => String(s).toLowerCase());
@@ -2286,6 +2387,8 @@ export default function ATRDashboard() {
                                 "Department",
                                 "Due date",
                                 "Actual Completion date",
+                                "Condition",
+                                "Lead Time",
                                 "Status",
                               ])
                             }
@@ -2324,6 +2427,14 @@ export default function ATRDashboard() {
                         add(
                           "Actual Completion date",
                           a.actualCompletionDate || "",
+                        );
+                        add(
+                          "Condition",
+                          computeAtrCondition(a.dueDate, a.actualCompletionDate),
+                        );
+                        add(
+                          "Lead Time",
+                          computeAtrLeadTime(a.dueDate, a.actualCompletionDate),
                         );
                         add("Status", a.status || "");
                         return row;
@@ -2380,12 +2491,22 @@ export default function ATRDashboard() {
                       <th className="text-left p-3 w-44">
                         Actual Completion date
                       </th>
+                      <th className="text-left p-3 w-40">Condition</th>
+                      <th className="text-left p-3 w-32">Lead Time</th>
                       <th className="text-left p-3 w-32">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {atrRowsFiltered.map(({ a, idx }) => {
                       const isLast = atrRows.length - 1 === idx;
+                      const condition = computeAtrCondition(
+                        a.dueDate,
+                        a.actualCompletionDate,
+                      );
+                      const leadTime = computeAtrLeadTime(
+                        a.dueDate,
+                        a.actualCompletionDate,
+                      );
                       return (
                         <tr
                           key={`${selectedProjectId || "ALL"}|${a.id}`}
@@ -2476,6 +2597,8 @@ export default function ATRDashboard() {
                               }
                             />
                           </td>
+                          <td className="p-3">{condition}</td>
+                          <td className="p-3">{String(leadTime)}</td>
                           <td className="p-3 flex items-center gap-2">
                             <Select
                               value={a.status}
