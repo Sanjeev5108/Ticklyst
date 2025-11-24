@@ -2913,7 +2913,6 @@ export default function ATRDashboard() {
               const statusPalette: Record<string, string> = {
                 Completed: "#10B981",
                 "In Progress": "#F59E0B",
-                Overdue: "#EF4444",
                 Pending: "#64748B",
               };
 
@@ -2977,7 +2976,6 @@ export default function ATRDashboard() {
                 "Pending",
                 "In Progress",
                 "Completed",
-                "Overdue",
               ];
               const deptAgg: Record<string, Record<string, number>> = {};
               rows.forEach((a) => {
@@ -3010,10 +3008,9 @@ export default function ATRDashboard() {
               ).length;
               const overdue = rows.filter(
                 (a) =>
-                  mapStatus(a.status) === "Overdue" ||
-                  (!!a.dueDate &&
-                    new Date(a.dueDate) < today &&
-                    mapStatus(a.status) !== "Completed"),
+                  !!a.dueDate &&
+                  new Date(a.dueDate) < today &&
+                  mapStatus(a.status) !== "Completed",
               ).length;
               const delays: number[] = rows
                 .filter((a) => a.actualCompletionDate && a.dueDate)
@@ -3076,7 +3073,6 @@ export default function ATRDashboard() {
                             Pending: { label: "Open" },
                             "In Progress": { label: "In Progress" },
                             Completed: { label: "Closed" },
-                            Overdue: { label: "Overdue" },
                           }}
                           className={innerClassName}
                         >
@@ -3168,7 +3164,6 @@ export default function ATRDashboard() {
                             Pending: { label: "Open" },
                             "In Progress": { label: "In Progress" },
                             Completed: { label: "Closed" },
-                            Overdue: { label: "Overdue" },
                           }}
                           className={innerClassName}
                         >
