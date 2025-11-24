@@ -2132,7 +2132,10 @@ export default function ATRDashboard() {
                       )}
                     </ExpandableChartCard>
 
-                    <ExpandableChartCard title="Lead Time (days)">
+                    <ExpandableChartCard
+                      title="Lead Time (days)"
+                      cardClassName="lg:col-span-2"
+                    >
                       {(innerClassName) => (
                         <ChartContainer
                           config={{}}
@@ -2152,7 +2155,7 @@ export default function ATRDashboard() {
                             <YAxis
                               type="category"
                               dataKey="label"
-                              width={120}
+                              width={160}
                             />
                             <ReferenceLine x={0} stroke="#94A3B8" />
                             <Bar dataKey="leadTime" radius={[4, 4, 4, 4]}>
