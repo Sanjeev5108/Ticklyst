@@ -1928,6 +1928,41 @@ export default function ATRDashboard() {
                   .sort()
                   .map((k) => ({ period: k, count: compGroups[k] }));
 
+                const leadTimeData = rows.reduce<
+                  { label: string; leadTime: number }[]
+                >((acc, a, index) => {
+                  const lt = computeAtrLeadTime(a.dueDate, a.actualCompletionDate);
+                  if (typeof lt !== "number" || !Number.isFinite(lt)) {
+                    return acc;
+                  }
+                  const baseLabel =
+                    a.auditObservation ||
+                    a.actionPlan ||
+                    a.responsibility ||
+                    `Item ${index + 1}`;
+                  acc.push({
+                    label:
+                      baseLabel.length > 40
+                        ? `${baseLabel.slice(0, 37)}...`
+                        : baseLabel,
+                    leadTime: lt,
+                  });
+                  return acc;
+                }, []);
+
+                const leadMin = leadTimeData.length
+                  ? Math.min(...leadTimeData.map((d) => d.leadTime))
+                  : 0;
+                const leadMax = leadTimeData.length
+                  ? Math.max(...leadTimeData.map((d) => d.leadTime))
+                  : 0;
+                const leadDomain: [number, number] = leadTimeData.length
+                  ? [
+                      Math.min(leadMin - 1, -1),
+                      Math.max(leadMax + 1, 1),
+                    ]
+                  : [-1, 1];
+
                 const total = rows.length;
                 const completed = rows.filter(
                 (a) => mapStatus(a.status) === "Completed",
@@ -2066,38 +2101,77 @@ export default function ATRDashboard() {
                       </ExpandableChartCard>
 
                       <ExpandableChartCard title="Responsibility Load">
-                        {(innerClassName) => (
-                          <ChartContainer
-                            config={{}}
-                            className={innerClassName}
-                          >
-                            <BarChart data={respData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                dataKey="name"
-                                angle={respData.length > 6 ? -45 : 0}
-                                textAnchor={
-                                  respData.length > 6 ? "end" : "middle"
-                                }
-                                interval={
-                                  respData.length > 6 ? 0 : "preserveStartEnd"
-                                }
-                                tickMargin={8}
-                                height={respData.length > 6 ? undefined : 20}
-                              />
-                              <YAxis allowDecimals={false} />
-                              <Bar
-                                dataKey="count"
-                                fill="#0EA5E9"
-                                radius={[4, 4, 0, 0]}
-                              />
-                              <ChartTooltip content={<ChartTooltipContent />} />
-                            </BarChart>
-                          </ChartContainer>
-                        )}
-                      </ExpandableChartCard>
+                      {(innerClassName) => (
+                        <ChartContainer
+                          config={{}}
+                          className={innerClassName}
+                        >
+                          <BarChart data={respData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="name"
+                              angle={respData.length > 6 ? -45 : 0}
+                              textAnchor={
+                                respData.length > 6 ? "end" : "middle"
+                              }
+                              interval={
+                                respData.length > 6 ? 0 : "preserveStartEnd"
+                              }
+                              tickMargin={8}
+                              height={respData.length > 6 ? undefined : 20}
+                            />
+                            <YAxis allowDecimals={false} />
+                            <Bar
+                              dataKey="count"
+                              fill="#0EA5E9"
+                              radius={[4, 4, 0, 0]}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </BarChart>
+                        </ChartContainer>
+                      )}
+                    </ExpandableChartCard>
 
-                      <ExpandableChartCard title="Department-wise Status">
+                    <ExpandableChartCard title="Lead Time (days)">
+                      {(innerClassName) => (
+                        <ChartContainer
+                          config={{}}
+                          className={innerClassName}
+                        >
+                          <BarChart
+                            data={leadTimeData}
+                            layout="vertical"
+                            margin={{ left: 8, right: 16 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              type="number"
+                              domain={leadDomain}
+                              tickMargin={8}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="label"
+                              width={120}
+                            />
+                            <ReferenceLine x={0} stroke="#94A3B8" />
+                            <Bar dataKey="leadTime" radius={[4, 4, 4, 4]}>
+                              {leadTimeData.map((entry, index) => (
+                                <Cell
+                                  key={`lead-${index}`}
+                                  fill={
+                                    entry.leadTime < 0 ? "#22C55E" : "#EF4444"
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </BarChart>
+                        </ChartContainer>
+                      )}
+                    </ExpandableChartCard>
+
+                    <ExpandableChartCard title="Department-wise Status">
                         {(innerClassName) => (
                           <ChartContainer
                             config={{
@@ -2982,6 +3056,38 @@ export default function ATRDashboard() {
               const completionData = Object.keys(compGroups)
                 .sort()
                 .map((k) => ({ period: k, count: compGroups[k] }));
+
+              const leadTimeData = rows.reduce<
+                { label: string; leadTime: number }[]
+              >((acc, a, index) => {
+                const lt = computeAtrLeadTime(a.dueDate, a.actualCompletionDate);
+                if (typeof lt !== "number" || !Number.isFinite(lt)) {
+                  return acc;
+                }
+                const baseLabel =
+                  a.auditObservation ||
+                  a.actionPlan ||
+                  a.responsibility ||
+                  `Item ${index + 1}`;
+                acc.push({
+                  label:
+                    baseLabel.length > 40
+                      ? `${baseLabel.slice(0, 37)}...`
+                      : baseLabel,
+                  leadTime: lt,
+                });
+                return acc;
+              }, []);
+
+              const leadMin = leadTimeData.length
+                ? Math.min(...leadTimeData.map((d) => d.leadTime))
+                : 0;
+              const leadMax = leadTimeData.length
+                ? Math.max(...leadTimeData.map((d) => d.leadTime))
+                : 0;
+              const leadDomain: [number, number] = leadTimeData.length
+                ? [Math.min(leadMin - 1, -1), Math.max(leadMax + 1, 1)]
+                : [-1, 1];
 
               const total = rows.length;
               const completed = rows.filter(
