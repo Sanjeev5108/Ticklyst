@@ -448,6 +448,11 @@ export default function StatementOfApplicability() {
           ) {
             const appMapClient: Record<string, boolean | null> =
               savedClient.nodeApplicability;
+            const industryAppMap: Record<string, boolean | null> =
+              saved.nodeApplicability &&
+              typeof saved.nodeApplicability === "object"
+                ? (saved.nodeApplicability as Record<string, boolean | null>)
+                : {};
             setDetailsClient((prev) => {
               const current = prev[selectedClientId] || {};
               const next: Record<string, NodeDetails> = { ...current };
@@ -465,6 +470,17 @@ export default function StatementOfApplicability() {
                   industry: ind,
                   applicable: val,
                 };
+              }
+              for (const [id, industryVal] of Object.entries(industryAppMap)) {
+                if (industryVal === true && !(id in appMapClient) && !next[id]) {
+                  next[id] = {
+                    description: "",
+                    industry: ind,
+                    client: selectedClientId,
+                    itemId: "",
+                    applicable: null,
+                  };
+                }
               }
               return { ...prev, [selectedClientId]: next };
             });
