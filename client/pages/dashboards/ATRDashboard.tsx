@@ -3241,6 +3241,42 @@ export default function ATRDashboard() {
                       )}
                     </ExpandableChartCard>
 
+                    <ExpandableChartCard title="Lead Time (days)">
+                      {(innerClassName) => (
+                        <ChartContainer config={{}} className={innerClassName}>
+                          <BarChart
+                            data={leadTimeData}
+                            layout="vertical"
+                            margin={{ left: 8, right: 16 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              type="number"
+                              domain={leadDomain}
+                              tickMargin={8}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="label"
+                              width={120}
+                            />
+                            <ReferenceLine x={0} stroke="#94A3B8" />
+                            <Bar dataKey="leadTime" radius={[4, 4, 4, 4]}>
+                              {leadTimeData.map((entry, index) => (
+                                <Cell
+                                  key={`lead2-${index}`}
+                                  fill={
+                                    entry.leadTime < 0 ? "#22C55E" : "#EF4444"
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </BarChart>
+                        </ChartContainer>
+                      )}
+                    </ExpandableChartCard>
+
                     <ExpandableChartCard title="Department-wise Status">
                       {(innerClassName) => (
                         <ChartContainer
