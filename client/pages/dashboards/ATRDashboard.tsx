@@ -1794,7 +1794,7 @@ export default function ATRDashboard() {
                       className="flex items-center gap-2"
                       onClick={() => {
                         const wb = XLSX.utils.book_new();
-                        const rows = vizAtrRowsFiltered.map(({ a }) => ({
+                      const rows = vizAtrRowsFiltered.map(({ a }) => ({
                           "Audit Observation": a.auditObservation || "",
                           "Action Plan": a.actionPlan || "",
                           Responsibility: a.responsibility || "",
@@ -1803,11 +1803,19 @@ export default function ATRDashboard() {
                           "Due date": a.dueDate || "",
                           "Actual Completion date":
                             a.actualCompletionDate || "",
+                          Condition: computeAtrCondition(
+                            a.dueDate,
+                            a.actualCompletionDate,
+                          ),
+                          "Lead Time": computeAtrLeadTime(
+                            a.dueDate,
+                            a.actualCompletionDate,
+                          ),
                           Status: a.status || "",
                         }));
-                        const ws = XLSX.utils.json_to_sheet(rows);
-                        XLSX.utils.book_append_sheet(wb, ws, "ATR");
-                        XLSX.writeFile(wb, "atr_visualized.xlsx");
+                      const ws = XLSX.utils.json_to_sheet(rows);
+                      XLSX.utils.book_append_sheet(wb, ws, "ATR");
+                      XLSX.writeFile(wb, "atr_visualized.xlsx");
                       }}
                     >
                       <Download className="h-4 w-4" /> Export XLSX
