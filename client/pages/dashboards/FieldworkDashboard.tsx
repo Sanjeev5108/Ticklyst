@@ -689,7 +689,7 @@ export default function FieldworkDashboard() {
     { key: 'Observation Ranking', label: 'Observation Ranking' },
   ];
   const [fwGroupBy, setFwGroupBy] = useState<string>('none');
-  const [fwFilters, setFwFilters] = useState<{ activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
+  const [fwFilters, setFwFilters] = useState<{ process: string; subprocess: string; activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ process: '', subprocess: '', activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
 
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const selectedClientLogo = useMemo(() => {
@@ -815,6 +815,20 @@ export default function FieldworkDashboard() {
               <div className="h-px bg-slate-200 my-1" />
               <div className="text-xs text-slate-500">Advanced</div>
               <div className="grid grid-cols-2 gap-2">
+                <Select value={fwFilters.process} onValueChange={(v)=>setFwFilters(prev=>({...prev, process:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Process" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.process || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.subprocess} onValueChange={(v)=>setFwFilters(prev=>({...prev, subprocess:v}))}>
+                  <SelectTrigger><SelectValue placeholder="Subprocess" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.subprocess || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
                 <Select value={fwFilters.activity} onValueChange={(v)=>setFwFilters(prev=>({...prev, activity:v}))}>
                   <SelectTrigger><SelectValue placeholder="Activity" /></SelectTrigger>
                   <SelectContent>
@@ -939,6 +953,8 @@ export default function FieldworkDashboard() {
                 if (max!=null && v > max) return false;
                 return true;
               };
+              if (fwFilters.process && String(r.process||'') !== fwFilters.process) return false;
+              if (fwFilters.subprocess && String(r.subprocess||'') !== fwFilters.subprocess) return false;
               if (fwFilters.activity && String(r.activity||'') !== fwFilters.activity) return false;
               if (fwFilters.risk && String(r.risk||'') !== fwFilters.risk) return false;
               if (fwFilters.controlOwner && String(r.controlOwner||'') !== fwFilters.controlOwner) return false;
