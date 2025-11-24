@@ -1931,12 +1931,9 @@ export default function ATRDashboard() {
                 const completed = rows.filter(
                 (a) => mapStatus(a.status) === "Completed",
               ).length;
-                const overdue = rows.filter(
-                  (a) =>
-                    !!a.dueDate &&
-                    new Date(a.dueDate) < today &&
-                    mapStatus(a.status) !== "Completed",
-                ).length;
+                const pending = rows.filter(
+                (a) => a.status === "Open" || a.status === "In Progress",
+              ).length;
                 const delays: number[] = rows
                   .filter((a) => a.actualCompletionDate && a.dueDate)
                   .map((a) =>
@@ -1978,9 +1975,9 @@ export default function ATRDashboard() {
                       </Card>
                       <Card className="shadow-sm">
                         <CardContent className="p-4">
-                          <div className="text-xs text-slate-500">Overdue (by due date)</div>
-                          <div className="text-2xl font-semibold text-red-600">
-                            {overdue}
+                          <div className="text-xs text-slate-500">Pending</div>
+                          <div className="text-2xl font-semibold text-sky-600">
+                            {pending}
                           </div>
                         </CardContent>
                       </Card>
@@ -2989,11 +2986,8 @@ export default function ATRDashboard() {
               const completed = rows.filter(
                 (a) => mapStatus(a.status) === "Completed",
               ).length;
-              const overdue = rows.filter(
-                (a) =>
-                  !!a.dueDate &&
-                  new Date(a.dueDate) < today &&
-                  mapStatus(a.status) !== "Completed",
+              const pending = rows.filter(
+                (a) => a.status === "Open" || a.status === "In Progress",
               ).length;
               const delays: number[] = rows
                 .filter((a) => a.actualCompletionDate && a.dueDate)
@@ -3032,9 +3026,9 @@ export default function ATRDashboard() {
                     </Card>
                     <Card className="shadow-sm">
                       <CardContent className="p-4">
-                        <div className="text-xs text-slate-500">Overdue</div>
-                        <div className="text-2xl font-semibold text-red-600">
-                          {overdue}
+                        <div className="text-xs text-slate-500">Pending</div>
+                        <div className="text-2xl font-semibold text-sky-600">
+                          {pending}
                         </div>
                       </CardContent>
                     </Card>
