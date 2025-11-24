@@ -1418,7 +1418,7 @@ export default function ATRDashboard() {
   const [atrGroupBy, setAtrGroupBy] = useState<
     "none" | "status" | "due" | "department" | "person"
   >("none");
-  const [vizGroup, setVizGroup] = useState<"weekly" | "monthly">("monthly");
+  const vizGroup: "monthly" = "monthly";
 
   const [vizAtrByProject, setVizAtrByProject] = useState<
     Record<string, AuditTrackRow[]>
