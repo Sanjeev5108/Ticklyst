@@ -580,31 +580,6 @@ export default function FieldworkDashboard() {
     }).sort((a,b) => (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
   }, [records, controls]);
 
-  const displayedRows = useMemo(() => {
-    let base: typeof matrixRows | typeof rejectedRows | typeof approvedRows;
-    if (statusFilter === 'Rejected') base = rejectedRows;
-    else if (statusFilter === 'Approved') base = approvedRows;
-    else {
-      base = matrixRows.filter((r) => {
-        if (submittedIds.has(r.id)) return true;
-        const s = getStatus(r.id);
-        if (statusFilter === 'All') return true;
-        if (statusFilter === 'In progress')
-          return s !== 'approved' && s !== 'rejected';
-        return true;
-      });
-    }
-    return (base as any[]).filter(rowMatchesFilters);
-  }, [
-    matrixRows,
-    statusFilter,
-    getStatus,
-    rejectedRows,
-    approvedRows,
-    submittedIds,
-    rowMatchesFilters,
-  ]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = controls.filter(c => {
@@ -790,6 +765,31 @@ export default function FieldworkDashboard() {
     },
     [fwFilters],
   );
+
+  const displayedRows = useMemo(() => {
+    let base: typeof matrixRows | typeof rejectedRows | typeof approvedRows;
+    if (statusFilter === 'Rejected') base = rejectedRows;
+    else if (statusFilter === 'Approved') base = approvedRows;
+    else {
+      base = matrixRows.filter((r) => {
+        if (submittedIds.has(r.id)) return true;
+        const s = getStatus(r.id);
+        if (statusFilter === 'All') return true;
+        if (statusFilter === 'In progress')
+          return s !== 'approved' && s !== 'rejected';
+        return true;
+      });
+    }
+    return (base as any[]).filter(rowMatchesFilters);
+  }, [
+    matrixRows,
+    statusFilter,
+    getStatus,
+    rejectedRows,
+    approvedRows,
+    submittedIds,
+    rowMatchesFilters,
+  ]);
 
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const selectedClientLogo = useMemo(() => {
