@@ -3546,8 +3546,8 @@ export default function ATRDashboard() {
             </div>
 
             {/* Table */}
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-lg overflow-hidden overflow-x-auto">
+              <table className="min-w-[1400px] w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="text-left p-3 w-48">Audit Observation</th>
