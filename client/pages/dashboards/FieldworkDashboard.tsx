@@ -910,62 +910,108 @@ export default function FieldworkDashboard() {
                   <span>Rejected</span>
                   {rejectedCount > 0 && (<span className="inline-flex items-center gap-1 text-red-700"><span className="font-bold">!</span><span className="text-xs">{rejectedCount}</span></span>)}
                 </Button>
-                <Button variant={statusFilter==='All'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('All'); setFilterOpen(false); }}>Show all</Button>
+                <Button
+                  variant={statusFilter==='All' && Object.values(fwFilters).every(v => v === '' || v == null) ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={()=>{
+                    setStatusFilter('All');
+                    setFwFilters({
+                      process: '',
+                      subprocess: '',
+                      activity: '',
+                      risk: '',
+                      controlOwner: '',
+                      riskLevel: '',
+                      testOfControl: '',
+                      substantiveProcedure: '',
+                      samplingApplicability: '',
+                      controlEffectiveness: '',
+                      redFlag: '',
+                      reportable: '',
+                      observationRanking: '',
+                      riskScoreMin: undefined,
+                      riskScoreMax: undefined,
+                      controlScoreMin: undefined,
+                      controlScoreMax: undefined,
+                      residualMin: undefined,
+                      residualMax: undefined,
+                    });
+                    setFilterOpen(false);
+                  }}
+                >
+                  Show all
+                </Button>
               </div>
               <div className="h-px bg-slate-200 my-1" />
               <div className="text-xs text-slate-500">Advanced</div>
               <div className="grid grid-cols-2 gap-2">
                 <Select value={fwFilters.process} onValueChange={(v)=>setFwFilters(prev=>({...prev, process:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Process" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.process ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Process" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {Array.from(new Set(matrixRows.map(r=> r.process || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.subprocess} onValueChange={(v)=>setFwFilters(prev=>({...prev, subprocess:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Subprocess" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.subprocess ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Subprocess" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {Array.from(new Set(matrixRows.map(r=> r.subprocess || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.activity} onValueChange={(v)=>setFwFilters(prev=>({...prev, activity:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Activity" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.activity ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Activity" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {Array.from(new Set(matrixRows.map(r=> r.activity || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.risk} onValueChange={(v)=>setFwFilters(prev=>({...prev, risk:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Risk" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.risk ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Risk" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {Array.from(new Set(matrixRows.map(r=> r.risk || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.controlOwner} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlOwner:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Control Owner" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.controlOwner ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Control Owner" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {Array.from(new Set(matrixRows.map(r=> r.controlOwner || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.testOfControl} onValueChange={(v)=>setFwFilters(prev=>({...prev, testOfControl:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Test of control" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.testOfControl ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Test of control" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.substantiveProcedure} onValueChange={(v)=>setFwFilters(prev=>({...prev, substantiveProcedure:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Substantive procedure" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.substantiveProcedure ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Substantive procedure" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.samplingApplicability} onValueChange={(v)=>setFwFilters(prev=>({...prev, samplingApplicability:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Sampling applicability" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.samplingApplicability ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Sampling applicability" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     <SelectItem value="Yes">Yes</SelectItem>
@@ -973,28 +1019,36 @@ export default function FieldworkDashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.controlEffectiveness} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlEffectiveness:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Control Effectiveness" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.controlEffectiveness ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Control Effectiveness" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.redFlag} onValueChange={(v)=>setFwFilters(prev=>({...prev, redFlag:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Red flag" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.redFlag ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Red flag" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.reportable} onValueChange={(v)=>setFwFilters(prev=>({...prev, reportable:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Reportable" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.reportable ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Reportable" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={fwFilters.observationRanking} onValueChange={(v)=>setFwFilters(prev=>({...prev, observationRanking:v}))}>
-                  <SelectTrigger><SelectValue placeholder="Observation Ranking" /></SelectTrigger>
+                  <SelectTrigger className={fwFilters.observationRanking ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Observation Ranking" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All</SelectItem>
                     {['High','Medium','Low'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
