@@ -3455,6 +3455,8 @@ export default function ATRDashboard() {
                               "Department",
                               "Due date",
                               "Actual Completion date",
+                              "Condition",
+                              "Lead Time",
                               "Status",
                             ])
                           }
@@ -3493,6 +3495,14 @@ export default function ATRDashboard() {
                       add(
                         "Actual Completion date",
                         a.actualCompletionDate || "",
+                      );
+                      add(
+                        "Condition",
+                        computeAtrCondition(a.dueDate, a.actualCompletionDate),
+                      );
+                      add(
+                        "Lead Time",
+                        computeAtrLeadTime(a.dueDate, a.actualCompletionDate),
                       );
                       add("Status", a.status || "");
                       return row;
@@ -3549,12 +3559,22 @@ export default function ATRDashboard() {
                     <th className="text-left p-3 w-44">
                       Actual Completion date
                     </th>
+                    <th className="text-left p-3 w-40">Condition</th>
+                    <th className="text-left p-3 w-32">Lead Time</th>
                     <th className="text-left p-3 w-32">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {atrRowsFiltered.map(({ a, idx }) => {
                     const isLast = atrRows.length - 1 === idx;
+                    const condition = computeAtrCondition(
+                      a.dueDate,
+                      a.actualCompletionDate,
+                    );
+                    const leadTime = computeAtrLeadTime(
+                      a.dueDate,
+                      a.actualCompletionDate,
+                    );
                     return (
                       <tr
                         key={`${selectedProjectId || "ALL"}|${a.id}`}
@@ -3633,6 +3653,8 @@ export default function ATRDashboard() {
                             }
                           />
                         </td>
+                        <td className="p-3">{condition}</td>
+                        <td className="p-3">{String(leadTime)}</td>
                         <td className="p-3 flex items-center gap-2">
                           <Select
                             value={a.status}
