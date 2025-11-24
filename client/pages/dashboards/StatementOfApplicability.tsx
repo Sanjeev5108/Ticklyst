@@ -75,6 +75,32 @@ interface NodeDetails {
   applicable: boolean | null;
 }
 
+// Lightweight view of Framework node details used for read-only display in SoA
+interface FrameworkNodeDetails {
+  process_id?: string;
+  process_name?: string;
+  process_description?: string;
+  process_category?: string;
+  sub_process_id?: string;
+  sub_process_name?: string;
+  sub_process_description?: string;
+  linked_process_id?: string;
+  activity_id?: string;
+  activity_name?: string;
+  activity_description?: string;
+  linked_sub_process_id?: string;
+  risk_id?: string;
+  risk_name?: string;
+  risk_description?: string;
+  risk_category?: string;
+  control_id?: string;
+  control_description?: string;
+  control_type?: string;
+  control_frequency?: string;
+  control_owner?: string;
+  [key: string]: any;
+}
+
 // Industries are managed globally via IndustrySelect (fetched from API/localStorage)
 
 type SoAClient = { id: string; name: string; industry: string };
@@ -166,6 +192,9 @@ export default function StatementOfApplicability() {
   >(null);
 
   const [tree, setTree] = useState<TreeNode[]>([]);
+  const [frameworkDetailsById, setFrameworkDetailsById] = useState<
+    Record<string, FrameworkNodeDetails>
+  >({});
   const [processOptions, setProcessOptions] = useState<
     { id: string; name: string }[]
   >([]);
@@ -551,6 +580,11 @@ export default function StatementOfApplicability() {
         }));
         const sorted = mapped.slice().sort((a, b) => compareHier(a.id, b.id));
         setTree(sorted);
+        const details = (data?.detailsById || {}) as Record<
+          string,
+          FrameworkNodeDetails
+        >;
+        setFrameworkDetailsById(details);
         setProcessOptions(
           sorted
             .filter((n) => n.type === "process")
@@ -599,6 +633,28 @@ export default function StatementOfApplicability() {
         .sort((a, b) => compareHier(a.id, b.id)),
     [tree, compareHier],
   );
+
+  const getHierarchyForNode = (node: TreeNode | null) => {
+    const result: {
+      process?: TreeNode;
+      subprocess?: TreeNode;
+      activity?: TreeNode;
+      risk?: TreeNode;
+      control?: TreeNode;
+    } = {};
+    let current: TreeNode | undefined | null = node;
+    while (current) {
+      if (current.type === "process") result.process = current;
+      else if (current.type === "subprocess") result.subprocess = current;
+      else if (current.type === "activity") result.activity = current;
+      else if (current.type === "risk") result.risk = current;
+      else if (current.type === "control") result.control = current;
+      current = current.parentId
+        ? tree.find((n) => n.id === current!.parentId) || undefined
+        : undefined;
+    }
+    return result;
+  };
   const collectDescendantIds = (id: string, acc: string[] = []) => {
     const children = tree.filter((n) => n.parentId === id);
     for (const c of children) {
@@ -780,6 +836,13 @@ export default function StatementOfApplicability() {
   const nodeDetails: NodeDetails | undefined = selectedNodeId
     ? (activeDetails as any)[selectedNodeId!]
     : undefined;
+  const frameworkDetailsForSelected: FrameworkNodeDetails | undefined =
+    selectedNode && frameworkDetailsById[selectedNode.id]
+      ? frameworkDetailsById[selectedNode.id]
+      : undefined;
+  const hierarchyForSelected = selectedNode
+    ? getHierarchyForNode(selectedNode)
+    : null;
 
   const updateNodeDetails = (patch: Partial<NodeDetails>) => {
     if (!selectedNodeId) return;
@@ -1205,7 +1268,7 @@ export default function StatementOfApplicability() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6">
         {/* Left: Tree */}
         <Card className="max-h-[80vh] overflow-hidden flex flex-col">
           <CardHeader>
@@ -1518,6 +1581,338 @@ export default function StatementOfApplicability() {
                 })}
               </div>
             </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Right: Read-only Framework details */}
+        <Card className="max-h-[80vh] overflow-hidden flex flex-col">
+          <CardHeader>
+            <div className="flex items-center justify-between w-full">
+              <CardTitle className="text-base">Framework Details</CardTitle>
+              {selectedNode && (
+                <div className="text-xs text-slate-500 flex flex-col items-end">
+                  <span className="capitalize">{selectedNode.type}</span>
+                  <span className="font-medium truncate max-w-[220px]">
+                    {selectedNode.name}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 flex-1 min-h-0">
+            {!selectedNode && (
+              <div className="text-sm text-slate-500 mt-2">
+                Select a Process, Subprocess, Activity, Risk or Control in the
+                checklist tree to view its Framework details.
+              </div>
+            )}
+            {selectedNode && (
+              <div className="space-y-3 text-sm">
+                {selectedNode.type === "process" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Process ID</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.process_id ||
+                            selectedNode.id
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Process Name</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.process_name ||
+                            selectedNode.name
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={
+                          frameworkDetailsForSelected?.process_description || ""
+                        }
+                        readOnly
+                        rows={4}
+                      />
+                    </div>
+                  </>
+                )}
+                {selectedNode.type === "subprocess" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Subprocess ID</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.sub_process_id ||
+                            selectedNode.id
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Subprocess Name</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.sub_process_name ||
+                            selectedNode.name
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={
+                          frameworkDetailsForSelected?.sub_process_description ||
+                          ""
+                        }
+                        readOnly
+                        rows={4}
+                      />
+                    </div>
+                    <div>
+                      <Label>Linked Process</Label>
+                      <Input
+                        value={
+                          hierarchyForSelected?.process?.name ||
+                          hierarchyForSelected?.process?.id ||
+                          frameworkDetailsForSelected?.linked_process_id ||
+                          ""
+                        }
+                        readOnly
+                      />
+                    </div>
+                  </>
+                )}
+                {selectedNode.type === "activity" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Activity ID</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.activity_id ||
+                            selectedNode.id
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Activity Name</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.activity_name ||
+                            selectedNode.name
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={
+                          frameworkDetailsForSelected?.activity_description ||
+                          ""
+                        }
+                        readOnly
+                        rows={4}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Linked Process</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.process?.name ||
+                            hierarchyForSelected?.process?.id ||
+                            frameworkDetailsForSelected?.linked_process_id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Linked Subprocess</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.subprocess?.name ||
+                            hierarchyForSelected?.subprocess?.id ||
+                            frameworkDetailsForSelected?.linked_sub_process_id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {selectedNode.type === "risk" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Risk ID</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.risk_id ||
+                            selectedNode.id
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Risk Name</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.risk_name ||
+                            selectedNode.name
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={
+                          frameworkDetailsForSelected?.risk_description || ""
+                        }
+                        readOnly
+                        rows={4}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label>Linked Process</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.process?.name ||
+                            hierarchyForSelected?.process?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Linked Subprocess</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.subprocess?.name ||
+                            hierarchyForSelected?.subprocess?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Linked Activity</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.activity?.name ||
+                            hierarchyForSelected?.activity?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {selectedNode.type === "control" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Control ID</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.control_id ||
+                            selectedNode.id
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Control Type</Label>
+                        <Input
+                          value={
+                            frameworkDetailsForSelected?.control_type || ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Control Description</Label>
+                      <Textarea
+                        value={
+                          frameworkDetailsForSelected?.control_description ||
+                          selectedNode.name
+                        }
+                        readOnly
+                        rows={4}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Linked Process</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.process?.name ||
+                            hierarchyForSelected?.process?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Linked Subprocess</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.subprocess?.name ||
+                            hierarchyForSelected?.subprocess?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Linked Activity</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.activity?.name ||
+                            hierarchyForSelected?.activity?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <Label>Linked Risk</Label>
+                        <Input
+                          value={
+                            hierarchyForSelected?.risk?.name ||
+                            hierarchyForSelected?.risk?.id ||
+                            ""
+                          }
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
