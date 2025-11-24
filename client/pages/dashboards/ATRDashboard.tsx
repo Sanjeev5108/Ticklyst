@@ -65,6 +65,7 @@ import {
   CartesianGrid,
   LineChart,
   Line,
+  ReferenceLine,
 } from "recharts";
 import { FieldworkStore } from "@/contexts/FieldworkStore";
 import { FieldworkRecord } from "@shared/fieldwork";
