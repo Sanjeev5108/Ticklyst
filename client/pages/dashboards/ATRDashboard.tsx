@@ -199,7 +199,7 @@ const computeAtrCondition = (
     if (actual.getTime() < due.getTime()) {
       return "Completed before due date";
     }
-    return "Delay beyond due date";
+    return "Completed on Due Date";
   }
 
   const today = ATR_TODAY_DATE;
