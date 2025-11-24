@@ -49,6 +49,7 @@ import {
   Rows3,
   Columns2,
   Download,
+  Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -1209,6 +1210,7 @@ export default function FrameworkDashboard() {
   const [fwFilter, setFwFilter] = useState<
     "all" | "process" | "subprocess" | "activity" | "risk_related"
   >("all");
+  const [isFwImporting, setIsFwImporting] = useState(false);
   const [fwGroupBy, setFwGroupBy] = useState<
     "none" | "process" | "subprocess" | "activity" | "risk"
   >("none");
@@ -1538,6 +1540,7 @@ export default function FrameworkDashboard() {
             onChange={async (e) => {
               const file = e.currentTarget.files?.[0];
               if (!file) return;
+              setIsFwImporting(true);
               try {
                 const data = await file.arrayBuffer();
                 const wb = XLSX.read(data, { type: "array" });
@@ -1566,7 +1569,6 @@ export default function FrameworkDashboard() {
                 if (errCount) {
                   console.warn("Import errors", result.errors);
                 }
-                // refresh tree
                 try {
                   const r = await fetch("/api/framework/tree");
                   if (r.ok) {
@@ -1581,6 +1583,7 @@ export default function FrameworkDashboard() {
               } catch (e) {
                 toast({ title: "Import failed" });
               } finally {
+                setIsFwImporting(false);
                 e.currentTarget.value = "";
               }
             }}
@@ -1588,9 +1591,20 @@ export default function FrameworkDashboard() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => document.getElementById("fw-import-input")?.click()}
+            disabled={isFwImporting}
+            onClick={() =>
+              !isFwImporting &&
+              document.getElementById("fw-import-input")?.click()
+            }
           >
-            Import XLSX
+            {isFwImporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Importing...
+              </>
+            ) : (
+              "Import XLSX"
+            )}
           </Button>
           <Button
             size="sm"
