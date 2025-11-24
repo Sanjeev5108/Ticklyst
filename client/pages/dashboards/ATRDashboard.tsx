@@ -3785,7 +3785,17 @@ export default function ATRDashboard() {
                           />
                         </td>
                         <td className="p-3">{condition}</td>
-                        <td className="p-3">{String(leadTime)}</td>
+                        <td
+                          className={
+                            typeof leadTime === "number"
+                              ? leadTime > 0
+                                ? "p-3 text-xs font-medium text-red-700 bg-red-50 rounded-md border border-red-100"
+                                : "p-3 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-md border border-emerald-100"
+                              : "p-3 text-xs text-slate-700 bg-slate-50 rounded-md border border-slate-100"
+                          }
+                        >
+                          {String(leadTime)}
+                        </td>
                         <td className="p-3 flex items-center gap-2">
                           <Select
                             value={a.status}
