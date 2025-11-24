@@ -581,16 +581,29 @@ export default function FieldworkDashboard() {
   }, [records, controls]);
 
   const displayedRows = useMemo(() => {
-    if (statusFilter === 'Rejected') return rejectedRows;
-    if (statusFilter === 'Approved') return approvedRows;
-    return matrixRows.filter(r => {
-      if (submittedIds.has(r.id)) return true;
-      const s = getStatus(r.id);
-      if (statusFilter === 'All') return true;
-      if (statusFilter === 'In progress') return s !== 'approved' && s !== 'rejected';
-      return true;
-    });
-  }, [matrixRows, statusFilter, getStatus, rejectedRows, approvedRows, submittedIds]);
+    let base: typeof matrixRows | typeof rejectedRows | typeof approvedRows;
+    if (statusFilter === 'Rejected') base = rejectedRows;
+    else if (statusFilter === 'Approved') base = approvedRows;
+    else {
+      base = matrixRows.filter((r) => {
+        if (submittedIds.has(r.id)) return true;
+        const s = getStatus(r.id);
+        if (statusFilter === 'All') return true;
+        if (statusFilter === 'In progress')
+          return s !== 'approved' && s !== 'rejected';
+        return true;
+      });
+    }
+    return (base as any[]).filter(rowMatchesFilters);
+  }, [
+    matrixRows,
+    statusFilter,
+    getStatus,
+    rejectedRows,
+    approvedRows,
+    submittedIds,
+    rowMatchesFilters,
+  ]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -690,6 +703,93 @@ export default function FieldworkDashboard() {
   ];
   const [fwGroupBy, setFwGroupBy] = useState<string>('none');
   const [fwFilters, setFwFilters] = useState<{ process: string; subprocess: string; activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ process: '', subprocess: '', activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
+
+  const rowMatchesFilters = useCallback(
+    (r: any) => {
+      const between = (v: number, min?: number, max?: number) => {
+        if (typeof v !== 'number' || Number.isNaN(v)) return false;
+        if (min != null && v < min) return false;
+        if (max != null && v > max) return false;
+        return true;
+      };
+      if (fwFilters.process && String(r.process || '') !== fwFilters.process)
+        return false;
+      if (fwFilters.subprocess && String(r.subprocess || '') !== fwFilters.subprocess)
+        return false;
+      if (fwFilters.activity && String(r.activity || '') !== fwFilters.activity)
+        return false;
+      if (fwFilters.risk && String(r.risk || '') !== fwFilters.risk) return false;
+      if (
+        fwFilters.controlOwner &&
+        String(r.controlOwner || '') !== fwFilters.controlOwner
+      )
+        return false;
+      if (fwFilters.riskLevel && String(r.riskLevel || '') !== fwFilters.riskLevel)
+        return false;
+      if (
+        fwFilters.testOfControl &&
+        String(r.testOfControl || '') !== fwFilters.testOfControl
+      )
+        return false;
+      if (
+        fwFilters.substantiveProcedure &&
+        String(r.substantiveProcedure || '') !== fwFilters.substantiveProcedure
+      )
+        return false;
+      if (
+        fwFilters.samplingApplicability &&
+        String(r.samplingApplicable || '') !== fwFilters.samplingApplicability
+      )
+        return false;
+      if (
+        fwFilters.controlEffectiveness &&
+        String(r.controlEffectiveness || '') !== fwFilters.controlEffectiveness
+      )
+        return false;
+      if (fwFilters.redFlag && String(r.redFlag || '') !== fwFilters.redFlag)
+        return false;
+      if (
+        fwFilters.reportable &&
+        String(r.reportable || '') !== fwFilters.reportable
+      )
+        return false;
+      if (
+        fwFilters.observationRanking &&
+        String(r.observationRanking || '') !== fwFilters.observationRanking
+      )
+        return false;
+      if (
+        (fwFilters.riskScoreMin != null || fwFilters.riskScoreMax != null) &&
+        !between(
+          Number(r.riskScore),
+          fwFilters.riskScoreMin,
+          fwFilters.riskScoreMax,
+        )
+      )
+        return false;
+      if (
+        (fwFilters.controlScoreMin != null ||
+          fwFilters.controlScoreMax != null) &&
+        !between(
+          Number(r.controlScore),
+          fwFilters.controlScoreMin,
+          fwFilters.controlScoreMax,
+        )
+      )
+        return false;
+      if (
+        (fwFilters.residualMin != null || fwFilters.residualMax != null) &&
+        !between(
+          Number(r.residualRisk),
+          fwFilters.residualMin,
+          fwFilters.residualMax,
+        )
+      )
+        return false;
+      return true;
+    },
+    [fwFilters],
+  );
 
   const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
   const selectedClientLogo = useMemo(() => {
@@ -945,33 +1045,7 @@ export default function FieldworkDashboard() {
 
           {/* Export */}
           <Button size="sm" className="flex items-center gap-2" onClick={async ()=>{
-            const rowsSrc = displayedRows.slice();
-            const passesFilter = (r:any) => {
-              const between = (v:number, min?:number, max?:number) => {
-                if (typeof v !== 'number' || isNaN(v)) return false;
-                if (min!=null && v < min) return false;
-                if (max!=null && v > max) return false;
-                return true;
-              };
-              if (fwFilters.process && String(r.process||'') !== fwFilters.process) return false;
-              if (fwFilters.subprocess && String(r.subprocess||'') !== fwFilters.subprocess) return false;
-              if (fwFilters.activity && String(r.activity||'') !== fwFilters.activity) return false;
-              if (fwFilters.risk && String(r.risk||'') !== fwFilters.risk) return false;
-              if (fwFilters.controlOwner && String(r.controlOwner||'') !== fwFilters.controlOwner) return false;
-              if (fwFilters.riskLevel && String(r.riskLevel||'') !== fwFilters.riskLevel) return false;
-              if (fwFilters.testOfControl && String(r.testOfControl||'') !== fwFilters.testOfControl) return false;
-              if (fwFilters.substantiveProcedure && String(r.substantiveProcedure||'') !== fwFilters.substantiveProcedure) return false;
-              if (fwFilters.samplingApplicability && String(r.samplingApplicable||'') !== fwFilters.samplingApplicability) return false;
-              if (fwFilters.controlEffectiveness && String(r.controlEffectiveness||'') !== fwFilters.controlEffectiveness) return false;
-              if (fwFilters.redFlag && String(r.redFlag||'') !== fwFilters.redFlag) return false;
-              if (fwFilters.reportable && String(r.reportable||'') !== fwFilters.reportable) return false;
-              if (fwFilters.observationRanking && String(r.observationRanking||'') !== fwFilters.observationRanking) return false;
-              if ((fwFilters.riskScoreMin!=null || fwFilters.riskScoreMax!=null) && !between(Number(r.riskScore), fwFilters.riskScoreMin, fwFilters.riskScoreMax)) return false;
-              if ((fwFilters.controlScoreMin!=null || fwFilters.controlScoreMax!=null) && !between(Number(r.controlScore), fwFilters.controlScoreMin, fwFilters.controlScoreMax)) return false;
-              if ((fwFilters.residualMin!=null || fwFilters.residualMax!=null) && !between(Number(r.residualRisk), fwFilters.residualMin, fwFilters.residualMax)) return false;
-              return true;
-            };
-            const list = rowsSrc.filter(passesFilter);
+            const list = displayedRows.slice();
 
             const buildRow = (r:any) => {
               const f: Record<string, any> = {};
