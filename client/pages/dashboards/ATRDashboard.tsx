@@ -2132,6 +2132,52 @@ export default function ATRDashboard() {
                       )}
                     </ExpandableChartCard>
 
+                    <ExpandableChartCard title="Department-wise Status">
+                      {(innerClassName) => (
+                        <ChartContainer
+                          config={{
+                            Pending: { label: "Open" },
+                            "In Progress": { label: "In Progress" },
+                            Completed: { label: "Closed" },
+                          }}
+                          className={innerClassName}
+                        >
+                          <BarChart data={deptData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="department"
+                              angle={deptData.length > 6 ? -45 : 0}
+                              textAnchor={
+                                deptData.length > 6 ? "end" : "middle"
+                              }
+                              interval={
+                                deptData.length > 6 ? 0 : "preserveStartEnd"
+                              }
+                              tickMargin={8}
+                              height={deptData.length > 6 ? undefined : 20}
+                            />
+                            <YAxis allowDecimals={false} />
+                            <Bar
+                              dataKey="Pending"
+                              stackId="a"
+                              fill={statusPalette["Pending"]}
+                            />
+                            <Bar
+                              dataKey="In Progress"
+                              stackId="a"
+                              fill={statusPalette["In Progress"]}
+                            />
+                            <Bar
+                              dataKey="Completed"
+                              stackId="a"
+                              fill={statusPalette["Completed"]}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </BarChart>
+                        </ChartContainer>
+                      )}
+                    </ExpandableChartCard>
+
                     <ExpandableChartCard
                       title="Lead Time (days)"
                       cardClassName="lg:col-span-2"
@@ -2173,52 +2219,6 @@ export default function ATRDashboard() {
                         </ChartContainer>
                       )}
                     </ExpandableChartCard>
-
-                    <ExpandableChartCard title="Department-wise Status">
-                        {(innerClassName) => (
-                          <ChartContainer
-                            config={{
-                              Pending: { label: "Open" },
-                              "In Progress": { label: "In Progress" },
-                              Completed: { label: "Closed" },
-                            }}
-                            className={innerClassName}
-                          >
-                            <BarChart data={deptData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                dataKey="department"
-                                angle={deptData.length > 6 ? -45 : 0}
-                                textAnchor={
-                                  deptData.length > 6 ? "end" : "middle"
-                                }
-                                interval={
-                                  deptData.length > 6 ? 0 : "preserveStartEnd"
-                                }
-                                tickMargin={8}
-                                height={deptData.length > 6 ? undefined : 20}
-                              />
-                              <YAxis allowDecimals={false} />
-                              <Bar
-                                dataKey="Pending"
-                                stackId="a"
-                                fill={statusPalette["Pending"]}
-                              />
-                              <Bar
-                                dataKey="In Progress"
-                                stackId="a"
-                                fill={statusPalette["In Progress"]}
-                              />
-                              <Bar
-                                dataKey="Completed"
-                                stackId="a"
-                                fill={statusPalette["Completed"]}
-                              />
-                              <ChartTooltip content={<ChartTooltipContent />} />
-                            </BarChart>
-                          </ChartContainer>
-                        )}
-                      </ExpandableChartCard>
 
                       <ExpandableChartCard
                         title="Completion Trend"
@@ -3244,45 +3244,6 @@ export default function ATRDashboard() {
                       )}
                     </ExpandableChartCard>
 
-                    <ExpandableChartCard
-                      title="Lead Time (days)"
-                      cardClassName="lg:col-span-2"
-                    >
-                      {(innerClassName) => (
-                        <ChartContainer config={{}} className={innerClassName}>
-                          <BarChart
-                            data={leadTimeData}
-                            layout="vertical"
-                            margin={{ left: 8, right: 16 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              type="number"
-                              domain={leadDomain}
-                              tickMargin={8}
-                            />
-                            <YAxis
-                              type="category"
-                              dataKey="label"
-                              width={160}
-                            />
-                            <ReferenceLine x={0} stroke="#94A3B8" />
-                            <Bar dataKey="leadTime" radius={[4, 4, 4, 4]}>
-                              {leadTimeData.map((entry, index) => (
-                                <Cell
-                                  key={`lead2-${index}`}
-                                  fill={
-                                    entry.leadTime < 0 ? "#22C55E" : "#EF4444"
-                                  }
-                                />
-                              ))}
-                            </Bar>
-                            <ChartTooltip content={<ChartTooltipContent />} />
-                          </BarChart>
-                        </ChartContainer>
-                      )}
-                    </ExpandableChartCard>
-
                     <ExpandableChartCard title="Department-wise Status">
                       {(innerClassName) => (
                         <ChartContainer
@@ -3323,6 +3284,45 @@ export default function ATRDashboard() {
                               stackId="a"
                               fill={statusPalette["Completed"]}
                             />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </BarChart>
+                        </ChartContainer>
+                      )}
+                    </ExpandableChartCard>
+
+                    <ExpandableChartCard
+                      title="Lead Time (days)"
+                      cardClassName="lg:col-span-2"
+                    >
+                      {(innerClassName) => (
+                        <ChartContainer config={{}} className={innerClassName}>
+                          <BarChart
+                            data={leadTimeData}
+                            layout="vertical"
+                            margin={{ left: 8, right: 16 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              type="number"
+                              domain={leadDomain}
+                              tickMargin={8}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="label"
+                              width={160}
+                            />
+                            <ReferenceLine x={0} stroke="#94A3B8" />
+                            <Bar dataKey="leadTime" radius={[4, 4, 4, 4]}>
+                              {leadTimeData.map((entry, index) => (
+                                <Cell
+                                  key={`lead2-${index}`}
+                                  fill={
+                                    entry.leadTime < 0 ? "#22C55E" : "#EF4444"
+                                  }
+                                />
+                              ))}
+                            </Bar>
                             <ChartTooltip content={<ChartTooltipContent />} />
                           </BarChart>
                         </ChartContainer>
