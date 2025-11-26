@@ -5,18 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { FileText, Save, CheckCircle2, XCircle, Share2, Search } from 'lucide-react';
+import { FileText, Save, CheckCircle2, XCircle, Share2, Search, Rows3, Columns2, Download } from 'lucide-react';
 import { FieldworkRecord } from '@shared/fieldwork';
 import { FieldworkStore } from '@/contexts/FieldworkStore';
 import { RiskConfigStore } from '@/contexts/RiskConfigStore';
+import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
 import { computeResidual, computeRiskScore, resolveLevel } from '@shared/risk';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ControlRow {
   id: string;
@@ -95,10 +100,9 @@ const SelectOrInput = ({ options, value, onChange, placeholder }: { options: str
 
 export default function FieldworkDashboard() {
   const [controls, setControls] = useState<ControlRow[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
-  const [selectedSubprocess, setSelectedSubprocess] = useState<string | null>(null);
-  const [matrixRows, setMatrixRows] = useState<{ id: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
+  const [matrixRows, setMatrixRows] = useState<{ id: string; process: string; subprocess: string; activity: string; risk: string; control: string; controlOwner: string; likelihood: number; consequence: number; riskScore: number; controlScore: number; residualRisk: number; riskLevel: string; residualLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicable: string; samplingMethodology: string; controlEffectiveness: string; attachments: string; auditRemarks: string; observationRanking: string; auditObservation: string; effect: string; recommendation: string; annexure: string; redFlag: string; reportable: string }[]>([]);
   const [search, setSearch] = useState('');
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   const [records, setRecords] = useState<Record<string, FieldworkRecord>>({});
@@ -107,13 +111,35 @@ export default function FieldworkDashboard() {
   const [submitAckOpen, setSubmitAckOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
+
+  const getResidualLevel = (val: number, thresholds: any): { level: string; color?: string } | undefined => {
+    const ranges = Array.isArray(thresholds?.ranges) ? [...thresholds.ranges] : [];
+    if (ranges.length === 0) return undefined;
+    ranges.sort((a:any,b:any)=> (a.from??0)-(b.from??0));
+    if (val <= 0) {
+      const first = ranges[0];
+      return { level: first?.label || 'Low', color: first?.color || thresholds?.heatmapColors?.[first?.label] || '#10B981' };
+    }
+    const min = ranges[0].from;
+    const max = ranges[ranges.length-1].to;
+    const v = Math.min(max, Math.max(min, val));
+    for (const r of ranges) {
+      if (v >= r.from && v <= r.to) return { level: r.label, color: r.color || thresholds?.heatmapColors?.[r.label] };
+    }
+    const last = ranges[ranges.length-1];
+    return { level: last?.label, color: last?.color || thresholds?.heatmapColors?.[last?.label] };
+  };
 
   const [riskConfigVersion, setRiskConfigVersion] = useState(0);
+  const [assignmentTypes, setAssignmentTypes] = useState<{id:string;name:string}[]>([]);
   useEffect(() => {
     const unsub = FieldworkStore.subscribe(() => setRecords(FieldworkStore.getAll()));
     const unsubRisk = RiskConfigStore.subscribe(() => setRiskConfigVersion(v=>v+1));
+    const unsubAssn = AssignmentTypeStore.subscribe(() => setAssignmentTypes(AssignmentTypeStore.getAll()));
     setRecords(FieldworkStore.getAll());
-    return () => { unsub(); unsubRisk(); };
+    setAssignmentTypes(AssignmentTypeStore.getAll());
+    return () => { unsub(); unsubRisk(); unsubAssn(); };
   }, []);
 
   useEffect(() => {
@@ -198,65 +224,298 @@ export default function FieldworkDashboard() {
   }, [controls.length]);
 
   const processes = useMemo(() => Array.from(new Set(controls.map(c => c.process).filter(Boolean) as string[])).sort(), [controls]);
-  const getSubprocesses = useCallback((proc: string | null) => {
+  const getActivities = useCallback((proc: string | null) => {
     if (!proc) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc).map(c => c.subprocess || 'General'))).sort();
+    return Array.from(new Set(controls.filter(c => c.process === proc).map(c => c.activity || 'General'))).sort();
   }, [controls]);
-  const getActivities = useCallback((proc: string | null, sub: string | null) => {
-    if (!proc || !sub) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub).map(c => c.activity || 'General'))).sort();
+  const getRisks = useCallback((proc: string | null, act: string) => {
+    if (!proc || !act) return [] as string[];
+    return Array.from(new Set(controls.filter(c => c.process === proc && (c.activity || 'General') === act).map(c => c.risk || ''))).filter(Boolean).sort();
   }, [controls]);
-  const getRisks = useCallback((proc: string | null, sub: string | null, act: string) => {
-    if (!proc || !sub || !act) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub && (c.activity || 'General') === act).map(c => c.risk || ''))).filter(Boolean).sort();
-  }, [controls]);
-  const getControls = useCallback((proc: string | null, sub: string | null, act: string, risk: string) => {
-    if (!proc || !sub || !act || !risk) return [] as string[];
-    return Array.from(new Set(controls.filter(c => c.process === proc && (c.subprocess || 'General') === sub && (c.activity || 'General') === act && (c.risk || '') === risk).map(c => c.name))).sort();
+  const getControls = useCallback((proc: string | null, act: string, risk: string) => {
+    if (!proc || !act || !risk) return [] as string[];
+    return Array.from(new Set(controls.filter(c => c.process === proc && (c.activity || 'General') === act && (c.risk || '') === risk).map(c => c.name))).sort();
   }, [controls]);
 
+
+  // Projects (loaded from API) with access filtering
+  const [projects, setProjects] = useState<{ id: string; title: string; client?: string; clientLogo?: string; raw?: any }[]>([]);
   useEffect(() => {
-    if (!selectedProcess) { setSelectedSubprocess(null); setMatrixRows([]); return; }
-    const subs = getSubprocesses(selectedProcess);
-    if (subs.length && !selectedSubprocess) setSelectedSubprocess(subs[0]);
-  }, [selectedProcess, selectedSubprocess, getSubprocesses]);
+    (async () => {
+      try {
+        const [projRes, clientsRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/clients').catch(() => null),
+        ]);
+        if (!projRes.ok) throw new Error('load_failed');
+        const rows = await projRes.json();
+
+        const buildClientLogoMap = (rowsAny: any[]): Record<string, string> => {
+          const map: Record<string, string> = {};
+          if (!Array.isArray(rowsAny)) return map;
+          rowsAny.forEach((c: any) => {
+            const name = String(c?.name || '').trim().toLowerCase();
+            const logo = c?.logo || c?.details?.logo;
+            if (name && logo) map[name] = logo;
+          });
+          return map;
+        };
+
+        let clientLogoMap: Record<string, string> = {};
+        try {
+          if (clientsRes && (clientsRes as Response).ok) {
+            const clientRows = await (clientsRes as Response).json();
+            clientLogoMap = buildClientLogoMap(clientRows);
+          } else if (typeof window !== 'undefined') {
+            const cached = window.localStorage.getItem('clients');
+            if (cached) {
+              const parsed = JSON.parse(cached) as any[];
+              clientLogoMap = buildClientLogoMap(parsed);
+            }
+          }
+        } catch {}
+
+        const mapped = (rows || []).map((r: any) => {
+          const clientName =
+            r.clientName ||
+            r.data?.clientName ||
+            r.data?.client_name ||
+            '';
+          const normName = String(clientName || '').trim().toLowerCase();
+          const logoFromClients = clientLogoMap[normName];
+          const clientLogo =
+            r.data?.clientLogo ||
+            r.data?.client?.logo ||
+            r.clientLogo ||
+            r.client?.logo ||
+            logoFromClients ||
+            undefined;
+          return {
+            id: r.id,
+            title:
+              r.name ||
+              r.data?.projectName ||
+              r.data?.project_name ||
+              r.code ||
+              r.data?.title ||
+              'Untitled Project',
+            client: clientName,
+            clientLogo,
+            raw: r,
+          };
+        });
+
+        // determine scope
+        const roleScopeMap = (() => { try { return JSON.parse(localStorage.getItem('roleProjectScope') || '{}'); } catch { return {}; } })();
+        const userScopeMap = (() => { try { return JSON.parse(localStorage.getItem('userProjectScope') || '{}'); } catch { return {}; } })();
+        const scope = (user?.id && userScopeMap[user.id]) ? userScopeMap[user.id] : (user?.role ? roleScopeMap[user.role] : 'all');
+        const normalizedRole = (user?.role || '').toLowerCase();
+        const isTargetRole = ['division partner','partner','division head','team leader','team member'].includes(normalizedRole);
+
+        const userName = user?.username || '';
+        const initials = userName.split(' ').map(s=>s[0]).join('');
+        const isOnProject = (prj: any) => {
+          const d = prj?.raw?.data || {};
+          const lists: string[][] = [d.divisionHeads||[], d.partners||[], d.teamLeaders||[], d.teamMembers||[]];
+          const flat = lists.flat().map((s:string)=>String(s||''));
+          return flat.includes(userName) || flat.includes(initials);
+        };
+
+        const filtered = (scope === 'own' && isTargetRole && user) ? mapped.filter(isOnProject) : mapped;
+        setProjects(filtered);
+      } catch (e) {
+        console.error('Failed to load projects', e);
+      }
+    })();
+  }, [user]);
+
+  const clientOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects
+            .map((p) => (p.client || '').trim())
+            .filter((name) => name && name.length > 0),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [projects],
+  );
+
+  const projectsForClient = useMemo(
+    () => {
+      if (!selectedClient) return [] as { id: string; title: string; client?: string; raw?: any }[];
+      const norm = selectedClient.trim().toLowerCase();
+      return projects.filter(
+        (p) => (p.client || '').trim().toLowerCase() === norm,
+      );
+    },
+    [projects, selectedClient],
+  );
+
+  const riskDisabled = useMemo(() => {
+    if (!selectedProject) return false;
+    const proj = projects.find(p => p.id === selectedProject);
+    return proj?.raw?.data?.riskModuleEnabled === false;
+  }, [selectedProject, projects]);
+
+  const projectStatus = useMemo(() => {
+    if (!selectedProject) return '';
+    const proj = projects.find(p => p.id === selectedProject);
+    return String(proj?.raw?.status || '').toLowerCase();
+  }, [selectedProject, projects]);
+  const projectLocked = projectStatus === 'completed' || projectStatus === 'hold';
+
+  const processesForSelectedProject = useMemo(() => {
+    if (!selectedProject) return [] as string[];
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj) return [] as string[];
+    const data = proj.raw?.data || {};
+    let procs: string[] = [];
+    if (data && typeof data.selectedChecklistTree === 'object' && Object.keys(data.selectedChecklistTree || {}).length) {
+      procs = Object.keys(data.selectedChecklistTree || {});
+    } else if (Array.isArray(data.checklistTemplate) && data.checklistTemplate.length) {
+      procs = data.checklistTemplate.slice();
+    } else if (Array.isArray(data.processes) && data.processes.length) {
+      procs = data.processes.slice();
+    } else if (Array.isArray(proj.raw?.data?.processes) && proj.raw.data.processes.length) {
+      procs = proj.raw.data.processes.slice();
+    }
+    if (!procs.length) {
+      procs = processes;
+    }
+    return Array.from(new Set(procs.filter(Boolean))).sort();
+  }, [selectedProject, projects, processes]);
+
+  const activeCfg = React.useMemo(() => {
+    if (!selectedProject) return RiskConfigStore.getGlobal();
+    const proj = projects.find(p => p.id === selectedProject);
+    const data = proj?.raw?.data || {};
+    const auditTypeName = data.auditType;
+    const assn = assignmentTypes.find(a => a.name === auditTypeName);
+    const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+    const map = (central.scope as any)?.assignmentMap || {};
+    const mode = assn ? map[assn.id]?.mode : undefined;
+    if (mode === 'project' && data.riskConfig) return data.riskConfig;
+    if (mode === 'assignment' && assn) return RiskConfigStore.get(`assignment|${assn.id}`) || RiskConfigStore.getGlobal();
+    return RiskConfigStore.getGlobal();
+  }, [selectedProject, projects, assignmentTypes, riskConfigVersion]);
 
   useEffect(() => {
-    if (!selectedProcess || !selectedSubprocess) { setMatrixRows([]); return; }
-    const rcfg = RiskConfigStore.getGlobal();
+    if (!selectedProject) { setMatrixRows([]); return; }
+    const proj = projects.find(p => p.id === selectedProject);
+    const tree = proj?.raw?.data?.selectedChecklistTree;
+    const rcfg = activeCfg;
+    const mkId = (parts: string[]) => 'fw|' + parts.map(s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g,'').slice(0,64)).join('|');
+    if (tree && typeof tree === 'object' && Object.keys(tree).length) {
+      const rows: any[] = [];
+      for (const [procName, procNode] of Object.entries<any>(tree)) {
+        const subs = procNode?.subprocesses || {};
+        for (const [subName, subNode] of Object.entries<any>(subs)) {
+          const acts = subNode?.activities || {};
+          for (const [actName, actNode] of Object.entries<any>(acts)) {
+            const risks = actNode?.risks || {};
+            for (const [riskName, riskNode] of Object.entries<any>(risks)) {
+              const ctrls: string[] = Array.isArray((riskNode as any).controls) ? (riskNode as any).controls : [];
+              ctrls.forEach((ctrl, idx) => {
+                const id = mkId([procName, subName, actName, riskName, String(idx+1)]);
+                const row: any = { id, process: procName || '', subprocess: subName || '', activity: actName || '', risk: riskName || '', control: ctrl || '', controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' };
+                row.department = procName || '';
+                row.process = procName || '';
+                row.subprocess = subName || '';
+                rows.push(row);
+              });
+            }
+          }
+        }
+      }
+      rows.sort((a,b)=> (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
+      const merged = rows.map(r => {
+        const rec = records[selectedProject ? `${selectedProject}|${r.id}` : r.id];
+        if (!rec) return r;
+        if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
+        const a: any = (rec as any).arc || {};
+        const rr = rec.risk || undefined;
+        return {
+          ...r,
+          controlOwner: a.controlOwner || r.controlOwner,
+          testOfControl: a.testOfControl || r.testOfControl,
+          substantiveProcedure: a.substantiveProcedure || r.substantiveProcedure,
+          samplingApplicable: (a.samplingApplicable as any) || r.samplingApplicable,
+          samplingMethodology: a.samplingMethodology || r.samplingMethodology,
+          controlEffectiveness: (a.controlEffective as any) || r.controlEffectiveness,
+          attachments: a.attachments || r.attachments,
+          auditRemarks: a.auditRemarks || r.auditRemarks,
+          redFlag: (a.redFlag as any) || r.redFlag,
+          reportable: (a.reportable as any) || r.reportable,
+          observationRanking: a.observationRanking || r.observationRanking,
+          auditObservation: a.auditObservation || r.auditObservation,
+          effect: a.effect || r.effect,
+          recommendation: a.recommendation || r.recommendation,
+          annexure: a.annexure || r.annexure,
+          ...(rr ? {
+            likelihood: typeof rr.likelihood === 'number' ? rr.likelihood : r.likelihood,
+            consequence: typeof rr.consequence === 'number' ? rr.consequence : r.consequence,
+            riskScore: typeof rr.riskScore === 'number' ? rr.riskScore : r.riskScore,
+            controlScore: typeof rr.controlScore === 'number' ? rr.controlScore : r.controlScore
+          } : {})
+        };
+      });
+      setMatrixRows(merged);
+      return;
+    }
+    const allowed = new Set(processesForSelectedProject);
+    if (allowed.size === 0) { setMatrixRows([]); return; }
     const rows = controls
-      .filter(c => c.process === selectedProcess && (c.subprocess || 'General') === selectedSubprocess)
-      .map(c => ({ id: c.id, activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }))
+      .filter(c => allowed.has(c.process || ''))
+      .map(c => { const row: any = { id: c.id, process: c.process || '', subprocess: c.subprocess || '', activity: c.activity || '', risk: c.risk || '', control: c.name, controlOwner: '', likelihood: rcfg.riskScore.likelihood?.scale.min || 1, consequence: rcfg.riskScore.consequence?.scale.min || 1, riskScore: rcfg.riskScore.mode === 'single' ? rcfg.riskScore.scale.min : 0, controlScore: rcfg.controlScore.scale.min, residualRisk: 0, riskLevel: '', residualLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicable: '', samplingMethodology: '', controlEffectiveness: '', attachments: '', auditRemarks: '', observationRanking: '', auditObservation: '', effect: '', recommendation: '', annexure: '', redFlag: '', reportable: '' }; row.department = c.process || ''; row.process = c.process || ''; row.subprocess = c.subprocess || ''; return row; })
       .sort((a,b)=>{
         return (a.activity.localeCompare(b.activity) || a.risk.localeCompare(b.risk) || a.control.localeCompare(b.control));
       });
-    setMatrixRows(rows);
-  }, [selectedProcess, selectedSubprocess, controls, riskConfigVersion]);
-
-  // Projects (sourced from ProjectManagement mock list)
-  const projects = [
-    { id: '1', title: 'SQ/25-26/0135 - Customisation T...' },
-    { id: '2', title: 'SQ/25-26/0150 - Customisation T...' },
-    { id: '3', title: 'CA Articles Training' },
-    { id: '4', title: 'Reshmi - Customisation' },
-    { id: '5', title: 'Artika VII - Customisation' },
-    { id: '6', title: 'SQ/25-26/0086 - Prashanthi Cust...' },
-    { id: '7', title: 'SQ/25-26/0168 - RMCL CCA June...' },
-    { id: '8', title: 'KSS Event ABC' },
-    { id: '9', title: 'SQ/25-26/0059 - MMD IA April 2...' }
-  ];
+    const merged = rows.map(r => {
+      const rec = records[selectedProject ? `${selectedProject}|${r.id}` : r.id];
+      if (!rec) return r;
+      if (selectedProject && rec.projectId && rec.projectId !== selectedProject) return r;
+      const a: any = (rec as any).arc || {};
+      const rr = rec.risk || undefined;
+      return {
+        ...r,
+        controlOwner: a.controlOwner || r.controlOwner,
+        testOfControl: a.testOfControl || r.testOfControl,
+        substantiveProcedure: a.substantiveProcedure || r.substantiveProcedure,
+        samplingApplicable: (a.samplingApplicable as any) || r.samplingApplicable,
+        samplingMethodology: a.samplingMethodology || r.samplingMethodology,
+        controlEffectiveness: (a.controlEffective as any) || r.controlEffectiveness,
+        attachments: a.attachments || r.attachments,
+        auditRemarks: a.auditRemarks || r.auditRemarks,
+        redFlag: (a.redFlag as any) || r.redFlag,
+        reportable: (a.reportable as any) || r.reportable,
+        observationRanking: a.observationRanking || r.observationRanking,
+        auditObservation: a.auditObservation || r.auditObservation,
+        effect: a.effect || r.effect,
+        recommendation: a.recommendation || r.recommendation,
+        annexure: a.annexure || r.annexure,
+        ...(rr ? {
+          likelihood: typeof rr.likelihood === 'number' ? rr.likelihood : r.likelihood,
+          consequence: typeof rr.consequence === 'number' ? rr.consequence : r.consequence,
+          riskScore: typeof rr.riskScore === 'number' ? rr.riskScore : r.riskScore,
+          controlScore: typeof rr.controlScore === 'number' ? rr.controlScore : r.controlScore
+        } : {})
+      };
+    });
+    setMatrixRows(merged);
+  }, [selectedProject, projects, processesForSelectedProject, controls, riskConfigVersion, activeCfg, records]);
 
   const testOfControlOptions = ['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'];
   const substantiveProcedureOptions = ['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'];
   const samplingMethodologyOptions = ['Random Sampling','Systematic Sampling','Stratified Sampling','Cluster Sampling','Monetary Unit Sampling (MUS)','Judgmental Sampling'];
   const controlEffectivenessOptions = ['Yes','No'];
 
-  const getStatus = useCallback((id: string) => records[id]?.status || 'draft', [records]);
+  const getStatus = useCallback((id: string) => { const key = selectedProject ? `${selectedProject}|${id}` : id; return records[key]?.status || 'draft'; }, [records, selectedProject]);
 
-  const rejectedCount = useMemo(() => Object.values(records).filter(r => r.status === 'rejected').length, [records]);
+  const rejectedCount = useMemo(() => Object.values(records).filter(r => r.status === 'rejected' && (!selectedProject || r.projectId === selectedProject)).length, [records, selectedProject]);
 
   const rejectedRows = useMemo(() => {
-    const all = Object.values(records).filter(r => r.status === 'rejected');
+    const all = Object.values(records).filter(r => r.status === 'rejected' && (!selectedProject || r.projectId === selectedProject));
     return all.map(r => {
       const ctrl = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
@@ -264,6 +523,8 @@ export default function FieldworkDashboard() {
       const controlEffective = a.controlEffective || (r.effectiveness?.effectiveness === 'Effective' ? 'Yes' : r.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
       return {
         id: r.controlId,
+        process: ctrl?.process || '',
+        subprocess: ctrl?.subprocess || '',
         activity: a.activity || ctrl?.activity || '',
         risk: a.risk || ctrl?.risk || '',
         control: a.control || ctrl?.name || '',
@@ -287,7 +548,7 @@ export default function FieldworkDashboard() {
   }, [records, controls]);
 
   const approvedRows = useMemo(() => {
-    const all = Object.values(records).filter(r => r.status === 'approved');
+    const all = Object.values(records).filter(r => r.status === 'approved' && (!selectedProject || r.projectId === selectedProject));
     return all.map(r => {
       const ctrl = controls.find(c => c.id === r.controlId);
       const a: any = (r as any).arc || {};
@@ -295,6 +556,8 @@ export default function FieldworkDashboard() {
       const controlEffective = a.controlEffective || (r.effectiveness?.effectiveness === 'Effective' ? 'Yes' : r.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
       return {
         id: r.controlId,
+        process: ctrl?.process || '',
+        subprocess: ctrl?.subprocess || '',
         activity: a.activity || ctrl?.activity || '',
         risk: a.risk || ctrl?.risk || '',
         control: a.control || ctrl?.name || '',
@@ -317,22 +580,11 @@ export default function FieldworkDashboard() {
     }).sort((a,b) => (a.activity||'').localeCompare(b.activity||'') || (a.risk||'').localeCompare(b.risk||'') || (a.control||'').localeCompare(b.control||''));
   }, [records, controls]);
 
-  const displayedRows = useMemo(() => {
-    if (statusFilter === 'Rejected') return rejectedRows;
-    if (statusFilter === 'Approved') return approvedRows;
-    return matrixRows.filter(r => {
-      if (submittedIds.has(r.id)) return true;
-      const s = getStatus(r.id);
-      if (statusFilter === 'All') return true;
-      if (statusFilter === 'In progress') return s !== 'approved' && s !== 'rejected';
-      return true;
-    });
-  }, [matrixRows, statusFilter, getStatus, rejectedRows, approvedRows, submittedIds]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = controls.filter(c => {
-      const rec = records[c.id];
+      const key = selectedProject ? `${selectedProject}|${c.id}` : c.id;
+      const rec = records[key];
       const status = rec?.status || 'draft';
       if (statusFilter === 'All') return true;
       if (statusFilter === 'Draft') return status === 'draft';
@@ -350,9 +602,11 @@ export default function FieldworkDashboard() {
   }, [controls, search, records, statusFilter]);
 
   const openFieldworkFor = (id: string) => {
-    setSelectedControlId(id);
-    FieldworkStore.ensure(id, () => ({
+    const recId = selectedProject ? `${selectedProject}|${id}` : id;
+    setSelectedControlId(recId);
+    FieldworkStore.ensure(recId, () => ({
       controlId: id,
+      projectId: selectedProject || undefined,
       status: 'draft',
       progress: 0,
       activeTab: 0,
@@ -380,46 +634,263 @@ export default function FieldworkDashboard() {
     setRecords(FieldworkStore.getAll());
   };
   const completeCurrentTab = () => { if (!record) return; const idx = record.activeTab; if (record.progress < idx) setRecord({ progress: idx }); if (idx < 4) setRecord({ activeTab: idx + 1, progress: Math.max(record.progress, idx) }); };
-  const submitForReview = () => { if (record && selectedControlId) { FieldworkStore.submitForReview(selectedControlId); setRecords(FieldworkStore.getAll()); setSubmitAckOpen(true); } };
+  const submitForReview = () => {
+    if (record && selectedControlId) {
+      const existing = FieldworkStore.get(selectedControlId);
+      const statusNow = existing?.status || 'draft';
+      const revised = (existing?.remarks?.revisedAuditRemarks || record.remarks.revisedAuditRemarks || '').trim();
+      const baseRemark = (existing?.remarks?.auditRemarks || record.remarks.auditRemarks || '').trim();
+      const auditRemarkToSave = revised || baseRemark;
+      if (statusNow === 'rejected' && auditRemarkToSave) {
+        FieldworkStore.addAuditRemark(selectedControlId, (user?.username || 'User'), auditRemarkToSave);
+        FieldworkStore.patchTab(selectedControlId, 'arc', { auditRemarks: auditRemarkToSave });
+      }
+      FieldworkStore.submitForReview(selectedControlId);
+      setRecords(FieldworkStore.getAll());
+      setSubmitAckOpen(true);
+    }
+  };
   const canOpenTab = (idx: number) => !record ? false : idx <= record.progress + 1;
+
+  const [projDetailsOpen, setProjDetailsOpen] = useState(false);
+
+  // Export toolbar state
+  const fwAllFields = [
+    'Process','Subprocess','Activity','Risk','Control','Control Owner','Likelihood','Impact','Risk Score','Control Score','Residual Risk','Risk Level','Color','Test of control','Substantive procedure','Sampling applicability','Sampling Methodology','Control Effectiveness','Attachments','Audit Remarks','Red flag','Reportable','Observation Ranking','Audit Observation','Effect','Recommendation','Annexure'
+  ] as const;
+  const [fwSelectedFields, setFwSelectedFields] = useState<string[]>([...fwAllFields]);
+  const fwGroupOptions = [
+    { key: 'none', label: 'No grouping' },
+    { key: 'Activity', label: 'Activity' },
+    { key: 'Risk', label: 'Risk' },
+    { key: 'Risk Score', label: 'Risk Score' },
+    { key: 'Control Score', label: 'Control Score' },
+    { key: 'Residual Risk', label: 'Residual Risk' },
+    { key: 'Risk Level', label: 'Risk Level' },
+    { key: 'Control Owner', label: 'Control Owner' },
+    { key: 'Test of control', label: 'Test of control' },
+    { key: 'Substantive procedure', label: 'Substantive procedure' },
+    { key: 'Sampling applicability', label: 'Sampling applicability' },
+    { key: 'Control Effectiveness', label: 'Control Effectiveness' },
+    { key: 'Red flag', label: 'Red flag' },
+    { key: 'Reportable', label: 'Reportable' },
+    { key: 'Observation Ranking', label: 'Observation Ranking' },
+  ];
+  const [fwGroupBy, setFwGroupBy] = useState<string>('none');
+  const [fwFilters, setFwFilters] = useState<{ process: string; subprocess: string; activity: string; risk: string; controlOwner: string; riskLevel: string; testOfControl: string; substantiveProcedure: string; samplingApplicability: string; controlEffectiveness: string; redFlag: string; reportable: string; observationRanking: string; riskScoreMin?: number; riskScoreMax?: number; controlScoreMin?: number; controlScoreMax?: number; residualMin?: number; residualMax?: number }>({ process: '', subprocess: '', activity: '', risk: '', controlOwner: '', riskLevel: '', testOfControl: '', substantiveProcedure: '', samplingApplicability: '', controlEffectiveness: '', redFlag: '', reportable: '', observationRanking: '' });
+
+  const rowMatchesFilters = useCallback(
+    (r: any) => {
+      const between = (v: number, min?: number, max?: number) => {
+        if (typeof v !== 'number' || Number.isNaN(v)) return false;
+        if (min != null && v < min) return false;
+        if (max != null && v > max) return false;
+        return true;
+      };
+      if (fwFilters.process && String(r.process || '') !== fwFilters.process)
+        return false;
+      if (fwFilters.subprocess && String(r.subprocess || '') !== fwFilters.subprocess)
+        return false;
+      if (fwFilters.activity && String(r.activity || '') !== fwFilters.activity)
+        return false;
+      if (fwFilters.risk && String(r.risk || '') !== fwFilters.risk) return false;
+      if (
+        fwFilters.controlOwner &&
+        String(r.controlOwner || '') !== fwFilters.controlOwner
+      )
+        return false;
+      if (fwFilters.riskLevel && String(r.riskLevel || '') !== fwFilters.riskLevel)
+        return false;
+      if (
+        fwFilters.testOfControl &&
+        String(r.testOfControl || '') !== fwFilters.testOfControl
+      )
+        return false;
+      if (
+        fwFilters.substantiveProcedure &&
+        String(r.substantiveProcedure || '') !== fwFilters.substantiveProcedure
+      )
+        return false;
+      if (
+        fwFilters.samplingApplicability &&
+        String(r.samplingApplicable || '') !== fwFilters.samplingApplicability
+      )
+        return false;
+      if (
+        fwFilters.controlEffectiveness &&
+        String(r.controlEffectiveness || '') !== fwFilters.controlEffectiveness
+      )
+        return false;
+      if (fwFilters.redFlag && String(r.redFlag || '') !== fwFilters.redFlag)
+        return false;
+      if (
+        fwFilters.reportable &&
+        String(r.reportable || '') !== fwFilters.reportable
+      )
+        return false;
+      if (
+        fwFilters.observationRanking &&
+        String(r.observationRanking || '') !== fwFilters.observationRanking
+      )
+        return false;
+      if (
+        (fwFilters.riskScoreMin != null || fwFilters.riskScoreMax != null) &&
+        !between(
+          Number(r.riskScore),
+          fwFilters.riskScoreMin,
+          fwFilters.riskScoreMax,
+        )
+      )
+        return false;
+      if (
+        (fwFilters.controlScoreMin != null ||
+          fwFilters.controlScoreMax != null) &&
+        !between(
+          Number(r.controlScore),
+          fwFilters.controlScoreMin,
+          fwFilters.controlScoreMax,
+        )
+      )
+        return false;
+      if (
+        (fwFilters.residualMin != null || fwFilters.residualMax != null) &&
+        !between(
+          Number(r.residualRisk),
+          fwFilters.residualMin,
+          fwFilters.residualMax,
+        )
+      )
+        return false;
+      return true;
+    },
+    [fwFilters],
+  );
+
+  const displayedRows = useMemo(() => {
+    let base: typeof matrixRows | typeof rejectedRows | typeof approvedRows;
+    if (statusFilter === 'Rejected') base = rejectedRows;
+    else if (statusFilter === 'Approved') base = approvedRows;
+    else {
+      base = matrixRows.filter((r) => {
+        if (submittedIds.has(r.id)) return true;
+        const s = getStatus(r.id);
+        if (statusFilter === 'All') return true;
+        if (statusFilter === 'In progress')
+          return s !== 'approved' && s !== 'rejected';
+        return true;
+      });
+    }
+    return (base as any[]).filter(rowMatchesFilters);
+  }, [
+    matrixRows,
+    statusFilter,
+    getStatus,
+    rejectedRows,
+    approvedRows,
+    submittedIds,
+    rowMatchesFilters,
+  ]);
+
+  const selectedProj = useMemo(() => projects.find(p => p.id === (selectedProject||''))?.raw, [projects, selectedProject]);
+  const selectedClientLogo = useMemo(() => {
+    if (!selectedClient) return undefined;
+    const norm = selectedClient.trim().toLowerCase();
+    const proj = projects.find(p => (p.client || '').trim().toLowerCase() === norm);
+    return proj?.clientLogo;
+  }, [projects, selectedClient]);
+  const formatDate = (d: any) => { try { if (!d) return '-'; const dt = new Date(d); return isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString(); } catch { return '-'; } };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <FileText className="h-7 w-7 text-orange-600" />
-          Fieldwork Module
+          Fieldwork
         </h1>
-        <Badge className="bg-orange-100 text-orange-800">Fieldwork</Badge>
+        <div className="flex items-center gap-3">
+          {selectedClient && (
+            <div className="flex items-center gap-2">
+              {selectedClientLogo ? (
+                <div
+                  className="h-9 w-auto max-w-[96px] border border-gray-200 bg-white flex items-center justify-center"
+                  aria-label="Client logo"
+                >
+                  <img
+                    src={selectedClientLogo}
+                    alt={selectedClient}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <Avatar
+                  className="h-9 w-9 border border-gray-200 bg-white"
+                  aria-label="Client initial"
+                >
+                  <AvatarFallback className="bg-orange-100 text-orange-800 font-semibold">
+                    {(selectedClient[0] || "?").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
-          <Label>Project</Label>
-          <Select value={selectedProject || ''} onValueChange={(v)=>{ const nv = v === '__CLEAR__' ? null : v; setSelectedProject(nv); setSelectedProcess(null); setSelectedSubprocess(null); }}>
+          <Label>Client</Label>
+          <Select
+            value={selectedClient}
+            onValueChange={(v) => {
+              const nv = v === '__CLEAR__' ? '' : v;
+              setSelectedClient(nv);
+              setSelectedProject(null);
+            }}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select project" />
+              <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__CLEAR__">Clear</SelectItem>
               <SelectSeparator />
-              {projects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              {clientOptions.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label>Process</Label>
-          <Typeahead items={processes} value={selectedProcess} onSelect={(v)=>{ setSelectedProcess(v); }} placeholder="Select or search process..." disabled={!selectedProject} />
+          <Label>Project</Label>
+          <Select
+            value={selectedProject || ''}
+            onValueChange={(v) => {
+              const nv = v === '__CLEAR__' ? null : v;
+              setSelectedProject(nv);
+            }}
+            disabled={!selectedClient}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={selectedClient ? 'Select project' : 'Select client first'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__CLEAR__">Clear</SelectItem>
+              <SelectSeparator />
+              {projectsForClient.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div>
-          <Label>Subprocess</Label>
-          <Typeahead items={getSubprocesses(selectedProcess)} value={selectedSubprocess} onSelect={(v)=> setSelectedSubprocess(v)} placeholder="Select or search subprocess..." disabled={!selectedProcess} />
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => setProjDetailsOpen(true)} disabled={!selectedProject}>View details</Button>
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center gap-2">
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="relative">
@@ -429,24 +900,464 @@ export default function FieldworkDashboard() {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-48 p-2">
-            <div className="flex flex-col gap-1">
-              <Button variant={statusFilter==='In progress'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('In progress'); setFilterOpen(false); }}>In progress</Button>
-              <Button variant={statusFilter==='Approved'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Approved'); setFilterOpen(false); }}>Approved</Button>
-              <Button variant={statusFilter==='Rejected'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Rejected'); setFilterOpen(false); }} className="justify-between">
-                <span>Rejected</span>
-                {rejectedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-red-700"><span className="font-bold">!</span><span className="text-xs">{rejectedCount}</span></span>
-                )}
-              </Button>
+          <PopoverContent align="end" className="w-80 p-3">
+            <div className="grid gap-2">
+              <div className="text-xs text-slate-500">Status</div>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant={statusFilter==='In progress'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('In progress'); setFilterOpen(false); }}>In progress</Button>
+                <Button variant={statusFilter==='Approved'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Approved'); setFilterOpen(false); }}>Approved</Button>
+                <Button variant={statusFilter==='Rejected'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('Rejected'); setFilterOpen(false); }} className="justify-between">
+                  <span>Rejected</span>
+                  {rejectedCount > 0 && (<span className="inline-flex items-center gap-1 text-red-700"><span className="font-bold">!</span><span className="text-xs">{rejectedCount}</span></span>)}
+                </Button>
+                <Button
+                  variant={statusFilter==='All' && Object.values(fwFilters).every(v => v === '' || v == null) ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={()=>{
+                    setStatusFilter('All');
+                    setFwFilters({
+                      process: '',
+                      subprocess: '',
+                      activity: '',
+                      risk: '',
+                      controlOwner: '',
+                      riskLevel: '',
+                      testOfControl: '',
+                      substantiveProcedure: '',
+                      samplingApplicability: '',
+                      controlEffectiveness: '',
+                      redFlag: '',
+                      reportable: '',
+                      observationRanking: '',
+                      riskScoreMin: undefined,
+                      riskScoreMax: undefined,
+                      controlScoreMin: undefined,
+                      controlScoreMax: undefined,
+                      residualMin: undefined,
+                      residualMax: undefined,
+                    });
+                    setFilterOpen(false);
+                  }}
+                >
+                  Show all
+                </Button>
+              </div>
               <div className="h-px bg-slate-200 my-1" />
-              <Button variant={statusFilter==='All'?'secondary':'ghost'} size="sm" onClick={()=>{ setStatusFilter('All'); setFilterOpen(false); }}>Show all</Button>
+              <div className="text-xs text-slate-500">Advanced</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={fwFilters.process} onValueChange={(v)=>setFwFilters(prev=>({...prev, process:v}))}>
+                  <SelectTrigger className={fwFilters.process ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Process" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.process || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.subprocess} onValueChange={(v)=>setFwFilters(prev=>({...prev, subprocess:v}))}>
+                  <SelectTrigger className={fwFilters.subprocess ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Subprocess" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.subprocess || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.activity} onValueChange={(v)=>setFwFilters(prev=>({...prev, activity:v}))}>
+                  <SelectTrigger className={fwFilters.activity ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Activity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.activity || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.risk} onValueChange={(v)=>setFwFilters(prev=>({...prev, risk:v}))}>
+                  <SelectTrigger className={fwFilters.risk ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Risk" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.risk || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.controlOwner} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlOwner:v}))}>
+                  <SelectTrigger className={fwFilters.controlOwner ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Control Owner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {Array.from(new Set(matrixRows.map(r=> r.controlOwner || '').filter(Boolean))).sort().map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.testOfControl} onValueChange={(v)=>setFwFilters(prev=>({...prev, testOfControl:v}))}>
+                  <SelectTrigger className={fwFilters.testOfControl ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Test of control" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Observation','Inquiry','Re performance','Walkthrough','Inspection of documents'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.substantiveProcedure} onValueChange={(v)=>setFwFilters(prev=>({...prev, substantiveProcedure:v}))}>
+                  <SelectTrigger className={fwFilters.substantiveProcedure ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Substantive procedure" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Vouching','Verification','Physical Verification','Recalculation','Confirmation','Analytical Procedures','Test Checking / Sampling','Cut-off Testing','Tracing','Casting & Cross-Casting','Documentary','Review'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.samplingApplicability} onValueChange={(v)=>setFwFilters(prev=>({...prev, samplingApplicability:v}))}>
+                  <SelectTrigger className={fwFilters.samplingApplicability ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Sampling applicability" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.controlEffectiveness} onValueChange={(v)=>setFwFilters(prev=>({...prev, controlEffectiveness:v}))}>
+                  <SelectTrigger className={fwFilters.controlEffectiveness ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Control Effectiveness" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.redFlag} onValueChange={(v)=>setFwFilters(prev=>({...prev, redFlag:v}))}>
+                  <SelectTrigger className={fwFilters.redFlag ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Red flag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.reportable} onValueChange={(v)=>setFwFilters(prev=>({...prev, reportable:v}))}>
+                  <SelectTrigger className={fwFilters.reportable ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Reportable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['Yes','No'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={fwFilters.observationRanking} onValueChange={(v)=>setFwFilters(prev=>({...prev, observationRanking:v}))}>
+                  <SelectTrigger className={fwFilters.observationRanking ? 'border-primary text-primary' : ''}>
+                    <SelectValue placeholder="Observation Ranking" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {['High','Medium','Low'].map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
+        <div className="flex items-center gap-2">
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {fwGroupOptions.map(opt => (
+                  <Button key={opt.key} variant={fwGroupBy===opt.key?'default':'outline'} size="sm" className="justify-start" onClick={()=>setFwGroupBy(opt.key)}>
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 max-h-64 overflow-y-auto p-3">
+              <div className="grid gap-2">
+                {fwAllFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={fwSelectedFields.includes(f)} onChange={(e)=> setFwSelectedFields(prev => e.target.checked ? [...prev, f as string] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([...fwAllFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([...fwAllFields])}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setFwSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={async ()=>{
+            const list = displayedRows.slice();
+
+            const buildRow = (r:any) => {
+              const f: Record<string, any> = {};
+              const riskVal = (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence));
+              const resid = Math.round((computeResidual(activeCfg.residualRisk.formula, riskVal, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100;
+              const riskLevel = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.level || '';
+              const color = resolveLevel(resid, activeCfg.residualRisk.thresholds)?.color || '';
+              if (fwSelectedFields.includes('Process')) f['Process'] = r.process;
+              if (fwSelectedFields.includes('Subprocess')) f['Subprocess'] = r.subprocess;
+              if (fwSelectedFields.includes('Activity')) f['Activity'] = r.activity;
+              if (fwSelectedFields.includes('Risk')) f['Risk'] = r.risk;
+              if (fwSelectedFields.includes('Control')) f['Control'] = r.control;
+              if (fwSelectedFields.includes('Control Owner')) f['Control Owner'] = r.controlOwner;
+              if (fwSelectedFields.includes('Likelihood')) f['Likelihood'] = r.likelihood;
+              if (fwSelectedFields.includes('Impact')) f['Impact'] = r.consequence;
+              if (fwSelectedFields.includes('Risk Score')) f['Risk Score'] = riskVal;
+              if (fwSelectedFields.includes('Control Score')) f['Control Score'] = r.controlScore;
+              if (fwSelectedFields.includes('Residual Risk')) f['Residual Risk'] = resid;
+              if (fwSelectedFields.includes('Risk Level')) f['Risk Level'] = riskLevel;
+              if (fwSelectedFields.includes('Color')) f['Color'] = color;
+              if (fwSelectedFields.includes('Test of control')) f['Test of control'] = r.testOfControl;
+              if (fwSelectedFields.includes('Substantive procedure')) f['Substantive procedure'] = r.substantiveProcedure;
+              if (fwSelectedFields.includes('Sampling applicability')) f['Sampling applicability'] = r.samplingApplicable;
+              if (fwSelectedFields.includes('Sampling Methodology')) f['Sampling Methodology'] = r.samplingMethodology;
+              if (fwSelectedFields.includes('Control Effectiveness')) f['Control Effectiveness'] = r.controlEffectiveness;
+              if (fwSelectedFields.includes('Attachments')) f['Attachments'] = r.attachments;
+              if (fwSelectedFields.includes('Audit Remarks')) f['Audit Remarks'] = r.auditRemarks;
+              if (fwSelectedFields.includes('Red flag')) f['Red flag'] = r.redFlag;
+              if (fwSelectedFields.includes('Reportable')) f['Reportable'] = r.reportable;
+              if (fwSelectedFields.includes('Observation Ranking')) f['Observation Ranking'] = r.observationRanking;
+              if (fwSelectedFields.includes('Audit Observation')) f['Audit Observation'] = r.auditObservation;
+              if (fwSelectedFields.includes('Effect')) f['Effect'] = r.effect;
+              if (fwSelectedFields.includes('Recommendation')) f['Recommendation'] = r.recommendation;
+              if (fwSelectedFields.includes('Annexure')) f['Annexure'] = r.annexure;
+              return f;
+            };
+
+            const getGroupKeys = (r:any, key:string): string[] => {
+              switch (key) {
+                case 'none': return [''];
+                case 'Activity': return [String(r.activity||'(none)')];
+                case 'Risk': return [String(r.risk||'(none)')];
+                case 'Risk Score': return [String(activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence))];
+                case 'Control Score': return [String(r.controlScore||'')];
+                case 'Residual Risk': { const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); return [String(Math.round((computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100)]; }
+                case 'Risk Level': { const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); const lvl = resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || '(none)'; return [lvl]; }
+                case 'Control Owner': return [String(r.controlOwner||'(none)')];
+                case 'Test of control': return [String(r.testOfControl||'(none)')];
+                case 'Substantive procedure': return [String(r.substantiveProcedure||'(none)')];
+                case 'Sampling applicability': return [String(r.samplingApplicable||'(none)')];
+                case 'Control Effectiveness': return [String(r.controlEffectiveness||'(none)')];
+                case 'Red flag': return [String(r.redFlag||'(none)')];
+                case 'Reportable': return [String(r.reportable||'(none)')];
+                case 'Observation Ranking': return [String(r.observationRanking||'(none)')];
+                default: return [''];
+              }
+            };
+
+            const rows:any[] = [];
+            if (fwGroupBy==='none') {
+              list.forEach(r => rows.push(buildRow(r)));
+            } else {
+              const grouped: Record<string, any[]> = {};
+              list.forEach(r => {
+                const keys = getGroupKeys(r, fwGroupBy);
+                const row = buildRow(r);
+                for (const k of keys) { if (!grouped[k]) grouped[k] = []; grouped[k].push(row); }
+              });
+              const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+              for (const label of labels) { rows.push({ Group: label }); grouped[label].forEach(rr => rows.push(rr)); rows.push({}); }
+            }
+
+            const wb = XLSX.utils.book_new();
+            const safeSheet = (name: string) => name.replace(/[\\/?*\[\]]/g, '').slice(0,31) || 'Sheet';
+
+            const exportSingle = (listLocal: any[], label: string) => {
+              const rowsOut:any[] = [];
+              if (fwGroupBy==='none') {
+                listLocal.forEach(r => rowsOut.push(buildRow(r)));
+              } else {
+                const grouped: Record<string, any[]> = {};
+                listLocal.forEach(r => {
+                  const keys = getGroupKeys(r, fwGroupBy);
+                  const row = buildRow(r);
+                  for (const k of keys) { if (!grouped[k]) grouped[k] = []; grouped[k].push(row); }
+                });
+                const labels = Object.keys(grouped).sort((a,b)=>a.localeCompare(b));
+                for (const gl of labels) { rowsOut.push({ Group: gl }); grouped[gl].forEach(rr => rowsOut.push(rr)); rowsOut.push({}); }
+              }
+              const ws = XLSX.utils.json_to_sheet(rowsOut);
+              XLSX.utils.book_append_sheet(wb, ws, safeSheet(`FW ${label}`));
+
+              // Risk Register
+              const byRisk: Record<string, { riskId: string; description: string; category: string; likelihood: number; impact: number; controls: Set<string>; controlOwner: string; residual: number }> = {};
+              listLocal.forEach(r => {
+                const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence);
+                const residual = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale);
+                const level = resolveLevel(residual, activeCfg.residualRisk.thresholds)?.level || '';
+                const key = r.risk || r.id;
+                if (!byRisk[key]) byRisk[key] = { riskId: r.id, description: r.risk, category: level, likelihood: r.likelihood, impact: r.consequence, controls: new Set(), controlOwner: r.controlOwner || '', residual: Math.round((residual + Number.EPSILON) * 100) / 100 };
+                byRisk[key].controls.add(r.control);
+              });
+              const rrRows = Object.values(byRisk).map(v => ({ 'Risk ID': v.riskId, 'Description': v.description, 'Category': v.category, 'Likelihood': v.likelihood, 'Impact': v.impact, 'Controls': Array.from(v.controls).join(', '), 'Control Owner': v.controlOwner, 'Residual Risk': v.residual }));
+              const ws2 = XLSX.utils.json_to_sheet(rrRows);
+              XLSX.utils.book_append_sheet(wb, ws2, safeSheet(`RR ${label}`));
+
+              // Heat Map Data
+              const hmRows = listLocal.map(r => ({ Likelihood: r.likelihood, Impact: r.consequence, 'Risk Score': (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), 'Control Score': r.controlScore, 'Residual Risk': Math.round((computeResidual(activeCfg.residualRisk.formula, (activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence)), r.controlScore, activeCfg.controlScore.scale) + Number.EPSILON) * 100) / 100, 'Risk Level': (()=>{ const risk = activeCfg.riskScore.mode === 'single' ? r.riskScore : computeRiskScore(activeCfg.riskScore.mode, r.likelihood, r.consequence); const rr = computeResidual(activeCfg.residualRisk.formula, risk, r.controlScore, activeCfg.controlScore.scale); return resolveLevel(rr, activeCfg.residualRisk.thresholds)?.level || ''; })() }));
+              const wsData = XLSX.utils.json_to_sheet(hmRows);
+              XLSX.utils.book_append_sheet(wb, wsData, safeSheet(`HM Data ${label}`));
+
+              // Heat Map matrix with colors
+              const Lmin = activeCfg.riskScore.likelihood?.scale.min ?? 1;
+              const Lmax = activeCfg.riskScore.likelihood?.scale.max ?? 5;
+              const Cmin = activeCfg.riskScore.consequence?.scale.min ?? 1;
+              const Cmax = activeCfg.riskScore.consequence?.scale.max ?? 5;
+              const counts: Record<string, number> = {};
+              listLocal.forEach(r => { const l = Math.round(Number(r.likelihood||0)); const c = Math.round(Number(r.consequence||0)); const k = `${l}|${c}`; counts[k] = (counts[k]||0)+1; });
+              const header = ['Likelihood \\ Impact'];
+              for (let c=Cmin; c<=Cmax; c++) header.push(String(c));
+              const aoa: any[][] = [header];
+              for (let l=Lmax; l>=Lmin; l--) {
+                const rw: any[] = [String(l)];
+                for (let c=Cmin; c<=Cmax; c++) {
+                  const k = `${l}|${c}`;
+                  rw.push(counts[k] ? counts[k] : '');
+                }
+                aoa.push(rw);
+              }
+              const wsHM: any = XLSX.utils.aoa_to_sheet(aoa);
+              const hexToARGB = (hex: string) => { const s = (hex||'').replace('#',''); return (s.length===6 ? `FF${s}` : s).toUpperCase(); };
+              for (let r=1; r<aoa.length; r++) {
+                const l = Lmax - (r-1);
+                for (let c=1; c<aoa[0].length; c++) {
+                  const impact = Cmin + (c-1);
+                  const riskVal = l * impact;
+                  const lvl = resolveLevel(riskVal, activeCfg.residualRisk.thresholds);
+                  const color = lvl?.color || '';
+                  const addr = XLSX.utils.encode_cell({ r, c });
+                  const cell = wsHM[addr] || { t: 's', v: aoa[r][c] };
+                  wsHM[addr] = cell;
+                  (wsHM[addr] as any).s = { alignment: { horizontal: 'center', vertical: 'center' }, fill: color ? { patternType: 'solid', fgColor: { rgb: hexToARGB(color) } } : undefined, font: { bold: true, color: { rgb: 'FF000000' } }, border: { top:{style:'thin',color:{rgb:'FFCCCCCC'}}, left:{style:'thin',color:{rgb:'FFCCCCCC'}}, right:{style:'thin',color:{rgb:'FFCCCCCC'}}, bottom:{style:'thin',color:{rgb:'FFCCCCCC'}} } };
+                }
+              }
+              for (let c=0; c<aoa[0].length; c++) { const addr = XLSX.utils.encode_cell({ r:0, c }); if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } }; }
+              for (let r=1; r<aoa.length; r++) { const addr = XLSX.utils.encode_cell({ r, c:0 }); if (wsHM[addr]) (wsHM[addr] as any).s = { font: { bold: true }, alignment: { horizontal: 'center' } }; }
+              (wsHM as any)['!cols'] = Array.from({ length: aoa[0].length }, (_,i)=> ({ wch: i===0 ? 14 : 6 }));
+              (wsHM as any)['!rows'] = Array.from({ length: aoa.length }, () => ({ hpt: 22 }));
+              XLSX.utils.book_append_sheet(wb, wsHM, safeSheet(`HM ${label}`));
+            };
+
+            if (selectedProject) {
+              exportSingle(list, selectedProject);
+            } else {
+              try {
+                const projRes = await fetch('/api/projects');
+                const projRows = projRes.ok ? await projRes.json() : [];
+                const projMap: Record<string, { code?: string; name?: string }> = {};
+                for (const pr of projRows || []) { projMap[pr.id] = { code: pr.code, name: pr.name }; }
+                const byPid: Record<string, any[]> = {};
+                const allRecs = Object.values(records);
+                for (const rec of allRecs) {
+                  if (!rec.projectId) continue;
+                  const status = rec.status || 'draft';
+                  if (statusFilter === 'Approved' && status !== 'approved') continue;
+                  if (statusFilter === 'Rejected' && status !== 'rejected') continue;
+                  if (statusFilter === 'In progress' && (status === 'approved' || status === 'rejected')) continue;
+                  const ctrl = controls.find(c => c.id === rec.controlId);
+                  const a: any = (rec as any).arc || {};
+                  const samplingApplicable = a.samplingApplicable || (rec.methodology?.verification ? (rec.methodology.verification === 'Sampling' ? 'Yes' : 'No') : '');
+                  const controlEffective = a.controlEffective || (rec.effectiveness?.effectiveness === 'Effective' ? 'Yes' : rec.effectiveness?.effectiveness === 'Ineffective' ? 'No' : '');
+                  const row = {
+                    id: rec.controlId,
+                    activity: a.activity || ctrl?.activity || '',
+                    risk: a.risk || ctrl?.risk || '',
+                    control: a.control || ctrl?.name || '',
+                    testOfControl: a.testOfControl || (rec.methodology?.methodType === 'Test of Control' ? rec.methodology.procedure : ''),
+                    substantiveProcedure: a.substantiveProcedure || (rec.methodology?.methodType === 'Substantive Procedure' ? rec.methodology.procedure : ''),
+                    samplingApplicable,
+                    samplingMethodology: a.samplingMethodology || rec.methodology?.samplingMethod || '',
+                    controlEffectiveness: controlEffective,
+                    attachments: a.attachments || '',
+                    auditRemarks: a.auditRemarks || rec.remarks.auditRemarks || '',
+                    redFlag: a.redFlag || '',
+                    reportable: a.reportable || '',
+                    observationRanking: a.observationRanking || rec.report.observationRanking || '',
+                    auditObservation: a.auditObservation || rec.report.observation || '',
+                    effect: a.effect || rec.report.riskEffect || '',
+                    recommendation: a.recommendation || rec.report.recommendation || '',
+                    controlOwner: a.controlOwner || '',
+                    annexure: a.annexure || rec.report.annexure || '',
+                    likelihood: rec.risk?.likelihood ?? 0,
+                    consequence: rec.risk?.consequence ?? 0,
+                    riskScore: rec.risk?.riskScore ?? 0,
+                    controlScore: rec.risk?.controlScore ?? 0,
+                  } as any;
+                  if (!byPid[rec.projectId]) byPid[rec.projectId] = [];
+                  byPid[rec.projectId].push(row);
+                }
+                const pids = Object.keys(byPid);
+                if (pids.length === 0) {
+                  exportSingle(list, 'All');
+                } else {
+                  for (const pid of pids) {
+                    const label = projMap[pid]?.code || projMap[pid]?.name || pid;
+                    exportSingle(byPid[pid], label);
+                  }
+                }
+              } catch {
+                exportSingle(list, 'All');
+              }
+            }
+
+            // Convert to ArrayBuffer and restyle HM sheets with ExcelJS (for cell fills)
+            const arrayBuf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+            const wbStyled = new ExcelJS.Workbook();
+            await wbStyled.xlsx.load(arrayBuf as ArrayBuffer);
+            const hexToARGB = (hex: string) => { const s = (hex||'').replace('#',''); return (s.length===6 ? `FF${s}` : s).toUpperCase(); };
+            const styleBorder = { style: 'thin', color: { argb: 'FFCCCCCC' } } as const;
+            wbStyled.worksheets.forEach(ws => {
+              if (!ws.name.startsWith('HM ')) return;
+              const colCount = ws.columnCount;
+              const rowCount = ws.rowCount;
+              for (let r = 2; r <= rowCount; r++) {
+                const lVal = ws.getCell(r, 1).value as any;
+                const l = Number.parseInt(String((lVal && (lVal.text || lVal.richText ? ws.getCell(r,1).text : lVal))));
+                for (let c = 2; c <= colCount; c++) {
+                  const iVal = ws.getCell(1, c).value as any;
+                  const impact = Number.parseInt(String((iVal && (iVal.text || iVal.richText ? ws.getCell(1,c).text : iVal))));
+                  if (!Number.isFinite(l) || !Number.isFinite(impact)) continue;
+                  const riskVal = l * impact;
+                  const lvl = resolveLevel(riskVal, activeCfg.residualRisk.thresholds);
+                  const color = lvl?.color || '';
+                  const cell = ws.getCell(r, c);
+                  if (color) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToARGB(color) } } as any;
+                  }
+                  cell.alignment = { horizontal: 'center', vertical: 'middle' } as any;
+                  cell.font = { bold: true, color: { argb: 'FF000000' } } as any;
+                  cell.border = { top: styleBorder, left: styleBorder, right: styleBorder, bottom: styleBorder } as any;
+                }
+              }
+              for (let c = 1; c <= colCount; c++) ws.getColumn(c).width = c===1 ? 14 : 6;
+              for (let r = 1; r <= rowCount; r++) ws.getRow(r).height = 22;
+              ws.getRow(1).eachCell(cell => { cell.font = { ...(cell.font||{}), bold: true } as any; cell.alignment = { horizontal: 'center', vertical: 'middle' } as any; });
+              for (let r=2; r<=rowCount; r++) { const cell = ws.getCell(r,1); cell.font = { ...(cell.font||{}), bold: true } as any; cell.alignment = { horizontal: 'center', vertical: 'middle' } as any; }
+            });
+            const buf = await wbStyled.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'fieldwork.xlsx'; a.click();
+            URL.revokeObjectURL(url);
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
 
-      {(selectedProcess && selectedSubprocess) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
+      {(selectedProject) || statusFilter === 'Rejected' || statusFilter === 'Approved' ? (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Activities → Risks → Controls</CardTitle>
@@ -456,16 +1367,19 @@ export default function FieldworkDashboard() {
               <table className="w-full text-sm table-fixed">
                 <thead className="bg-slate-50 sticky top-0 z-10">
                   <tr>
+                    <th className="text-left p-3 w-64">Process</th>
+                    <th className="text-left p-3 w-64">Subprocess</th>
                     <th className="text-left p-3 w-64">Activity</th>
                     <th className="text-left p-3 w-64">Risk</th>
                     <th className="text-left p-3 w-64">Control</th>
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (<th className="text-left p-3 w-40">Likelihood</th>)}
+                    {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (<th className="text-left p-3 w-40">Consequence</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Risk Score</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Control Score</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Residual Risk</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-40">Risk Level</th>)}
+                    {!riskDisabled && (<th className="text-left p-3 w-24">Color</th>)}
                     <th className="text-left p-3 w-64">Control Owner</th>
-                    <th className="text-left p-3 w-40">Likelihood</th>
-                    <th className="text-left p-3 w-40">Consequence</th>
-                    <th className="text-left p-3 w-40">Risk Score</th>
-                    <th className="text-left p-3 w-40">Control Score</th>
-                    <th className="text-left p-3 w-40">Residual Risk</th>
-                    <th className="text-left p-3 w-40">Risk Level</th>
                     <th className="text-left p-3 w-64">Test of Control</th>
                     <th className="text-left p-3 w-64">Substantive Procedure</th>
                     <th className="text-left p-3 w-64">Sampling Applicable?</th>
@@ -480,116 +1394,243 @@ export default function FieldworkDashboard() {
                     <th className="text-left p-3 w-64">Effect</th>
                     <th className="text-left p-3 w-64">Recommendation</th>
                     <th className="text-left p-3 w-64">Annexure</th>
-                    <th className="text-left p-3 w-64">Submit for review</th>
+                    <th className="text-left p-3 w-64">
+                      <div className="flex flex-col gap-1">
+                        <span>Submit for review</span>
+                        <Button size="xs" variant="outline" onClick={() => {
+                          const cfg = activeCfg;
+                          const all = displayedRows.slice();
+                          for (const row of all) {
+                            const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                            const existing = FieldworkStore.get(recKey);
+                            const statusNow = existing?.status || 'draft';
+                            const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                            if (projectLocked || (cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk)) continue;
+                            FieldworkStore.ensure(recKey, () => ({
+                              controlId: row.id,
+                              projectId: selectedProject || undefined,
+                              status: 'draft',
+                              progress: 0,
+                              activeTab: 0,
+                              env: { alternativeControl: '', altControlCategory: '', responsibility: '', riskAssociated: '', controlNature: '' },
+                              methodology: { methodType: '', procedure: '', verification: '', samplingMethod: '', implementationConclusion: '' },
+                              effectiveness: { effectiveness: '', designConclusion: '', automated: '', rating: '' },
+                              remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
+                              report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
+                            }));
+                            const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                            const baseRemark = (row.auditRemarks || '').trim();
+                            const auditRemarkToSave = revised || baseRemark;
+                            if (statusNow === 'rejected' && auditRemarkToSave) {
+                              FieldworkStore.addAuditRemark(recKey, (user?.username || 'User'), auditRemarkToSave);
+                            }
+                            const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
+                            let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
+                            if (cfg.residualRisk.constraintResidualLEQRisk) {
+                              residual = Math.min(residual, riskValue);
+                            }
+                            const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
+                            const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
+                            FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
+                              arc: {
+                                activity: row.activity,
+                                risk: row.risk,
+                                control: row.control,
+                                testOfControl: row.testOfControl,
+                                substantiveProcedure: row.substantiveProcedure,
+                                samplingApplicable: (row.samplingApplicable as any) || '',
+                                samplingMethodology: (row.samplingMethodology as any) || '',
+                                controlEffective: (row.controlEffectiveness as any) || '',
+                                controlOwner: row.controlOwner || '',
+                                attachments: row.attachments,
+                                auditRemarks: auditRemarkToSave,
+                                redFlag: (row.redFlag as any) || '',
+                                reportable: (row.reportable as any) || '',
+                                observationRanking: row.observationRanking,
+                                auditObservation: row.auditObservation,
+                                effect: row.effect,
+                                recommendation: row.recommendation,
+                                annexure: row.annexure,
+                              },
+                              risk: {
+                                mode: cfg.riskScore.mode,
+                                likelihood: row.likelihood,
+                                consequence: row.consequence,
+                                riskScore: riskValue,
+                                controlScore: row.controlScore,
+                                residualRisk: residual,
+                                riskLevel: rLevel,
+                                residualLevel: rrLevel,
+                                overridden: false,
+                                lastCalculatedAt: new Date().toISOString()
+                              }
+                            });
+                            FieldworkStore.submitForReview(recKey);
+                          }
+                          setRecords(FieldworkStore.getAll());
+                          setSubmitAckOpen(true);
+                        }}>Submit all</Button>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedRows.map((row) => (
-                    <tr key={row.id} className={`border-t ${records[row.id]?.status === 'rejected' ? 'bg-red-50' : ''}`}>
+                  {displayedRows.map((row, idx) => (
+                    <tr key={`${selectedProject || 'GLOBAL'}|${row.id}|${idx}`} className={`border-t ${(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'bg-red-50' : ''}`}>
+                      <td className="p-3 align-top w-64 break-words">{row.process || '-'}</td>
+                      <td className="p-3 align-top w-64 break-words">{row.subprocess || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.activity || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.risk || '-'}</td>
                       <td className="p-3 align-top w-64 break-words">{row.control || '-'}</td>
-                      <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
-                      </td>
-                      {/* Likelihood */}
-                      <td className="p-3 align-top w-40 break-words">
-                        {RiskConfigStore.getGlobal().riskScore.mode === 'likelihood_consequence' ? (
-                          records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
-                            <span>{records[row.id]?.risk?.likelihood ?? '-'}</span>
-                          ) : (
-                            <Input type="number" value={row.likelihood}
-                              onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: Number(e.target.value) } : r))}
-                            />
-                          )
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      {/* Consequence */}
-                      <td className="p-3 align-top w-40 break-words">
-                        {RiskConfigStore.getGlobal().riskScore.mode === 'likelihood_consequence' ? (
-                          records[row.id]?.status && records[row.id]?.status !== 'draft' && records[row.id]?.status !== 'submitted' ? (
-                            <span>{records[row.id]?.risk?.consequence ?? '-'}</span>
-                          ) : (
-                            <Input type="number" value={row.consequence}
-                              onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: Number(e.target.value) } : r))}
-                            />
-                          )
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
+                      {activeCfg.riskScore.mode === 'likelihood_consequence' && !riskDisabled && (
+                        <>
+                          {/* Likelihood */}
+                          <td className="p-3 align-top w-40 break-words">
+                            {(() => { const key = selectedProject ? `${selectedProject}|${row.id}` : row.id; const st = records[key]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                              <span>{records[key]?.risk?.likelihood ?? '-'}</span>
+                            ); } return (
+                              <Input type="number" step={1} min={activeCfg.riskScore.likelihood?.scale.min} max={activeCfg.riskScore.likelihood?.scale.max} value={Number.isFinite(Number(row.likelihood)) ? row.likelihood : (activeCfg.riskScore.likelihood?.scale.min ?? 1)}
+                                onChange={(e)=> { const min = activeCfg.riskScore.likelihood?.scale.min ?? 1; const max = activeCfg.riskScore.likelihood?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, likelihood: nv } : r)); }}
+                              />
+                            ); })()}
+                          </td>
+                          {/* Consequence */}
+                          <td className="p-3 align-top w-40 break-words">
+                            {(() => { const key = selectedProject ? `${selectedProject}|${row.id}` : row.id; const st = records[key]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                              <span>{records[key]?.risk?.consequence ?? '-'}</span>
+                            ); } return (
+                              <Input type="number" step={1} min={activeCfg.riskScore.consequence?.scale.min} max={activeCfg.riskScore.consequence?.scale.max} value={Number.isFinite(Number(row.consequence)) ? row.consequence : (activeCfg.riskScore.consequence?.scale.min ?? 1)}
+                                onChange={(e)=> { const min = activeCfg.riskScore.consequence?.scale.min ?? 1; const max = activeCfg.riskScore.consequence?.scale.max ?? 5; const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, consequence: nv } : r)); }}
+                              />
+                            ); })()}
+                          </td>
+                        </>
+                      )}
                       {/* Risk Score */}
+                      {!riskDisabled && (
                       <td className="p-3 align-top w-40 break-words">
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
-                          const status = records[row.id]?.status || 'draft';
-                          // Allow editing risk score for draft/submitted rows
-                          if (status === 'draft' || status === 'submitted') {
-                            return (
-                              <Input type="number" value={row.riskScore}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: Number(e.target.value) } : r))}
-                              />
-                            );
-                          }
-                          // Read-only display for finalized rows
+                          const cfg = activeCfg;
+                          const status = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
                           if (cfg.riskScore.mode === 'single') {
-                            return <span>{records[row.id]?.risk?.riskScore ?? '-'}</span>;
+                            const min = cfg.riskScore.scale.min; const max = cfg.riskScore.scale.max;
+                            const pickColor = (val: number) => {
+                              const ranges = cfg.residualRisk?.thresholds?.ranges || [];
+                              if (ranges.length > 0) {
+                                for (let i=0;i<ranges.length;i++) {
+                                  const r = ranges[i];
+                                  if (val >= r.from && val <= r.to) {
+                                    return r.color || cfg.residualRisk.thresholds?.heatmapColors?.[r.label];
+                                  }
+                                }
+                              }
+                              const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
+                              labels.sort((a,b)=>a.value-b.value);
+                              let chosen = labels[0];
+                              for (const l of labels) { if (val >= l.value) chosen = l; }
+                              return chosen?.color;
+                            };
+                            if (!projectLocked && status !== 'submitted' && status !== 'approved' && status !== 'finalized') {
+                              const c = pickColor(row.riskScore);
+                              return (
+                                <span className="inline-flex items-center gap-2">
+                                  <Input type="number" step={1} min={min} max={max} value={Number.isFinite(Number(row.riskScore)) ? row.riskScore : min}
+                                    onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, riskScore: nv } : r)); }}
+                                  />
+                                  {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
+                                </span>
+                              );
+                            }
+                            const v = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.risk?.riskScore ?? '-';
+                            const c = typeof v === 'number' ? pickColor(v) : undefined;
+                            return <span className="inline-flex items-center gap-2"><span>{v}</span>{c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}</span>;
                           }
-                          const v = records[row.id]?.risk?.riskScore ?? computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
-                          return <span>{v || 0}</span>;
+                          const v = computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                          const pickRiskColor = (val: number) => {
+                            const ranges = activeCfg.residualRisk?.thresholds?.ranges || [];
+                            if (ranges.length > 0) {
+                              for (let i=0;i<ranges.length;i++) {
+                                const r = ranges[i];
+                                if (val >= r.from && val <= r.to) {
+                                  return r.color || activeCfg.residualRisk.thresholds?.heatmapColors?.[r.label];
+                                }
+                              }
+                            }
+                            const labels = Array.isArray(cfg.riskScore.labels) ? [...cfg.riskScore.labels] : [];
+                            labels.sort((a,b)=>a.value-b.value);
+                            let chosen = labels[0];
+                            for (const l of labels) { if (val >= l.value) chosen = l; }
+                            return chosen?.color;
+                          };
+                          const rc = pickRiskColor(v || 0);
+                          return <span className="inline-flex items-center gap-2"><span>{v || 0}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
+                      )}
                       {/* Control Score */}
-                      <td className="p-3 align-top w-40 break-words">
+                      <td className={`p-3 align-top w-40 break-words ${riskDisabled ? 'hidden' : ''}`}>
                         {(() => {
-                          const status = records[row.id]?.status || 'draft';
-                          if (status === 'draft' || status === 'submitted') {
+                          const cfg = activeCfg;
+                          const status = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status || 'draft';
+                          const pickControlColor = (val: number) => {
+                            const labels = Array.isArray(cfg.controlScore.labels) ? [...cfg.controlScore.labels] : [];
+                            labels.sort((a,b)=>a.value-b.value);
+                            let chosen = labels[0];
+                            for (const l of labels) { if (val >= l.value) chosen = l; }
+                            return chosen?.color;
+                          };
+                          if (!projectLocked && status !== 'submitted' && status !== 'approved' && status !== 'finalized') {
+                            const min = cfg.controlScore.scale.min; const max = cfg.controlScore.scale.max;
+                            const c = pickControlColor(row.controlScore);
                             return (
-                              <Input type="number" value={row.controlScore}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: Number(e.target.value) } : r))}
-                              />
+                              <span className="inline-flex items-center gap-2">
+                                <Input type="number" step={1} min={min} max={max} value={Number.isFinite(Number(row.controlScore)) ? row.controlScore : min}
+                                  onChange={(e)=> { const nv = Math.max(min, Math.min(max, Math.round(Number(e.target.value||0)))); setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlScore: nv } : r)); }}
+                                />
+                                {c ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c }} /> : null}
+                              </span>
                             );
                           }
-                          return <span>{records[row.id]?.risk?.controlScore ?? '-'}</span>;
+                          const v = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.risk?.controlScore ?? '-';
+                          const cc = typeof v === 'number' ? pickControlColor(v) : undefined;
+                          return <span className="inline-flex items-center gap-2"><span>{v}</span>{cc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: cc }} /> : null}</span>;
                         })()}
                       </td>
                       {/* Residual Risk */}
-                      <td className="p-3 align-top w-40 break-words">
+                      <td className={`p-3 align-top w-40 break-words ${riskDisabled ? 'hidden' : ''}`}>
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
-                          const status = records[row.id]?.status || 'draft';
-                          // Allow editing residual risk for draft/submitted rows
-                          if (status === 'draft' || status === 'submitted') {
-                            return (
-                              <Input type="number" value={row.residualRisk}
-                                onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, residualRisk: Number(e.target.value) } : r))}
-                              />
-                            );
-                          }
+                          const cfg = activeCfg;
                           const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
                           const res = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
-                          return <span>{Math.round((res + Number.EPSILON) * 100) / 100}</span>;
+                          const lvl = getResidualLevel(res, cfg.residualRisk.thresholds);
+                          const rc = lvl?.color;
+                          const resDisplay = Number.isFinite(res) ? Math.round((res + Number.EPSILON) * 100) / 100 : 0;
+                          return <span className="inline-flex items-center gap-2"><span>{resDisplay}</span>{rc ? <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: rc }} /> : null}</span>;
                         })()}
                       </td>
                       {/* Risk Level */}
-                      <td className="p-3 align-top w-40 break-words">
+                      <td className={`p-3 align-top w-40 break-words ${riskDisabled ? 'hidden' : ''}`}>
                         {(() => {
-                          const cfg = RiskConfigStore.getGlobal();
-                          const status = records[row.id]?.status || 'draft';
-                          if (status !== 'draft' && status !== 'submitted') {
-                            return <span>{records[row.id]?.risk?.residualLevel || records[row.id]?.risk?.riskLevel || '-'}</span>;
-                          }
-                          const risk = (status === 'draft' || status === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
-                          const rl = resolveLevel(risk, cfg.residualRisk.thresholds);
-                          const rr = (status === 'draft' || status === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
-                          const rrl = resolveLevel(rr, cfg.residualRisk.thresholds);
-                          return <span>{rrl?.level || rl?.level || '-'}</span>;
+                          const cfg = activeCfg;
+                          const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence);
+                          const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale);
+                          const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds);
+                          return <span>{rrl?.level || 'Low'}</span>;
                         })()}
                       </td>
+                      {/* Color */}
+                      <td className={`p-3 align-top w-24 break-words ${riskDisabled ? 'hidden' : ''}`}>
+                        {(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const rr = computeResidual(cfg.residualRisk.formula, risk, row.controlScore, cfg.controlScore.scale); const rrl = getResidualLevel(rr, cfg.residualRisk.thresholds); return rrl?.color ? <span className="inline-block w-5 h-5 rounded" title={rrl?.level} style={{ backgroundColor: rrl.color }} /> : <span className="inline-block w-5 h-5 rounded bg-emerald-500" title="Low" />; })()}
+                      </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))}>
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.controlOwner || '-'}</span>
+                        ); } return (
+                          <Input value={row.controlOwner ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlOwner: e.target.value } : r))} placeholder="Control owner" />
+                        ); })()}
+                      </td>
+                      <td className="p-3 align-top w-64 break-words">
+                        <Select value={row.testOfControl} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, testOfControl: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -603,7 +1644,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.substantiveProcedure} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, substantiveProcedure: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -617,7 +1658,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))}>
+                        <Select value={row.samplingApplicable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => { const nv = v === '__CLEAR__' ? '' : v; return r.id === row.id ? { ...r, samplingApplicable: nv as any, samplingMethodology: nv === 'Yes' ? r.samplingMethodology : '' } : r; }))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -630,7 +1671,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes'}>
+                        <Select value={row.samplingMethodology} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, samplingMethodology: v === '__CLEAR__' ? '' : v } : r))} disabled={row.samplingApplicable !== 'Yes' || (() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder={row.samplingApplicable === 'Yes' ? 'Select' : 'Not applicable'} />
                           </SelectTrigger>
@@ -644,7 +1685,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.controlEffectiveness} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, controlEffectiveness: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -658,14 +1699,54 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.attachments ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, attachments: e.target.value } : r))} placeholder="Paste link or text" />
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.attachments || '-'}</span>
+                        ); } return (
+                          <Input value={row.attachments ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, attachments: e.target.value } : r))} placeholder="Paste link or text" />
+                        ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.auditRemarks ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditRemarks: e.target.value } : r))} placeholder="Type remarks" />
+                        {(() => { const key = selectedProject ? `${selectedProject}|${row.id}` : row.id; const st = records[key]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.auditRemarks || '-'}</span>
+                        ); } return (
+                          <Input value={row.auditRemarks ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditRemarks: e.target.value } : r))} placeholder="Type remarks" />
+                        ); })()}
                         {(() => { const cfg = RiskConfigStore.getGlobal(); const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); const invalid = cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; return invalid ? <div className="text-xs text-red-600 mt-1">Control Score cannot exceed Risk Score</div> : null; })()}
+                        {(() => {
+                          const key = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                          const hist = records[key]?.auditRemarksHistory || [];
+                          if (hist.length === 0) return null;
+                          const last = hist[hist.length - 1];
+                          return (
+                            <div className="mt-2">
+                              <div className="inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm bg-slate-50 border border-slate-200 text-slate-800">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="break-words">{last.content}</div>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 border border-slate-300 text-slate-700" title="Audit remark count">×{hist.length}</button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-2">
+                                      <div className="text-xs font-medium mb-1">Past audit remarks</div>
+                                      <div className="space-y-2 max-h-64 overflow-auto">
+                                        {hist.slice().reverse().map((h, i) => (
+                                          <div key={i} className="p-2 border rounded bg-slate-50 text-slate-800">
+                                            <div className="break-words">{h.content}</div>
+                                            <div className="mt-1 text-[10px] text-slate-600">��� {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                <div className="mt-1 text-xs text-slate-600 opacity-80">— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.redFlag} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, redFlag: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -679,7 +1760,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.reportable} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, reportable: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -693,7 +1774,7 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))}>
+                        <Select value={row.observationRanking} onValueChange={(v)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, observationRanking: v === '__CLEAR__' ? '' : v } : r))} disabled={(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; return projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized'; })()}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -707,31 +1788,47 @@ export default function FieldworkDashboard() {
                         </Select>
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.auditObservation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditObservation: e.target.value } : r))} placeholder="Type observation" />
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.auditObservation || '-'}</span>
+                        ); } return (
+                          <Input value={row.auditObservation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, auditObservation: e.target.value } : r))} placeholder="Type observation" />
+                        ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.effect ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, effect: e.target.value } : r))} placeholder="Describe effect" />
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.effect || '-'}</span>
+                        ); } return (
+                          <Input value={row.effect ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, effect: e.target.value } : r))} placeholder="Describe effect" />
+                        ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.recommendation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, recommendation: e.target.value } : r))} placeholder="Recommendation" />
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.recommendation || '-'}</span>
+                        ); } return (
+                          <Input value={row.recommendation ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, recommendation: e.target.value } : r))} placeholder="Recommendation" />
+                        ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        <Input value={row.annexure ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, annexure: e.target.value } : r))} placeholder="Annexure ref/link" />
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (projectLocked || st === 'submitted' || st === 'approved' || st === 'finalized') { return (
+                          <span>{row.annexure || '-'}</span>
+                        ); } return (
+                          <Input value={row.annexure ?? ''} onChange={(e)=> setMatrixRows(prev => prev.map(r => r.id === row.id ? { ...r, annexure: e.target.value } : r))} placeholder="Annexure ref/link" />
+                        ); })()}
                       </td>
                       <td className="p-3 align-top w-64 break-words">
-                        {((records[row.id]?.status === 'submitted') || submittedIds.has(row.id)) ? (
+                        {(() => { const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status; if (st === 'submitted') { return (
                           <Button size="sm" variant="default" className="bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-md focus-visible:ring-2 focus-visible:ring-green-400 transition" disabled>
                             <CheckCircle2 className="h-3 w-3 mr-2" /> Submitted for Review
                           </Button>
-                        ) : (
+                        ); } if (st === 'approved') { return (
                           <Button
                             size="sm"
                             variant="default"
                             className="bg-gradient-to-b from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 active:scale-[0.98] shadow-md hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 transition"
-                            disabled={(() => { const cfg = RiskConfigStore.getGlobal(); const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); return cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk; })()}
                             onClick={() => {
                               const cfg = RiskConfigStore.getGlobal();
-                              FieldworkStore.ensure(row.id, () => ({
+                              const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                              FieldworkStore.ensure(recKey, () => ({
                                 controlId: row.id,
                                 status: 'draft',
                                 progress: 0,
@@ -742,7 +1839,8 @@ export default function FieldworkDashboard() {
                                 remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
                                 report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
                               }));
-                              const statusNow = records[row.id]?.status || 'draft';
+                              const existing = FieldworkStore.get(recKey);
+                              const statusNow = existing?.status || 'draft';
                               const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
                               let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
                               if (cfg.residualRisk.constraintResidualLEQRisk) {
@@ -750,7 +1848,10 @@ export default function FieldworkDashboard() {
                               }
                               const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
                               const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
-                              FieldworkStore.patch(row.id, {
+                              const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                              const baseRemark = (row.auditRemarks || '').trim();
+                              const auditRemarkToSave = revised || baseRemark;
+                              FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
                                 arc: {
                                   activity: row.activity,
                                   risk: row.risk,
@@ -762,7 +1863,7 @@ export default function FieldworkDashboard() {
                                   controlEffective: (row.controlEffectiveness as any) || '',
                                   controlOwner: row.controlOwner || '',
                                   attachments: row.attachments,
-                                  auditRemarks: row.auditRemarks,
+                                  auditRemarks: auditRemarkToSave,
                                   redFlag: (row.redFlag as any) || '',
                                   reportable: (row.reportable as any) || '',
                                   observationRanking: row.observationRanking,
@@ -784,32 +1885,137 @@ export default function FieldworkDashboard() {
                                   lastCalculatedAt: new Date().toISOString()
                                 }
                               });
-                              FieldworkStore.submitForReview(row.id);
+                              FieldworkStore.submitForReview(recKey);
                               setRecords(FieldworkStore.getAll());
-                              setSubmittedIds(prev => new Set(prev).add(row.id));
                               setSubmitAckOpen(true);
                             }}
                           >
-                            <Share2 className="h-3 w-3 mr-2" /> Submit for review
+                            <Share2 className="h-3 w-3 mr-2" /> Resubmit for review
                           </Button>
-                        )}
-                        {(records[row.id]?.status === 'rejected' && statusFilter === 'Rejected') || (records[row.id]?.status === 'approved' && statusFilter === 'Approved') ? (
-                          <div className="mt-2">
-                            {(records[row.id]?.reviewHistory || []).slice(-1).map((c, idx) => (
-                              <div key={idx} className={`inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm ${records[row.id]?.status === 'rejected' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
-                                <div className="break-words">{c.content}</div>
-                                <div className={`mt-1 text-xs ${records[row.id]?.status === 'rejected' ? 'text-red-700' : 'text-green-700'} opacity-80`}>— {c.author}, {new Date(c.timestamp).toLocaleString()}</div>
+                        ); } if (projectLocked) { return (
+                          <Button size="sm" variant="outline" disabled>
+                            <CheckCircle2 className="h-3 w-3 mr-2" /> {projectStatus === 'completed' ? 'Completed' : 'On Hold'}
+                          </Button>
+                        ); } return (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-gradient-to-b from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 active:scale-[0.98] shadow-md hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 transition"
+                            disabled={(() => { const cfg = activeCfg; const risk = cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence); return projectLocked || (cfg.controlScore.constraintControlLEQRisk && row.controlScore > risk); })()}
+                            onClick={() => {
+                              const cfg = RiskConfigStore.getGlobal();
+                              const recKey = selectedProject ? `${selectedProject}|${row.id}` : row.id;
+                              FieldworkStore.ensure(recKey, () => ({
+                                controlId: row.id,
+                                status: 'draft',
+                                progress: 0,
+                                activeTab: 0,
+                                env: { alternativeControl: '', altControlCategory: '', responsibility: '', riskAssociated: '', controlNature: '' },
+                                methodology: { methodType: '', procedure: '', verification: '', samplingMethod: '', implementationConclusion: '' },
+                                effectiveness: { effectiveness: '', designConclusion: '', automated: '', rating: '' },
+                                remarks: { auditRemarks: '', reviewComments: '', revisedAuditRemarks: '', reviewStatus: '' },
+                                report: { observation: '', observationRanking: '', annexure: '', riskEffect: '', recommendation: '' }
+                              }));
+                              const existing = FieldworkStore.get(recKey);
+                              const statusNow = existing?.status || 'draft';
+                              const riskValue = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.riskScore) || computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence)) : (cfg.riskScore.mode === 'single' ? row.riskScore : computeRiskScore(cfg.riskScore.mode, row.likelihood, row.consequence));
+                              let residual = (statusNow === 'draft' || statusNow === 'submitted') ? (Number(row.residualRisk) || computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale)) : computeResidual(cfg.residualRisk.formula, riskValue, row.controlScore, cfg.controlScore.scale);
+                              if (cfg.residualRisk.constraintResidualLEQRisk) {
+                                residual = Math.min(residual, riskValue);
+                              }
+                              const rLevel = resolveLevel(riskValue, cfg.residualRisk.thresholds)?.level || '';
+                              const rrLevel = resolveLevel(residual, cfg.residualRisk.thresholds)?.level || '';
+                              const revised = (existing?.remarks?.revisedAuditRemarks || '').trim();
+                              const baseRemark = (row.auditRemarks || '').trim();
+                              const auditRemarkToSave = revised || baseRemark;
+                              if (statusNow === 'rejected' && auditRemarkToSave) {
+                                FieldworkStore.addAuditRemark(recKey, (user?.username || 'User'), auditRemarkToSave);
+                              }
+                              FieldworkStore.patch(recKey, { projectId: selectedProject || undefined,
+                                arc: {
+                                  activity: row.activity,
+                                  risk: row.risk,
+                                  control: row.control,
+                                  testOfControl: row.testOfControl,
+                                  substantiveProcedure: row.substantiveProcedure,
+                                  samplingApplicable: (row.samplingApplicable as any) || '',
+                                  samplingMethodology: (row.samplingMethodology as any) || '',
+                                  controlEffective: (row.controlEffectiveness as any) || '',
+                                  controlOwner: row.controlOwner || '',
+                                  attachments: row.attachments,
+                                  auditRemarks: auditRemarkToSave,
+                                  redFlag: (row.redFlag as any) || '',
+                                  reportable: (row.reportable as any) || '',
+                                  observationRanking: row.observationRanking,
+                                  auditObservation: row.auditObservation,
+                                  effect: row.effect,
+                                  recommendation: row.recommendation,
+                                  annexure: row.annexure,
+                                },
+                                risk: {
+                                  mode: cfg.riskScore.mode,
+                                  likelihood: row.likelihood,
+                                  consequence: row.consequence,
+                                  riskScore: riskValue,
+                                  controlScore: row.controlScore,
+                                  residualRisk: residual,
+                                  riskLevel: rLevel,
+                                  residualLevel: rrLevel,
+                                  overridden: false,
+                                  lastCalculatedAt: new Date().toISOString()
+                                }
+                              });
+                              FieldworkStore.submitForReview(recKey);
+                              setRecords(FieldworkStore.getAll());
+                              setSubmitAckOpen(true);
+                            }}
+                          >
+                            <Share2 className="h-3 w-3 mr-2" /> {(records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status) === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
+                          </Button>
+                        ); })()}
+                        {(() => {
+                          const hist = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.reviewHistory || [];
+                          if (hist.length === 0) return null;
+                          const last = hist[hist.length - 1];
+                          const st = records[selectedProject ? `${selectedProject}|${row.id}` : row.id]?.status;
+                          const rejCount = hist.filter(h => (h.content || '').startsWith('Rejected')).length;
+                          return (
+                            <div className="mt-2">
+                              <div className={`inline-block max-w-xs px-3 py-2 rounded-lg shadow-sm ${st === 'rejected' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="break-words">{last.content}</div>
+                                  {rejCount > 0 ? (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button className={`ml-2 inline-flex items-center justify-center rounded-full text-xs px-2 py-0.5 ${st === 'rejected' ? 'border border-red-300 text-red-700' : 'border border-green-300 text-green-700'}`} title="Times rejected">
+                                          ×{rejCount}
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-80 p-2">
+                                        <div className="text-xs font-medium mb-1">Past rejection comments</div>
+                                        <div className="space-y-2 max-h-64 overflow-auto">
+                                          {hist.filter(h => (h.content || '').startsWith('Rejected')).map((h, i) => (
+                                            <div key={i} className="p-2 border rounded bg-red-50 text-red-800">
+                                              <div className="break-words">{h.content}</div>
+                                              <div className="mt-1 text-[10px] text-red-700">�� {h.author}, {new Date(h.timestamp).toLocaleString()}</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  ) : null}
+                                </div>
+                                <div className={`mt-1 text-xs ${st === 'rejected' ? 'text-red-700' : 'text-green-700'} opacity-80`}>— {last.author}, {new Date(last.timestamp).toLocaleString()}</div>
                               </div>
-                            ))}
-                            {(!records[row.id]?.reviewHistory || (records[row.id]?.reviewHistory?.length || 0) === 0) && <div className="text-sm text-slate-500">No review comments</div>}
-                          </div>
-                        ) : null}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
                   {displayedRows.length === 0 && (
                     <tr>
-                      <td colSpan={25} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected process/subprocess'}</td>
+                      <td colSpan={27} className="p-6 text-center text-slate-500">{statusFilter==='Rejected' ? 'No rejected rows' : 'No data for selected project'}</td>
                     </tr>
                   )}
                 </tbody>
@@ -819,6 +2025,97 @@ export default function FieldworkDashboard() {
         </Card>
       ) : null}
 
+      <Dialog open={projDetailsOpen} onOpenChange={setProjDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Details</DialogTitle>
+          </DialogHeader>
+          {selectedProj ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Project Code</div>
+                  <div className="font-medium">{selectedProj.code || selectedProj.data?.projectCode || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Status</div>
+                  <div className="font-medium">{String(selectedProj.status||'') === 'completed' ? 'Completed' : String(selectedProj.status||'') === 'in-progress' ? 'In Progress' : String(selectedProj.status||'') === 'hold' ? 'Hold' : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Client</div>
+                  <div className="font-medium">{selectedProj.clientName || selectedProj.data?.clientName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Project Name</div>
+                  <div className="font-medium">{selectedProj.name || selectedProj.data?.projectName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Division</div>
+                  <div className="font-medium">{selectedProj.data?.division || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Nature of Assignment</div>
+                  <div className="font-medium">{selectedProj.data?.auditType || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Reporting Frequency</div>
+                  <div className="font-medium">{selectedProj.data?.reportingFrequency || '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Project Description</div>
+                <div className="font-medium whitespace-pre-wrap">{selectedProj.data?.description || '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Start Date</div>
+                  <div className="font-medium">{formatDate(selectedProj.startDate || selectedProj.data?.startDate)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">End Date</div>
+                  <div className="font-medium">{formatDate(selectedProj.endDate || selectedProj.data?.endDate)}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Progress</div>
+                <div className="text-sm">{selectedProj.data?.progress != null ? `${selectedProj.data?.progress}%` : '-'}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Division Heads</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.divisionHeads) && selectedProj.data?.divisionHeads.length ? selectedProj.data?.divisionHeads.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Partners</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.partners) && selectedProj.data?.partners.length ? selectedProj.data?.partners.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Leaders</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.teamLeaders) && selectedProj.data?.teamLeaders.length ? selectedProj.data?.teamLeaders.join(', ') : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Team Members</div>
+                  <div className="text-sm">{Array.isArray(selectedProj.data?.teamMembers) && selectedProj.data?.teamMembers.length ? selectedProj.data?.teamMembers.join(', ') : '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Audit Universe</div>
+                <div className="text-sm">{Array.isArray(selectedProj.data?.auditUniverse) && selectedProj.data?.auditUniverse.length ? selectedProj.data?.auditUniverse.join(', ') : '-'}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Scope Notes</div>
+                <div className="text-sm whitespace-pre-wrap">{selectedProj.data?.scopeNotes || '-'}</div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={openFW && !!record} onOpenChange={setOpenFW}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">

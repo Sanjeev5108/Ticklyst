@@ -13,10 +13,20 @@ import {
   createChecklistQuestion,
   getClients,
   createClient,
+  deleteAllClients,
   getProjects,
   createProject,
-  addComment
+  deleteAllProjects,
+  addComment,
+  updateClient,
+  setClientPurgeStatus
 } from "./routes/auditing";
+import { getEmployees, createEmployee, deleteAllEmployees, updateEmployee, setEmployeeStatus } from "./routes/employees";
+import { login, forgotPassword, resetPassword } from "./routes/auth";
+import { getSetting, setSetting } from "./routes/settings";
+import { getFrameworkTree, createFrameworkNode, updateFrameworkNode, deleteFrameworkNode, downloadFrameworkTemplate, importFrameworkRows } from "./routes/framework";
+import { initProjectProgressScheduler } from "./routes/auditing";
+import { getAllFieldwork, getFieldworkById, upsertFieldwork, bulkUpsertFieldwork } from "./routes/fieldwork";
 
 export function createServer() {
   const app = express();
@@ -33,6 +43,36 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Employees (persisted to Postgres)
+  app.get('/api/employees', getEmployees);
+  app.post('/api/employees', createEmployee);
+  app.put('/api/employees/:id', updateEmployee);
+  app.patch('/api/employees/:id/status', setEmployeeStatus);
+  app.delete('/api/employees', deleteAllEmployees);
+
+  // Auth
+  app.post('/api/auth/login', login);
+  app.post('/api/auth/forgot', forgotPassword);
+  app.post('/api/auth/reset', resetPassword);
+
+  // Settings persistence
+  app.get('/api/settings/:key', getSetting);
+  app.post('/api/settings/:key', setSetting);
+
+  // Framework
+  app.get('/api/framework/tree', getFrameworkTree);
+  app.post('/api/framework/nodes', createFrameworkNode);
+  app.put('/api/framework/nodes/*', updateFrameworkNode);
+  app.delete('/api/framework/nodes/*', deleteFrameworkNode);
+  app.get('/api/framework/template', downloadFrameworkTemplate);
+  app.post('/api/framework/import-rows', importFrameworkRows);
+
+  // Fieldwork persistence
+  app.get('/api/fieldwork', getAllFieldwork);
+  app.get('/api/fieldwork/:id', getFieldworkById);
+  app.put('/api/fieldwork/:id', upsertFieldwork);
+  app.post('/api/fieldwork/bulk', bulkUpsertFieldwork);
 
   // Auditing System API Routes
 
@@ -53,13 +93,20 @@ export function createServer() {
   // Clients
   app.get("/api/clients", getClients);
   app.post("/api/clients", createClient);
+  app.put('/api/clients/:id', updateClient);
+  app.patch('/api/clients/:id/purge', setClientPurgeStatus);
+  app.delete("/api/clients", deleteAllClients as any);
 
   // Projects
   app.get("/api/projects", getProjects);
   app.post("/api/projects", createProject);
+  app.delete("/api/projects", deleteAllProjects);
 
   // Comments
   app.post("/api/projects/:projectId/checklist/:checklistItemId/comments", addComment);
+
+  // Background schedulers
+  initProjectProgressScheduler();
 
   return app;
 }

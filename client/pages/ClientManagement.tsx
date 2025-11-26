@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Plus, 
-  Search, 
-  Building2, 
-  MapPin, 
-  Globe, 
+import {
+  Plus,
+  Search,
+  Building2,
+  MapPin,
+  Globe,
   Star,
   Users,
   Calendar,
@@ -23,8 +23,13 @@ import {
   Filter,
   Grid3x3,
   List,
-  Upload
+  Upload,
+  Rows3,
+  Columns2,
+  Download
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface ContactPerson {
   name: string;
@@ -39,6 +44,7 @@ interface Client {
   sector?: string;
   industry?: string;
   location: string;
+  isPurged?: boolean;
   city: string;
   state: string;
   pincode: string;
@@ -64,6 +70,42 @@ interface Client {
     progressPercentage: number;
   };
   createdAt: string;
+}
+
+const defaultStats = { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 };
+
+function normalizeClient(c: any): Client {
+  const contactPersons = Array.isArray(c?.contactPersons) && c.contactPersons.length
+    ? c.contactPersons
+    : (c?.contactPerson ? [c.contactPerson] : [{ name: '', designation: '', email: '', mobile: '' }]);
+  const contactPerson = c?.contactPerson || contactPersons[0] || { name: '', designation: '', email: '', mobile: '' };
+  const au = c?.auditUniverse || { units: [], departments: [], additionalDepartments: {} };
+  const isPurged = !!(c?.isPurged || (c?.details && (c as any).details?.isPurged));
+  return {
+    id: String(c?.id ?? ''),
+    name: c?.name || '',
+    industry: c?.industry || c?.sector || '',
+    sector: c?.sector || c?.industry || '',
+    location: c?.location || `${c?.city || ''}${c?.city ? ', ' : ''}${c?.state || ''}`,
+    isPurged,
+    city: c?.city || '',
+    state: c?.state || '',
+    pincode: c?.pincode || '',
+    street1: c?.street1 || '',
+    street2: c?.street2 || '',
+    website: c?.website || '',
+    logo: c?.logo || '',
+    contactPersons,
+    contactPerson,
+    auditUniverse: {
+      units: au.units || [],
+      departments: au.departments || [],
+      additionalDepartments: au.additionalDepartments || {},
+      sections: au.sections || undefined,
+    },
+    stats: c?.stats || defaultStats,
+    createdAt: typeof c?.createdAt === 'string' && c.createdAt ? c.createdAt.slice(0,10) : new Date().toISOString().split('T')[0],
+  };
 }
 
 const mockClients: Client[] = [
@@ -217,6 +259,7 @@ const sectors = [
   'Textile', 'Automotive', 'Chemical', 'Construction', 'Education', 'Energy'
 ];
 const industryOptions = [...sectors];
+import IndustrySelect from '@/components/IndustrySelect';
 
 const unitOptions = [
   'Factory 1', 'Factory 2', 'Head Office', 'Branch Office', 'Warehouse',
@@ -227,6 +270,7 @@ const departmentOptions = [
   'Production', 'Quality Control', 'Finance', 'Human Resources', 'Marketing',
   'Sales', 'IT', 'Supply Chain', 'Research & Development', 'Legal'
 ];
+
 
 const UnitsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
   const [open, setOpen] = React.useState(false);
@@ -249,7 +293,7 @@ const UnitsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: 
     toggle(name);
     setNewUnit('');
   };
-  const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e:any) => { e.stopPropagation(); };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -266,7 +310,7 @@ const UnitsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: 
             <CommandGroup heading="Units">
               {options.map(opt => (
                 <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
-                  <Checkbox className="mr-2" checked={value?.includes(opt)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(opt)} /> {opt}
+                  <Checkbox className="mr-2" checked={value?.includes(opt)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(opt)} /> {opt}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -309,7 +353,7 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
     toggle(name);
     setNewDept('');
   };
-  const stop = (e:any) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e:any) => { e.stopPropagation(); };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -326,7 +370,7 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
             <CommandGroup heading="Departments">
               {options.map(dep => (
                 <CommandItem key={dep} value={dep} onSelect={() => toggle(dep)}>
-                  <Checkbox className="mr-2" checked={value?.includes(dep)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(dep)} /> {dep}
+                  <Checkbox className="mr-2" checked={value?.includes(dep)} onPointerDown={stop} onMouseDown={stop} onClick={stop} onCheckedChange={() => toggle(dep)} /> {dep}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -349,11 +393,35 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
 };
 
 export default function ClientManagement() {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  const isValidEmail = (v: string) => emailRegex.test(String(v || '').trim());
+  const isValidMobile = (v: string) => /^\d{10,}$/.test(String(v || '').trim());
+  const [clients, setClients] = useState<Client[]>([]);
+  const apiEnabled = React.useMemo(() => {
+    try {
+      const forced = localStorage.getItem('api:enabled');
+      if (forced === 'true') return true;
+      if (forced === 'false') return false;
+    } catch {}
+    const h = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (h === 'localhost' || h === '127.0.0.1') return true;
+    if (h.endsWith('.netlify.app')) return true;
+    if (h.endsWith('.fly.dev')) return true;
+    return true;
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [newEmailErrors, setNewEmailErrors] = useState<Record<number, string>>({});
+  const [newMobileErrors, setNewMobileErrors] = useState<Record<number, string>>({});
   const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [filterStateVal, setFilterStateVal] = useState<string>('all');
+  const [filterName, setFilterName] = useState<string>('');
+  const [filterSector, setFilterSector] = useState<string>('all');
+  const [filterIndustry, setFilterIndustry] = useState<string>('all');
+  const allFields = ['Name','Industry','Location','City','State','Pincode','Website','Contact Name','Contact Email','Projects','Ongoing','Created At'] as const;
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
+  const [groupBy, setGroupBy] = useState<'none'|'industry'|'state'|'city'>('none');
 
   // New client form state
   const [newClient, setNewClient] = useState<Partial<Client>>({
@@ -374,6 +442,12 @@ export default function ClientManagement() {
       additionalDepartments: {}
     }
   });
+
+  const newClientNameExists = React.useMemo(() => {
+    const name = String(newClient.name || '').trim().toLowerCase();
+    if (!name) return false;
+    return clients.some(c => String(c.name || '').trim().toLowerCase() === name);
+  }, [newClient.name, clients]);
 
   const [auditSections, setAuditSections] = useState<{ unit: string[]; departments: string[] }[]>(() => {
     const au = ({} as any) || {};
@@ -402,6 +476,8 @@ export default function ClientManagement() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedClientDetails, setSelectedClientDetails] = useState<Client | null>(null);
   const [isEditClientOpen, setIsEditClientOpen] = useState(false);
+  const [editEmailErrors, setEditEmailErrors] = useState<Record<number, string>>({});
+  const [editMobileErrors, setEditMobileErrors] = useState<Record<number, string>>({});
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [editClient, setEditClient] = useState<Partial<Client>>({
     name: '',
@@ -419,15 +495,69 @@ export default function ClientManagement() {
   });
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSector = selectedSector === 'all' || client.sector === selectedSector;
-    return matchesSearch && matchesSector;
+    const term = (searchTerm || '').toLowerCase();
+    const name = (client.name || '').toLowerCase();
+    const location = (client.location || '').toLowerCase();
+    const matchesSearch = name.includes(term) || location.includes(term);
+    const matchesSector = selectedSector === 'all' || (client.sector || client.industry) === selectedSector;
+    const matchesState = filterStateVal === 'all' || (client.state || '').toLowerCase() === filterStateVal.toLowerCase();
+    const matchesName = !filterName || (client.name || '').toLowerCase().includes(filterName.toLowerCase());
+    const matchesFilterSector = filterSector === 'all' || (client.sector || client.industry || '').toLowerCase() === filterSector.toLowerCase();
+    const matchesIndustry = filterIndustry === 'all' || (client.industry || '').toLowerCase() === filterIndustry.toLowerCase();
+    return matchesSearch && matchesSector && matchesState && matchesName && matchesFilterSector && matchesIndustry;
   });
 
-  const handleAddClient = () => {
+  useEffect(() => {
+    (async () => {
+      try {
+        // Optimistic: seed from cache for instant dropdowns in other modules
+        try {
+          const cached = localStorage.getItem('clients');
+          if (cached) {
+            const parsed = JSON.parse(cached) as any[];
+            if (Array.isArray(parsed) && parsed.length && clients.length === 0) setClients(parsed.map(normalizeClient));
+          }
+        } catch {}
+        if (!apiEnabled) return;
+        const res = await fetch('/api/clients');
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: Client[] = (data || []).map((r: any) =>
+          normalizeClient({
+            ...r,
+            sector: r.sector || r.industry,
+            location: r.location || `${r.city || ''}${r.city ? ', ' : ''}${r.state || ''}`,
+          })
+        );
+          setClients(mapped);
+          try { localStorage.setItem('clients', JSON.stringify(mapped)); } catch {}
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const handleAddClient = async () => {
+    // Validate email/mobile only when provided (no longer mandatory)
+    const cps = newClient.contactPersons || [];
+    let hasError = false;
+    const emailErrs: Record<number, string> = {};
+    const mobileErrs: Record<number, string> = {};
+    cps.forEach((cp, idx) => {
+      const email = String(cp.email || '').trim();
+      const mobile = String(cp.mobile || '').trim();
+      const digits = mobile.replace(/\D/g, '');
+      const mustValidate = !!email || !!mobile; // only validate if a value is present
+      if (mustValidate) {
+        if (email && !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (mobile && !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+      }
+    });
+    setNewEmailErrors(emailErrs);
+    setNewMobileErrors(mobileErrs);
+    if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
     const firstContactName = (newClient.contactPersons && newClient.contactPersons[0] && newClient.contactPersons[0].name) || '';
-    if (!newClient.name || !firstContactName) return;
+    if (!newClient.name || !newClient.industry) return;
+    if (newClientNameExists) { toast({ title: 'Client already exist' }); return; }
 
     // Build auditUniverse from auditSections
     const sections = auditSections || [];
@@ -435,32 +565,61 @@ export default function ClientManagement() {
     const departments = Array.from(new Set(sections.flatMap(s => s.departments || [])));
     const additionalDepartments: { [unit: string]: string[] } = {};
 
-    const client: Client = {
-      id: Date.now().toString(),
-      name: newClient.name || '',
-      sector: newClient.sector || '',
-      industry: newClient.industry || '',
-      location: `${newClient.city || ''}, India`,
-      city: newClient.city || '',
-      state: newClient.state || '',
-      pincode: newClient.pincode || '',
-      street1: newClient.street1,
-      street2: newClient.street2,
-      website: newClient.website,
-      logo: newClient.logo,
-      contactPersons: newClient.contactPersons || [{ name: '', designation: '', email: '', mobile: '' }],
-      contactPerson: (newClient.contactPersons && newClient.contactPersons[0]) || { name: '', designation: '', email: '', mobile: '' },
-      auditUniverse: {
-        units,
-        departments,
-        additionalDepartments,
-        sections: sections.map(s => ({ unit: s.unit, departments: s.departments }))
-      },
-      stats: { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+    const payload = {
+      name: newClient.name,
+      industry: newClient.industry,
+      details: {
+        sector: newClient.sector || newClient.industry,
+        location: `${newClient.city || ''}${newClient.city ? ', ' : ''}${newClient.state || ''}`,
+        city: newClient.city || '',
+        state: newClient.state || '',
+        pincode: newClient.pincode || '',
+        street1: newClient.street1,
+        street2: newClient.street2,
+        website: newClient.website,
+        logo: newClient.logo,
+        contactPersons: newClient.contactPersons || [{ name: '', designation: '', email: '', mobile: '' }],
+        contactPerson: (newClient.contactPersons && newClient.contactPersons[0]) || { name: '', designation: '', email: '', mobile: '' },
+        auditUniverse: {
+          units,
+          departments,
+          additionalDepartments,
+          sections: sections.map(s => ({ unit: s.unit, departments: s.departments }))
+        },
+        stats: { projects: 0, ongoing: 0, revenue: '$0', rating: 0, progressPercentage: 0 },
+      }
+    } as any;
 
-    setClients([...clients, client]);
+    try {
+      const res = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (res.ok) {
+        const created = await res.json();
+        const nextClient: Client = {
+          id: created.id,
+          name: created.name,
+          industry: created.industry,
+          sector: created.sector || created.industry,
+          location: created.location || payload.details.location,
+          city: created.city || payload.details.city,
+          state: created.state || payload.details.state,
+          pincode: created.pincode || payload.details.pincode,
+          street1: created.street1 || payload.details.street1,
+          street2: created.street2 || payload.details.street2,
+          website: created.website || payload.details.website,
+          logo: created.logo || payload.details.logo,
+          contactPersons: created.contactPersons || payload.details.contactPersons,
+          contactPerson: created.contactPerson || payload.details.contactPerson,
+          auditUniverse: created.auditUniverse || payload.details.auditUniverse,
+          stats: created.stats || payload.details.stats,
+          createdAt: created.createdAt?.slice?.(0,10) || new Date().toISOString().split('T')[0],
+        };
+        setClients(prev => {
+          const updated = [...prev, nextClient];
+          try { localStorage.setItem('clients', JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+      }
+    } catch {}
     setNewClient({
       name: '',
       sector: '',
@@ -506,8 +665,24 @@ export default function ClientManagement() {
   };
 
   const handleUpdateClient = () => {
-    const firstContactName = (editClient.contactPersons && editClient.contactPersons[0] && editClient.contactPersons[0].name) || '';
-    if (!editClientId || !editClient.name || !firstContactName) return;
+    const cps = editClient.contactPersons || [];
+    let hasError = false;
+    const emailErrs: Record<number, string> = {};
+    const mobileErrs: Record<number, string> = {};
+    cps.forEach((cp, idx) => {
+      const email = String(cp.email || '').trim();
+      const mobile = String(cp.mobile || '').trim();
+      const digits = mobile.replace(/\D/g, '');
+      const mustValidate = !!email || !!mobile;
+      if (mustValidate) {
+        if (email && !isValidEmail(email)) { emailErrs[idx] = 'Please enter a valid email address (e.g., name@domain.com)'; hasError = true; }
+        if (mobile && !isValidMobile(digits)) { mobileErrs[idx] = 'Please enter a valid 10-digit mobile number'; hasError = true; }
+      }
+    });
+    setEditEmailErrors(emailErrs);
+    setEditMobileErrors(mobileErrs);
+    if (hasError) { toast({ title: 'Validation error', description: 'Fix email/mobile before saving' }); return; }
+    if (!editClientId || !editClient.name) return;
 
     const sections = auditSections || [];
     const units = Array.from(new Set(sections.flatMap(s => s.unit || [])));
@@ -541,57 +716,164 @@ export default function ClientManagement() {
       updatedObj = updated;
       return updated;
     });
+    const prevClients = clients;
     setClients(next);
     if (updatedObj) setSelectedClientDetails(updatedObj);
+
+    (async () => {
+      try {
+        const details = {
+          location: updatedObj?.location,
+          city: updatedObj?.city,
+          state: updatedObj?.state,
+          pincode: updatedObj?.pincode,
+          street1: updatedObj?.street1,
+          street2: updatedObj?.street2,
+          website: updatedObj?.website,
+          logo: updatedObj?.logo,
+          contactPersons: updatedObj?.contactPersons,
+          contactPerson: updatedObj?.contactPerson,
+          auditUniverse: updatedObj?.auditUniverse,
+          stats: updatedObj?.stats
+        };
+        if (apiEnabled && editClientId) {
+          const res = await fetch(`/api/clients/${encodeURIComponent(editClientId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: updatedObj?.name, industry: updatedObj?.industry || updatedObj?.sector, details }) });
+          if (!res.ok) {
+            // rollback
+            setClients(prevClients);
+            toast({ title: 'Failed to save client to server' });
+          } else {
+            const saved = await res.json();
+            const norm = normalizeClient({ ...saved, sector: saved.sector || saved.industry, location: saved.location || `${saved.city || ''}${saved.city ? ', ' : ''}${saved.state || ''}` });
+            setClients(prev => prev.map(c => c.id === norm.id ? norm : c));
+            try { localStorage.setItem('clients', JSON.stringify(prev.map(c => c.id === norm.id ? norm : c))); } catch {}
+            toast({ title: 'Client updated' });
+          }
+        } else {
+          try { localStorage.setItem('clients', JSON.stringify(next)); } catch {}
+          toast({ title: 'Client updated (local)' });
+        }
+      } catch (e) {
+        console.error(e);
+        setClients(prevClients);
+        toast({ title: 'Error saving client' });
+      }
+    })();
+
     setIsEditClientOpen(false);
   };
 
-  const ClientCard = ({ client }: { client: Client }) => (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-gray-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
-                {client.name}
-              </h3>
-              <p className="text-xs text-gray-500 flex items-center mt-1">
-                <MapPin className="h-3 w-3 mr-1" />
-                {client.location}
-              </p>
-            </div>
-          </div>
-        </div>
+  const handleDeleteAllClients = async () => {
+    try { await fetch('/api/clients', { method: 'DELETE' }); } catch {}
+    setClients([]);
+    try { localStorage.removeItem('clients'); } catch {}
+    toast({ title: 'All clients deleted' });
+  };
 
-        <div className="mb-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-6 mb-2">
-              <div>
-                <div className="text-2xl font-bold text-blue-600">{client.stats.projects}</div>
-                <p className="text-sm text-gray-600 font-medium">Projects</p>
+  const handleSetClientPurged = async (client: Client, isPurged: boolean) => {
+    const prev = clients;
+    const next = clients.map((c) =>
+      c.id === client.id ? { ...c, isPurged } : c,
+    );
+    setClients(next);
+    setSelectedClientDetails((curr) =>
+      curr && curr.id === client.id ? { ...curr, isPurged } : curr,
+    );
+    try {
+      try {
+        localStorage.setItem("clients", JSON.stringify(next));
+      } catch {}
+      if (apiEnabled) {
+        const res = await fetch(
+          `/api/clients/${encodeURIComponent(client.id)}/purge`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPurged }),
+          },
+        );
+        if (!res.ok) {
+          setClients(prev);
+          setSelectedClientDetails(client);
+          toast({ title: "Failed to update client status" });
+        } else {
+          const saved = await res.json();
+          const norm = normalizeClient(saved);
+          setClients((curr) => {
+            const updated = curr.map((c) => (c.id === norm.id ? norm : c));
+            try {
+              localStorage.setItem("clients", JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+          setSelectedClientDetails(norm);
+          toast({
+            title: isPurged ? "Client purged" : "Client restored",
+          });
+        }
+      }
+    } catch {
+      setClients(prev);
+      setSelectedClientDetails(client);
+      toast({ title: "Error updating client status" });
+    }
+  };
+
+  const ClientCard = ({ client }: { client: Client }) => {
+    const stats = client.stats || defaultStats;
+    return (
+      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                {client.logo ? (
+                  <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
+                ) : (
+                  <span className="text-lg font-semibold text-gray-600">
+                    {(client.name || '').trim().charAt(0) || 'C'}
+                  </span>
+                )}
               </div>
               <div>
-                <div className="text-2xl font-bold text-blue-600">{client.stats.ongoing}</div>
-                <p className="text-sm text-gray-600 font-medium">In Progress</p>
+                <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
+                  {client.name}
+                </h3>
+                <p className="text-xs text-gray-500 flex items-center mt-1">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {client.location}
+                </p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="text-xs">
-            {client.sector || client.industry}
-          </Badge>
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
-            View Details
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          <div className="mb-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-6 mb-2">
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.projects}</div>
+                  <p className="text-sm text-gray-600 font-medium">Projects</p>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.ongoing}</div>
+                  <p className="text-sm text-gray-600 font-medium">In Progress</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="text-xs">
+              {client.sector || client.industry}
+            </Badge>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
+              View Details
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -625,6 +907,9 @@ export default function ClientManagement() {
                   placeholder="Enter client name"
                   className="mt-1"
                 />
+                {newClientNameExists ? (
+                  <div className="text-xs text-red-600 mt-1">Client already exist.</div>
+                ) : null}
               </div>
 
               {/* Sector & Industry */}
@@ -643,17 +928,10 @@ export default function ClientManagement() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Industry</Label>
-                  <Select value={newClient.industry || ''} onValueChange={(value) => setNewClient({ ...newClient, industry: value })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {industryOptions.map(ind => (
-                        <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium">Industry <span className="text-red-500">*</span></Label>
+                  <div className="mt-1">
+                    <IndustrySelect value={newClient.industry || ''} onChange={(value) => setNewClient({ ...newClient, industry: value })} placeholder="Select industry" baseOptions={industryOptions} />
+                  </div>
                 </div>
               </div>
 
@@ -721,18 +999,33 @@ export default function ClientManagement() {
 
               {/* Client Logo */}
               <div>
-                <Label htmlFor="logo" className="text-sm font-medium">Client Logo</Label>
+                <Label htmlFor="logoNew" className="text-sm font-medium">Client Logo</Label>
                 <div className="mt-1 flex items-center gap-2">
                   <Input
-                    id="logo"
+                    id="logoNew"
                     type="file"
                     accept="image/*"
                     className="flex-1"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const dataUrl = String(reader.result || '');
+                        setNewClient(prev => ({ ...prev, logo: dataUrl }));
+                      };
+                      reader.readAsDataURL(file);
+                    }}
                   />
-                  <Button type="button" variant="outline" size="sm">
+                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logoNew')?.click()}>
                     <Upload className="h-4 w-4" />
                   </Button>
                 </div>
+                {newClient.logo ? (
+                  <div className="mt-2">
+                    <img src={newClient.logo} alt="Logo preview" className="h-10 w-auto rounded border" />
+                  </div>
+                ) : null}
               </div>
 
               {/* Audit Universe */}
@@ -806,25 +1099,52 @@ export default function ClientManagement() {
                               const next = [...(newClient.contactPersons || [])];
                               next[idx] = { ...next[idx], email: e.target.value };
                               setNewClient({ ...newClient, contactPersons: next, contactPerson: next[0] });
+                              const msg = e.target.value.trim() && !isValidEmail(e.target.value) ? 'Please enter a valid email address (e.g., name@domain.com)' : '';
+                              setNewEmailErrors(prev => ({ ...prev, [idx]: msg }));
                             }}
                           />
+                          {newEmailErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{newEmailErrors[idx]}</div>) : null}
                         </div>
                         <div>
                           <Input
                             placeholder="Mobile"
                             value={cp.mobile}
                             onChange={(e) => {
+                              const onlyDigits = e.target.value.replace(/\D/g, '');
                               const next = [...(newClient.contactPersons || [])];
-                              next[idx] = { ...next[idx], mobile: e.target.value };
+                              next[idx] = { ...next[idx], mobile: onlyDigits };
                               setNewClient({ ...newClient, contactPersons: next, contactPerson: next[0] });
+                              const msg = onlyDigits && !isValidMobile(onlyDigits) ? 'Please enter a valid 10-digit mobile number' : '';
+                              setNewMobileErrors(prev => ({ ...prev, [idx]: msg }));
                             }}
                           />
+                          {newMobileErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{newMobileErrors[idx]}</div>) : null}
                         </div>
                       </div>
                       <div className="mt-2 flex justify-end">
                         <Button variant="ghost" size="sm" onClick={() => {
                           const next = (newClient.contactPersons || []).filter((_, i) => i !== idx);
                           setNewClient({ ...newClient, contactPersons: next.length ? next : [{ name: '', designation: '', email: '', mobile: '' }], contactPerson: (next[0] || { name: '', designation: '', email: '', mobile: '' }) });
+                          setNewEmailErrors(prev => {
+                            const updated: Record<number, string> = {};
+                            Object.entries(prev).forEach(([key, value]) => {
+                              const oldIndex = Number(key);
+                              if (oldIndex === idx) return;
+                              const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                              if (value) updated[newIndex] = value as string;
+                            });
+                            return updated;
+                          });
+                          setNewMobileErrors(prev => {
+                            const updated: Record<number, string> = {};
+                            Object.entries(prev).forEach(([key, value]) => {
+                              const oldIndex = Number(key);
+                              if (oldIndex === idx) return;
+                              const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                              if (value) updated[newIndex] = value as string;
+                            });
+                            return updated;
+                          });
                         }} disabled={(newClient.contactPersons || []).length <= 1}>
                           Remove
                         </Button>
@@ -841,7 +1161,13 @@ export default function ClientManagement() {
                 </div>
               </div>
 
-              <Button onClick={handleAddClient} className="w-full">
+              <Button onClick={handleAddClient} className="w-full"
+                disabled={(() => {
+                  const hasEmailError = Object.values(newEmailErrors).some(Boolean);
+                  const hasMobileError = Object.values(newMobileErrors).some(Boolean);
+                  const hasRequired = !!newClient.name && !!newClient.industry && !newClientNameExists;
+                  return !(hasRequired && !hasEmailError && !hasMobileError);
+                })()}>
                 Add Client
               </Button>
             </div>
@@ -892,11 +1218,137 @@ export default function ClientManagement() {
         </div>
       </div>
 
-      {/* Results count */}
+      {/* Results and Export Toolbar */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
           {filteredClients.length} of {clients.length} clients
         </p>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 z-[40]">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Name</Label>
+                  <Input value={filterName} onChange={(e)=>setFilterName(e.target.value)} placeholder="Search by name" />
+                </div>
+                <div>
+                  <Label className="text-xs">Sector</Label>
+                  <Select value={filterSector} onValueChange={setFilterSector}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Sector" /></SelectTrigger>
+                    <SelectContent className="z-[60]">
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => (c.sector || c.industry)).filter(Boolean))).sort().map(sec => (
+                        <SelectItem key={sec as string} value={sec as string}>{sec as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Industry</Label>
+                  <Select value={filterIndustry} onValueChange={setFilterIndustry}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Industry" /></SelectTrigger>
+                    <SelectContent className="z-[60]">
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => c.industry).filter(Boolean))).sort().map(ind => (
+                        <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">State</Label>
+                  <Select value={filterStateVal} onValueChange={setFilterStateVal}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="State" /></SelectTrigger>
+                    <SelectContent className="z-[60]">
+                      <SelectItem value="all">All</SelectItem>
+                      {Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort().map(st => (
+                        <SelectItem key={st as string} value={st as string}>{st as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={()=>{ setFilterName(''); setFilterSector('all'); setFilterIndustry('all'); setFilterStateVal('all'); }}>Reset</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['none','industry','state','city'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'none' ? 'None' : opt}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" onClick={()=>{
+            const makeRow = (c: Client) => {
+              const row: Record<string, any> = {};
+              const cp = (c.contactPersons && c.contactPersons[0]) || c.contactPerson || { name:'', email:'' } as any;
+              if (selectedFields.includes('Name')) row['Name'] = c.name;
+              if (selectedFields.includes('Industry')) row['Industry'] = c.sector || c.industry || '';
+              if (selectedFields.includes('Location')) row['Location'] = c.location || '';
+              if (selectedFields.includes('City')) row['City'] = c.city || '';
+              if (selectedFields.includes('State')) row['State'] = c.state || '';
+              if (selectedFields.includes('Pincode')) row['Pincode'] = c.pincode || '';
+              if (selectedFields.includes('Website')) row['Website'] = c.website || '';
+              if (selectedFields.includes('Contact Name')) row['Contact Name'] = cp?.name || '';
+              if (selectedFields.includes('Contact Email')) row['Contact Email'] = cp?.email || '';
+              if (selectedFields.includes('Projects')) row['Projects'] = c.stats?.projects ?? '';
+              if (selectedFields.includes('Ongoing')) row['Ongoing'] = c.stats?.ongoing ?? '';
+  if (selectedFields.includes('Created At')) row['Created At'] = c.createdAt || '';
+              return row;
+            };
+            let rows: any[] = [];
+            if (groupBy === 'none') rows = filteredClients.map(makeRow);
+            else {
+              const groups: Record<string, Client[]> = {};
+              for (const c of filteredClients) {
+                const k = groupBy === 'industry' ? (c.sector || c.industry || '') : groupBy === 'state' ? (c.state || '') : (c.city || '');
+                if (!groups[k]) groups[k] = [];
+                groups[k].push(c);
+              }
+              const keys = Object.keys(groups).sort();
+              for (const k of keys) {
+                rows.push({ Group: k });
+                rows.push(...groups[k].map(makeRow));
+                rows.push({});
+              }
+            }
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+            XLSX.writeFile(wb, 'clients.xlsx');
+          }} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
 
       {/* Client Grid */}
@@ -918,8 +1370,14 @@ export default function ClientManagement() {
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-gray-600" />
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                      {client.logo ? (
+                        <img src={client.logo} alt={client.name} className="h-full w-full object-contain p-1" />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-600">
+                          {(client.name || '').trim().charAt(0) || 'C'}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">{client.name}</h3>
@@ -928,10 +1386,6 @@ export default function ClientManagement() {
                   </div>
                   <div className="flex items-center space-x-6">
                     <Badge variant="secondary">{client.industry}</Badge>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{client.stats.revenue}</p>
-                      <p className="text-xs text-gray-500">Revenue</p>
-                    </div>
                     <Button variant="outline" size="sm" onClick={() => { setSelectedClientDetails(client); setIsDetailsOpen(true); }}>
                       View Details
                     </Button>
@@ -947,10 +1401,35 @@ export default function ClientManagement() {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-8">
+            <div className="flex items-center justify-between pr-8 gap-2">
               <DialogTitle>Client Details</DialogTitle>
               {selectedClientDetails && (
-                <Button size="sm" className="mr-2" onClick={() => openEditClient(selectedClientDetails)}>Edit</Button>
+                <div className="flex items-center gap-2">
+                  {selectedClientDetails.isPurged ? (
+                    <Badge variant="destructive" className="text-xs">
+                      Purged
+                    </Badge>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant={selectedClientDetails.isPurged ? "outline" : "destructive"}
+                    onClick={() =>
+                      handleSetClientPurged(
+                        selectedClientDetails,
+                        !selectedClientDetails.isPurged,
+                      )
+                    }
+                  >
+                    {selectedClientDetails.isPurged ? "Restore" : "Purge"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="mr-2"
+                    onClick={() => openEditClient(selectedClientDetails)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               )}
             </div>
           </DialogHeader>
@@ -1061,16 +1540,9 @@ export default function ClientManagement() {
               </div>
               <div>
                 <Label className="text-sm font-medium">Industry</Label>
-                <Select value={editClient.industry || ''} onValueChange={(value) => setEditClient({ ...editClient, industry: value })}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industryOptions.map(ind => (
-                      <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1">
+                  <IndustrySelect value={editClient.industry || ''} onChange={(value) => setEditClient({ ...editClient, industry: value })} placeholder="Select industry" baseOptions={industryOptions} />
+                </div>
               </div>
             </div>
 
@@ -1132,6 +1604,37 @@ export default function ClientManagement() {
                 placeholder="Enter website URL"
                 className="mt-1"
               />
+            </div>
+
+            {/* Client Logo (Edit) */}
+            <div>
+              <Label htmlFor="logoEdit" className="text-sm font-medium">Client Logo</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <Input
+                  id="logoEdit"
+                  type="file"
+                  accept="image/*"
+                  className="flex-1"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const dataUrl = String(reader.result || '');
+                      setEditClient(prev => ({ ...prev, logo: dataUrl }));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logoEdit')?.click()}>
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
+              {editClient.logo ? (
+                <div className="mt-2">
+                  <img src={editClient.logo} alt="Logo preview" className="h-10 w-auto rounded border" />
+                </div>
+              ) : null}
             </div>
 
             <div>
@@ -1203,25 +1706,52 @@ export default function ClientManagement() {
                             const next = [...(editClient.contactPersons || [])];
                             next[idx] = { ...next[idx], email: e.target.value };
                             setEditClient({ ...editClient, contactPersons: next, contactPerson: next[0] });
+                            const msg = e.target.value.trim() && !isValidEmail(e.target.value) ? 'Please enter a valid email address (e.g., name@domain.com)' : '';
+                            setEditEmailErrors(prev => ({ ...prev, [idx]: msg }));
                           }}
                         />
+                        {editEmailErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{editEmailErrors[idx]}</div>) : null}
                       </div>
                       <div>
                         <Input
                           placeholder="Mobile"
                           value={cp.mobile}
                           onChange={(e) => {
+                            const onlyDigits = e.target.value.replace(/\D/g, '');
                             const next = [...(editClient.contactPersons || [])];
-                            next[idx] = { ...next[idx], mobile: e.target.value };
+                            next[idx] = { ...next[idx], mobile: onlyDigits };
                             setEditClient({ ...editClient, contactPersons: next, contactPerson: next[0] });
+                            const msg = onlyDigits && !isValidMobile(onlyDigits) ? 'Please enter a valid 10-digit mobile number' : '';
+                            setEditMobileErrors(prev => ({ ...prev, [idx]: msg }));
                           }}
                         />
+                        {editMobileErrors[idx] ? (<div className="text-xs text-red-600 mt-1">{editMobileErrors[idx]}</div>) : null}
                       </div>
                     </div>
                     <div className="mt-2 flex justify-end">
                       <Button variant="ghost" size="sm" onClick={() => {
                         const next = (editClient.contactPersons || []).filter((_, i) => i !== idx);
                         setEditClient({ ...editClient, contactPersons: next.length ? next : [{ name: '', designation: '', email: '', mobile: '' }], contactPerson: (next[0] || { name: '', designation: '', email: '', mobile: '' }) });
+                        setEditEmailErrors(prev => {
+                          const updated: Record<number, string> = {};
+                          Object.entries(prev).forEach(([key, value]) => {
+                            const oldIndex = Number(key);
+                            if (oldIndex === idx) return;
+                            const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                            if (value) updated[newIndex] = value as string;
+                          });
+                          return updated;
+                        });
+                        setEditMobileErrors(prev => {
+                          const updated: Record<number, string> = {};
+                          Object.entries(prev).forEach(([key, value]) => {
+                            const oldIndex = Number(key);
+                            if (oldIndex === idx) return;
+                            const newIndex = oldIndex > idx ? oldIndex - 1 : oldIndex;
+                            if (value) updated[newIndex] = value as string;
+                          });
+                          return updated;
+                        });
                       }} disabled={(editClient.contactPersons || []).length <= 1}>
                         Remove
                       </Button>
@@ -1238,7 +1768,13 @@ export default function ClientManagement() {
               </div>
             </div>
 
-            <Button onClick={handleUpdateClient} className="w-full">
+            <Button onClick={handleUpdateClient} className="w-full"
+              disabled={(() => {
+                const hasEmailError = Object.values(editEmailErrors).some(Boolean);
+                const hasMobileError = Object.values(editMobileErrors).some(Boolean);
+                const hasRequired = !!editClient.name;
+                return !(hasRequired && !hasEmailError && !hasMobileError);
+              })()}>
               Save Changes
             </Button>
           </div>

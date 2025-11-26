@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:client && npm run build:server",
+    "postinstall": "npm run build",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
     "start": "node dist/server/node-build.mjs",
@@ -21,8 +22,14 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "dotenv": "^17.2.0",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
+    "html2canvas": "^1.4.1",
+    "nodemailer": "^7.0.10",
+    "pg": "^8.11.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -12,22 +12,40 @@ import { RiskConfigStore } from '@/contexts/RiskConfigStore';
 import { RiskAssessmentConfig, RiskCalcMode, ResidualFormula, RiskScoringModel, clamp, computeResidual, computeRiskScore } from '@shared/risk';
 import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
-import { Info } from 'lucide-react';
+import { Info, Filter as FilterIcon, Rows3, Columns2, Download } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import * as XLSX from 'xlsx';
+import { resolveLevel } from '@shared/risk';
+
+const LS_SCOPE_TYPE = 'risk_scope_type';
+const LS_SELECTED_ASSIGNMENT = 'risk_selected_assignment';
+const LS_SELECTED_MODE = 'risk_selected_mode';
 
 export default function RiskAssessmentDashboard() {
   const { user } = useAuth();
   const [configs, setConfigs] = React.useState(RiskConfigStore.getAll());
-  const [scopeType, setScopeType] = React.useState<'global'|'assignment'>('global');
+  const [scopeType, setScopeType] = React.useState<'global'|'assignment'>(()=>{ try { return (localStorage.getItem(LS_SCOPE_TYPE) as any) || 'assignment'; } catch { return 'assignment'; } });
   const [assignmentTypes, setAssignmentTypes] = React.useState<{id:string;name:string}[]>([]);
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(() => RiskConfigStore.getGlobal());
   const [editingAssignmentId, setEditingAssignmentId] = React.useState<string | null>(null);
-  const [selectedAssignmentId, setSelectedAssignmentId] = React.useState<string | null>(null);
-  const [selectedMode, setSelectedMode] = React.useState<'_select'|'assignment'|'project'>('_select');
+  const [selectedAssignmentId, setSelectedAssignmentId] = React.useState<string | null>(()=>{ try { return localStorage.getItem(LS_SELECTED_ASSIGNMENT) || null; } catch { return null; } });
+  const [selectedMode, setSelectedMode] = React.useState<'_select'|'assignment'|'project'>(()=>{ try { return (localStorage.getItem(LS_SELECTED_MODE) as any) || '_select'; } catch { return '_select'; } });
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
   const [previewText, setPreviewText] = React.useState('');
   const [infoDialogOpen, setInfoDialogOpen] = React.useState(false);
   const [openColorPickerFor, setOpenColorPickerFor] = React.useState<number | null>(null);
   const [breakpointErrors, setBreakpointErrors] = React.useState<string[]>([]);
+  const { toast } = useToast();
+
+  // Export toolbar state
+  const [filterAssignment, setFilterAssignment] = React.useState<string>('all');
+  const [groupBy, setGroupBy] = React.useState<'generic'|'assignment'>('generic');
+  const allFields = [
+    'Assignment Type','Risk Scoring Model','Calculation Mode','Likelihood Scale','Consequence Scale','Risk Scale','Control Scale','Residual Parameter','Residual Formula','Residual Scale','Residual Ranges','Example Likelihood','Example Consequence','Example Control Score','Example Risk Score','Example Residual','Residual Level'
+  ];
+  const [selectedFields, setSelectedFields] = React.useState<string[]>(allFields.filter(f => f !== 'Residual Formula'));
 
   // Projects (sourced from ProjectManagement mock list)
   const projects = [
@@ -51,10 +69,16 @@ export default function RiskAssessmentDashboard() {
     if (scopeType === 'global') {
       setCfg(prev => ({ ...RiskConfigStore.getGlobal(), enabled: prev?.enabled } as RiskAssessmentConfig));
     } else {
-      // assignment-specific: derive from global and keep existing assignmentMap and enabled flag if any
-      const base = RiskConfigStore.getGlobal();
-      setCfg(prev => ({ ...base, enabled: prev?.enabled, id: 'assignment', scope: { ...base.scope, configType: 'assignment', assignmentMap: prev?.scope?.assignmentMap || {} } } as RiskAssessmentConfig));
+      // assignment-specific: prefer persisted central 'assignment' config; fallback to global with empty map
+      const saved = RiskConfigStore.get('assignment');
+      if (saved) {
+        setCfg(prev => ({ ...saved, enabled: prev?.enabled, id: 'assignment', scope: { ...saved.scope, configType: 'assignment' } } as RiskAssessmentConfig));
+      } else {
+        const base = RiskConfigStore.getGlobal();
+        setCfg(prev => ({ ...base, enabled: prev?.enabled, id: 'assignment', scope: { ...base.scope, configType: 'assignment', assignmentMap: prev?.scope?.assignmentMap || {} } } as RiskAssessmentConfig));
+      }
     }
+    try { localStorage.setItem(LS_SCOPE_TYPE, scopeType); } catch {}
   }, [scopeType]);
 
   React.useEffect(() => {
@@ -63,6 +87,34 @@ export default function RiskAssessmentDashboard() {
     sync();
     return () => unsub();
   }, []);
+
+  React.useEffect(() => {
+    try { if (selectedAssignmentId) localStorage.setItem(LS_SELECTED_ASSIGNMENT, selectedAssignmentId); } catch {}
+  }, [selectedAssignmentId]);
+
+  // Keep assignment map and selection in sync with current assignment types from Settings
+  React.useEffect(() => {
+    const valid = new Set((assignmentTypes || []).map(a => a.id));
+    // prune assignmentMap entries that no longer exist
+    setCfg(prev => {
+      const curMap = (prev.scope as any)?.assignmentMap || {};
+      const entries = Object.entries(curMap).filter(([k]) => valid.has(k));
+      const pruned: any = Object.fromEntries(entries);
+      const changed = Object.keys(pruned).length !== Object.keys(curMap).length;
+      let next: any = prev;
+      if (changed) {
+        next = { ...prev, scope: { ...prev.scope, assignmentMap: pruned } } as any;
+      }
+      // fix selection if removed and restore last used
+      const fromLs = (()=>{ try { return localStorage.getItem(LS_SELECTED_ASSIGNMENT); } catch { return null; } })();
+      const pick = (fromLs && valid.has(fromLs)) ? fromLs : (selectedAssignmentId && valid.has(selectedAssignmentId) ? selectedAssignmentId : (assignmentTypes[0]?.id || null));
+      setSelectedAssignmentId(pick);
+      const lsMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return '_select'; } })();
+      const modeFromMap = pick ? ((prev.scope as any)?.assignmentMap?.[pick]?.mode || '_select') : '_select';
+      setSelectedMode(modeFromMap || lsMode || '_select');
+      return next;
+    });
+  }, [assignmentTypes]);
 
   // Enforce default constraints: control ≤ risk and residual ≤ risk
   React.useEffect(() => {
@@ -73,42 +125,89 @@ export default function RiskAssessmentDashboard() {
     } as RiskAssessmentConfig));
   }, []);
 
-  // Initialize default residual thresholds and parameter when empty (min to max)
+  // When in Flexible + Single Value mode, restrict parameters to [riskScore, controlScore, residualRisk]
+  React.useEffect(() => {
+    const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+    if (modeIsSingle) {
+      const allowed = new Set(['riskScore','controlScore','residualRisk']);
+      const cur = cfg.residualRisk?.parameter as string | undefined;
+      if (!cur || !allowed.has(cur)) {
+        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, parameter: 'riskScore' } } as any));
+      }
+    }
+  }, [cfg.riskScoringModel, cfg.riskScore.mode]);
+
+  // Initialize default residual thresholds and parameter with standard breakpoints
   React.useEffect(() => {
     setCfg(prev => {
       const existing = prev.residualRisk?.thresholds?.ranges || [];
       if (existing.length > 0) return prev;
-
       const p = prev.residualRisk?.parameter || 'residualRisk';
-      let min = 1, max = 5;
 
-      if (p === 'likelihood') {
-        min = prev.riskScore?.likelihood?.scale?.min ?? prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.likelihood?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-      } else if (p === 'consequence') {
-        min = prev.riskScore?.consequence?.scale?.min ?? prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.consequence?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-      } else if (p === 'controlScore') {
-        min = prev.controlScore?.scale?.min ?? 1;
-        max = prev.controlScore?.scale?.max ?? 5;
+      const mkRanges = (bps: number[], labels: string[], colors: string[]) => bps.slice(0, -1).map((from, i) => ({ from, to: bps[i + 1], label: labels[i] || `Level ${i + 1}`, color: colors[i] || 'Grey' }));
+
+      let ranges;
+      if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
+        ranges = mkRanges(
+          [1,2,3,4,5],
+          ['Low','Moderate','High','Very High'],
+          ['#10B981','#F59E0B','#F97316','#EF4444'],
+        );
       } else {
-        // riskScore or residualRisk - use riskScore range
-        min = prev.riskScore?.scale?.min ?? 1;
-        max = prev.riskScore?.scale?.max ?? 25;
-        if (p === 'riskScore' || p === 'residualRisk') {
-          const lmax = prev.riskScore?.likelihood?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-          const cmax = prev.riskScore?.consequence?.scale?.max ?? prev.riskScore?.scale?.max ?? 5;
-          max = lmax * cmax;
-        }
+        ranges = [
+          { from: 1, to: 5, label: 'Very Low', color: '#10B981' },
+          { from: 6, to: 10, label: 'Low', color: '#A3E635' },
+          { from: 11, to: 15, label: 'Moderate', color: '#F59E0B' },
+          { from: 16, to: 20, label: 'High', color: '#F97316' },
+          { from: 21, to: 25, label: 'Very High', color: '#EF4444' }
+        ];
       }
 
-      // Start with just min and max breakpoints (creates one range)
-      const breakpoints = [min, max];
-      const ranges = [{ from: min, to: max, label: 'Default', color: '#10B981' }];
-
-      return { ...prev, residualRisk: { ...prev.residualRisk, parameter: prev.residualRisk?.parameter || 'residualRisk', thresholds: { ...prev.residualRisk.thresholds, ranges } } } as RiskAssessmentConfig;
+      return { ...prev, residualRisk: { ...prev.residualRisk, parameter: p, thresholds: { ...prev.residualRisk.thresholds, ranges } } } as RiskAssessmentConfig;
     });
   }, []);
+
+  // For Standard model, enforce default ranges on parameter change
+  React.useEffect(() => {
+    if (cfg.riskScoringModel !== 'standard') return;
+    const p = cfg.residualRisk?.parameter || 'residualRisk';
+    const ranges = cfg.residualRisk.thresholds.ranges || [];
+
+    if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
+      const desiredBps = [1,2,3,4,5];
+      const currentBps = getBreakpointsFromRanges(ranges);
+      const same = currentBps.length === desiredBps.length && currentBps.every((v,i)=>v===desiredBps[i]);
+      if (!same) {
+        const newRanges = desiredBps.slice(0, -1).map((from, i) => ({
+          from,
+          to: desiredBps[i + 1],
+          label: ['Low','Moderate','High','Very High'][i],
+          color: ['#10B981','#F59E0B','#F97316','#EF4444'][i],
+        }));
+        setCfg(prev => ({
+          ...prev,
+          residualRisk: {
+            ...prev.residualRisk,
+            thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges },
+          },
+        } as RiskAssessmentConfig));
+        setBreakpointErrors([]);
+      }
+    } else {
+      const desiredRanges = [
+        { from: 1, to: 5, label: 'Very Low', color: '#10B981' },
+        { from: 6, to: 10, label: 'Low', color: '#A3E635' },
+        { from: 11, to: 15, label: 'Moderate', color: '#F59E0B' },
+        { from: 16, to: 20, label: 'High', color: '#F97316' },
+        { from: 21, to: 25, label: 'Very High', color: '#EF4444' }
+      ];
+      const same = ranges.length === desiredRanges.length && ranges.every((r, i) => r.from === desiredRanges[i].from && r.to === desiredRanges[i].to);
+      if (!same) {
+        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: desiredRanges } } } as RiskAssessmentConfig));
+        setBreakpointErrors([]);
+      }
+    }
+  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter]);
 
   // initialize single-row selection from existing cfg if present
   React.useEffect(() => {
@@ -117,8 +216,10 @@ export default function RiskAssessmentDashboard() {
     if (keys.length > 0) {
       const k = keys[0];
       setSelectedAssignmentId(k);
-      setSelectedMode(map[k]?.mode || '_select');
-      if (map[k]?.mode === 'assignment') setEditingAssignmentId(k);
+      const lsMode = (()=>{ try { return localStorage.getItem(LS_SELECTED_MODE) as any; } catch { return null; } })();
+      const savedMode = map[k]?.mode || lsMode || '_select';
+      setSelectedMode(savedMode);
+      if (savedMode === 'assignment' || map[k]?.mode === 'assignment') setEditingAssignmentId(k);
     } else if (assignmentTypes.length > 0) {
       setSelectedAssignmentId(assignmentTypes[0].id);
       setSelectedMode('_select');
@@ -136,7 +237,7 @@ export default function RiskAssessmentDashboard() {
     );
   }
 
-  const onSave = () => {
+  const onSave = async () => {
     // If editing a specific assignment type, persist that assignment config
     if (editingAssignmentId) {
       const perId = `assignment|${editingAssignmentId}`;
@@ -146,14 +247,22 @@ export default function RiskAssessmentDashboard() {
       const overall = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
       const overallNext = { ...overall, id: 'assignment', scope: { ...overall.scope, configType: 'assignment', assignmentMap: (cfg.scope as any).assignmentMap || {} } } as RiskAssessmentConfig;
       RiskConfigStore.upsert(overallNext);
-      alert('Assignment-type configuration saved');
+      toast({ title: 'Saved successfully' });
       return;
     }
 
     // otherwise persist the assignment-level mapping
     const id = scopeType === 'global' ? 'global' : 'assignment';
     RiskConfigStore.upsert({ ...cfg, id, scope: { ...cfg.scope, configType: scopeType } });
-    alert('Settings saved');
+    // Also persist the global enable/disable toggle for project creation
+    try {
+      await fetch('/api/settings/riskModuleEnabled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!cfg.enabled })
+      });
+    } catch {}
+    toast({ title: 'Saved successfully' });
   };
 
   const mode = cfg.riskScore.mode as RiskCalcMode;
@@ -254,6 +363,14 @@ export default function RiskAssessmentDashboard() {
   React.useEffect(() => {
     const ranges = cfg.residualRisk.thresholds.ranges || [];
     if (!ranges || ranges.length === 0) return;
+
+    // In Standard model we fully control ranges; skip mutation and only validate to avoid duplicates like "2–2"
+    if (cfg.riskScoringModel === 'standard') {
+      const errors = validateBreakpoints(getBreakpointsFromRanges(ranges), getParameterMin(), getParameterMax());
+      setBreakpointErrors(errors);
+      return;
+    }
+
     const paramMin = getParameterMin();
     const paramMax = getParameterMax();
     const breakpoints = getBreakpointsFromRanges(ranges);
@@ -293,21 +410,149 @@ export default function RiskAssessmentDashboard() {
     // re-validate and display errors if any
     const errors = validateBreakpoints(newBps, paramMin, paramMax);
     setBreakpointErrors(errors);
-  }, [cfg.residualRisk.parameter, cfg.riskScore?.scale?.min, cfg.riskScore?.scale?.max, cfg.riskScore?.likelihood?.scale?.max, cfg.riskScore?.consequence?.scale?.max, cfg.controlScore?.scale?.max, JSON.stringify(cfg.residualRisk.thresholds.ranges)]);
+  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore?.scale?.min, cfg.riskScore?.scale?.max, cfg.riskScore?.likelihood?.scale?.max, cfg.riskScore?.consequence?.scale?.max, cfg.controlScore?.scale?.max, JSON.stringify(cfg.residualRisk.thresholds.ranges)]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Risk Assessment Module</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Risk Assessment</h1>
         <Badge className="bg-emerald-100 text-emerald-800">Configuration</Badge>
       </div>
 
+      {/* Export toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Filter by Assignment Type */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><FilterIcon className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 z-[60]">
+              <div className="space-y-2">
+                <Label className="text-xs">Assignment Type</Label>
+                <Select value={filterAssignment} onValueChange={(v:any)=>setFilterAssignment(v)}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="All" /></SelectTrigger>
+                  <SelectContent className="z-[70]">
+                    <SelectItem value="all">All</SelectItem>
+                    {assignmentTypes.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex justify-end pt-1"><Button size="sm" variant="outline" onClick={()=>setFilterAssignment('all')}>Reset</Button></div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['generic','assignment'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'generic' ? 'Generic report' : 'By assignment type'}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Fields */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {allFields.map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([...allFields])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(allFields.filter(f => f !== 'Residual Formula'))}>Default</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Export */}
+          <Button size="sm" className="flex items-center gap-2" onClick={()=>{
+            const list = (filterAssignment==='all' ? assignmentTypes : assignmentTypes.filter(a=>a.id===filterAssignment));
+
+            const getCfgFor = (id:string) => {
+              const specific = RiskConfigStore.get(`assignment|${id}`);
+              return specific || RiskConfigStore.getGlobal();
+            };
+
+            const rows: any[] = [];
+            for (const a of list) {
+              const conf = getCfgFor(a.id) as RiskAssessmentConfig;
+              const isSingle = conf.riskScore.mode === 'single';
+              const like = isSingle ? undefined : conf.riskScore?.likelihood?.scale;
+              const cons = isSingle ? undefined : conf.riskScore?.consequence?.scale;
+              const rscale = conf.riskScore?.scale || { min: 1, max: (like?.max||5) * (cons?.max||5) };
+              const cscale = conf.controlScore?.scale || { min: 1, max: 5 };
+
+              const mid = (s:{min:number;max:number}) => Math.round((Number(s.min)+Number(s.max))/2);
+              const lVal = like ? mid(like) : undefined;
+              const cVal = cons ? mid(cons) : undefined;
+              const ctrlVal = mid(cscale);
+              const riskVal = computeRiskScore(conf.riskScore.mode, lVal as any, cVal as any, mid(rscale));
+              const residualVal = computeResidual(conf.residualRisk.formula, riskVal, ctrlVal, cscale);
+              const level = resolveLevel(Math.round(residualVal), conf.residualRisk.thresholds)?.level || '';
+
+              const row: Record<string, any> = {};
+              if (selectedFields.includes('Assignment Type')) row['Assignment Type'] = a.name;
+              if (selectedFields.includes('Risk Scoring Model')) row['Risk Scoring Model'] = conf.riskScoringModel || '';
+              if (selectedFields.includes('Calculation Mode')) row['Calculation Mode'] = conf.riskScore.mode;
+              if (selectedFields.includes('Likelihood Scale')) row['Likelihood Scale'] = like ? `${like.min}–${like.max}` : '';
+              if (selectedFields.includes('Consequence Scale')) row['Consequence Scale'] = cons ? `${cons.min}–${cons.max}` : '';
+              if (selectedFields.includes('Risk Scale')) row['Risk Scale'] = rscale ? `${rscale.min}–${rscale.max}` : '';
+              if (selectedFields.includes('Control Scale')) row['Control Scale'] = cscale ? `${cscale.min}–${cscale.max}` : '';
+              if (selectedFields.includes('Residual Parameter')) row['Residual Parameter'] = conf.residualRisk?.parameter || 'residualRisk';
+              if (selectedFields.includes('Residual Formula')) row['Residual Formula'] = conf.residualRisk?.formula || '';
+              if (selectedFields.includes('Residual Scale')) {
+                const rs = conf.residualRisk?.scale || rscale;
+                row['Residual Scale'] = rs ? `${rs.min}–${rs.max}` : '';
+              }
+              if (selectedFields.includes('Residual Ranges')) row['Residual Ranges'] = (conf.residualRisk?.thresholds?.ranges||[]).map(r=>`${r.label}: ${r.from}–${r.to}`).join(', ');
+              if (selectedFields.includes('Example Likelihood')) row['Example Likelihood'] = (lVal ?? '');
+              if (selectedFields.includes('Example Consequence')) row['Example Consequence'] = (cVal ?? '');
+              if (selectedFields.includes('Example Control Score')) row['Example Control Score'] = ctrlVal;
+              if (selectedFields.includes('Example Risk Score')) row['Example Risk Score'] = riskVal;
+              if (selectedFields.includes('Example Residual')) row['Example Residual'] = Math.round(residualVal * 100) / 100;
+              if (selectedFields.includes('Residual Level')) row['Residual Level'] = level;
+
+              if (groupBy === 'assignment') {
+                rows.push({ Group: a.name });
+                rows.push(row);
+                rows.push({});
+              } else {
+                rows.push(row);
+              }
+            }
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Risk Assessment');
+            XLSX.writeFile(wb, 'risk_assessment.xlsx');
+          }}><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
+      </div>
+
       <Card>
-        <CardHeader><CardTitle>Risk Assessment Module Applicability</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Risk Assessment Applicability</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
             <div>
-              <Label>Enable Risk Assessment Module?</Label>
+              <Label>Enable Risk Assessment?</Label>
               <Select value={cfg.enabled ? 'yes' : 'no'} onValueChange={(v:any)=> setCfg(prev => ({ ...prev, enabled: v === 'yes' }))}>
                 <SelectTrigger><SelectValue placeholder="Select"/></SelectTrigger>
                 <SelectContent>
@@ -464,16 +709,23 @@ export default function RiskAssessmentDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <Label>Parameters</Label>
-                    <Select value={cfg.residualRisk.parameter || 'residualRisk'} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
-                      <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="likelihood">Likelihood</SelectItem>
-                        <SelectItem value="consequence">Consequence</SelectItem>
-                        <SelectItem value="riskScore">Risk Score</SelectItem>
-                        <SelectItem value="controlScore">Control Score</SelectItem>
-                        <SelectItem value="residualRisk">Residual Risk</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {(() => {
+                      const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+                      const allowed = modeIsSingle ? ['riskScore','controlScore','residualRisk'] : ['likelihood','consequence','riskScore','controlScore','residualRisk'];
+                      const value = (cfg.residualRisk.parameter && allowed.includes(cfg.residualRisk.parameter)) ? cfg.residualRisk.parameter : (modeIsSingle ? 'riskScore' : (cfg.residualRisk.parameter || 'residualRisk'));
+                      return (
+                        <Select value={value} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
+                          <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
+                          <SelectContent>
+                            {allowed.includes('likelihood') && <SelectItem value="likelihood">Likelihood</SelectItem>}
+                            {allowed.includes('consequence') && <SelectItem value="consequence">Consequence</SelectItem>}
+                            {allowed.includes('riskScore') && <SelectItem value="riskScore">Risk Score</SelectItem>}
+                            {allowed.includes('controlScore') && <SelectItem value="controlScore">Control Score</SelectItem>}
+                            {allowed.includes('residualRisk') && <SelectItem value="residualRisk">Residual Risk</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -740,8 +992,46 @@ export default function RiskAssessmentDashboard() {
                       <Select value={selectedAssignmentId || ''} onValueChange={(v:any) => {
                         setSelectedAssignmentId(v);
                         const curMap = (cfg.scope as any).assignmentMap || {};
-                        curMap[v] = curMap[v] || { enabled: true, projectId: undefined, mode: 'assignment' };
-                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: curMap } });
+                        // also consult centrally persisted map to avoid race conditions wiping saved mode
+                        const central = RiskConfigStore.get('assignment');
+                        const centralMap = (central?.scope as any)?.assignmentMap || {};
+                        const existing = curMap[v] || centralMap[v];
+                        // prefer saved per-assignment config to infer mode
+                        const id = `assignment|${v}`;
+                        const perCfg = RiskConfigStore.get(id);
+                        const inferredMode: 'assignment'|'project'|undefined = existing?.mode || (perCfg ? 'assignment' : undefined);
+                        const nextMap: any = { ...curMap };
+                        if (existing) nextMap[v] = existing; else nextMap[v] = { enabled: true, projectId: undefined, mode: inferredMode };
+                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: nextMap } });
+                        // reflect saved mode and load config if needed
+                        const savedMode = (nextMap[v] && nextMap[v].mode) as 'assignment' | 'project' | undefined;
+                        if (savedMode === 'assignment') {
+                          setSelectedMode('assignment');
+                          setEditingAssignmentId(v);
+                          if (perCfg) {
+                            setCfg(prev => ({
+                              ...perCfg,
+                              enabled: prev?.enabled,
+                              scope: { ...perCfg.scope, assignmentMap: (prev.scope as any)?.assignmentMap || (perCfg.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: v }
+                            } as RiskAssessmentConfig));
+                          } else {
+                            const base = RiskConfigStore.getGlobal();
+                            setCfg(prev => ({
+                              ...base,
+                              enabled: prev?.enabled,
+                              id,
+                              scope: { ...base.scope, assignmentMap: (prev.scope as any)?.assignmentMap || {}, configType: 'assignment', assignmentType: v }
+                            } as RiskAssessmentConfig));
+                          }
+                        } else if (savedMode === 'project') {
+                          setSelectedMode('project');
+                          setEditingAssignmentId(null);
+                        } else {
+                          setSelectedMode('_select');
+                          setEditingAssignmentId(null);
+                        }
+                        try { localStorage.setItem(LS_SELECTED_ASSIGNMENT, v); } catch {}
+                        try { localStorage.setItem(LS_SELECTED_MODE, savedMode || '_select'); } catch {}
                       }}>
                         <SelectTrigger><SelectValue placeholder="Select assignment" /></SelectTrigger>
                         <SelectContent>
@@ -754,17 +1044,33 @@ export default function RiskAssessmentDashboard() {
                         const raw = v as string;
                         const mode = raw === '_select' ? '' : (raw as 'assignment'|'project');
                         setSelectedMode(raw === '_select' ? '_select' : (raw as any));
+                        try { localStorage.setItem(LS_SELECTED_MODE, raw); } catch {}
                         if (!selectedAssignmentId) return;
+                        try { localStorage.setItem(LS_SELECTED_ASSIGNMENT, selectedAssignmentId); } catch {}
                         const cur = (cfg.scope && (cfg.scope as any).assignmentMap) || {};
                         const next = { ...cur, [selectedAssignmentId]: { enabled: mode !== '', projectId: cur[selectedAssignmentId]?.projectId, mode: mode === '' ? undefined : mode } };
-                        setCfg({ ...cfg, scope: { ...cfg.scope, assignmentMap: next } });
+                        const updated = { ...cfg, scope: { ...cfg.scope, assignmentMap: next } } as RiskAssessmentConfig;
+                        setCfg(updated);
+                        // Persist central mapping immediately so it survives reload without needing Save
+                        const central = RiskConfigStore.get('assignment') || RiskConfigStore.getGlobal();
+                        const centralNext = { ...central, id: 'assignment', scope: { ...central.scope, configType: 'assignment', assignmentMap: next } } as RiskAssessmentConfig;
+                        RiskConfigStore.upsert(centralNext);
                         if (mode === 'assignment') {
                           const id = `assignment|${selectedAssignmentId}`;
                           const existing = RiskConfigStore.get(id);
-                          if (existing) setCfg(prev => ({ ...existing, enabled: prev?.enabled } as RiskAssessmentConfig));
+                          if (existing) setCfg(prev => ({
+                            ...existing,
+                            enabled: prev?.enabled,
+                            scope: { ...existing.scope, assignmentMap: next, configType: 'assignment', assignmentType: selectedAssignmentId }
+                          } as RiskAssessmentConfig));
                           else {
                             const base = RiskConfigStore.getGlobal();
-                            setCfg(prev => ({ ...base, enabled: prev?.enabled, id, scope: { ...base.scope, configType: 'assignment', assignmentType: selectedAssignmentId } } as RiskAssessmentConfig));
+                            setCfg(prev => ({
+                              ...base,
+                              enabled: prev?.enabled,
+                              id,
+                              scope: { ...base.scope, assignmentMap: next, configType: 'assignment', assignmentType: selectedAssignmentId }
+                            } as RiskAssessmentConfig));
                           }
                           setEditingAssignmentId(selectedAssignmentId);
                         } else {
@@ -911,18 +1217,25 @@ export default function RiskAssessmentDashboard() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <Label>Parameters</Label>
-                      <Select value={cfg.residualRisk.parameter || 'residualRisk'} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
-                        <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="likelihood">Likelihood</SelectItem>
-                          <SelectItem value="consequence">Consequence</SelectItem>
-                          <SelectItem value="riskScore">Risk Score</SelectItem>
-                          <SelectItem value="controlScore">Control Score</SelectItem>
-                          <SelectItem value="residualRisk">Residual Risk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Label>Parameters</Label>
+                    {(() => {
+                      const modeIsSingle = (cfg.riskScoringModel !== 'standard') && cfg.riskScore.mode === 'single';
+                      const allowed = modeIsSingle ? ['riskScore','controlScore','residualRisk'] : ['likelihood','consequence','riskScore','controlScore','residualRisk'];
+                      const value = (cfg.residualRisk.parameter && allowed.includes(cfg.residualRisk.parameter)) ? cfg.residualRisk.parameter : (modeIsSingle ? 'riskScore' : (cfg.residualRisk.parameter || 'residualRisk'));
+                      return (
+                        <Select value={value} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
+                          <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
+                          <SelectContent>
+                            {allowed.includes('likelihood') && <SelectItem value="likelihood">Likelihood</SelectItem>}
+                            {allowed.includes('consequence') && <SelectItem value="consequence">Consequence</SelectItem>}
+                            {allowed.includes('riskScore') && <SelectItem value="riskScore">Risk Score</SelectItem>}
+                            {allowed.includes('controlScore') && <SelectItem value="controlScore">Control Score</SelectItem>}
+                            {allowed.includes('residualRisk') && <SelectItem value="residualRisk">Residual Risk</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
+                  </div>
                   </div>
 
                   <div className="space-y-2">
@@ -1217,7 +1530,7 @@ export default function RiskAssessmentDashboard() {
 
               const inherentFormula = mode === 'single'
                 ? `${cfg.naming.riskDisplayName} (manual) = ${rManual}`
-                : `${cfg.naming.riskDisplayName} = Likelihood × Impact = ${l} × ${c} = ${riskScore}`;
+                : `${cfg.naming.riskDisplayName} = Likelihood × Impact = ${l} �� ${c} = ${riskScore}`;
 
               const displayResidualLabel = cfg.naming.residualDisplayName === 'Net Risk' ? 'Residual Risk' : cfg.naming.residualDisplayName;
 
@@ -1268,8 +1581,8 @@ export default function RiskAssessmentDashboard() {
             <h3 className="font-semibold">📊 Risk Scoring in Risk Assessment</h3>
             <p>This guide explains how risk scores are derived using Likelihood, Consequence (Impact), and Control Effectiveness, helping you apply risk assessment consistently.</p>
 
-            <h4 className="font-semibold">1��⃣ Likelihood (Probability of Occurrence)</h4>
-            <p><strong>Definition:</strong> How often a risk event is expected to occur.<br/>Scale can be 1–5, 1–10, or % ranges.</p>
+            <h4 className="font-semibold">1����⃣ Likelihood (Probability of Occurrence)</h4>
+            <p><strong>Definition:</strong> How often a risk event is expected to occur.<br/>Scale can be 1���5, 1–10, or % ranges.</p>
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr>
@@ -1282,7 +1595,7 @@ export default function RiskAssessmentDashboard() {
               <tbody>
                 <tr><td>1</td><td>Rare</td><td>May occur only in exceptional circumstances</td><td>Once in 10+ years, &lt;5%</td></tr>
                 <tr><td>2</td><td>Unlikely</td><td>Could occur, but not expected</td><td>Once in 5–10 years, 5–20%</td></tr>
-                <tr><td>3</td><td>Possible</td><td>Might occur at some time</td><td>Once in 2–5 years, 21–50%</td></tr>
+                <tr><td>3</td><td>Possible</td><td>Might occur at some time</td><td>Once in 2–5 years, 21��50%</td></tr>
                 <tr><td>4</td><td>Likely</td><td>Will probably occur in most circumstances</td><td>Annually or every 1–2 years, 51–80%</td></tr>
                 <tr><td>5</td><td>Almost Certain</td><td>Expected to occur frequently</td><td>More than once a year, &gt;80%</td></tr>
               </tbody>
@@ -1290,7 +1603,7 @@ export default function RiskAssessmentDashboard() {
             <div className="font-semibold">🔑 Tip:</div>
             <div>If using a 1–10 scale, divide probability bands into finer increments (e.g., 10% each).</div>
 
-            <h4 className="font-semibold">2️⃣ Consequence (Impact)</h4>
+            <h4 className="font-semibold">2️��� Consequence (Impact)</h4>
             <p><strong>Definition:</strong> Measures severity of the effect if the risk occurs. Impacts may be financial, operational, compliance, reputational, or safety-related.</p>
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -1385,7 +1698,7 @@ export default function RiskAssessmentDashboard() {
             <p><strong>Example 2: Strategic Risk – Supply Chain Disruption</strong></p>
             <p>Likelihood = 3/5, Consequence = 4/5 → IRS = 3 × 4 = 12 (Medium-High)</p>
             <p>Control Score: Design=5 (1.5), Implementation=4 (1.6), Coverage=4 (0.6), Monitoring=4 (0.6) → Total = 4.3/5 → 86% effective</p>
-            <p>Residual Risk: 12 �� (1 − 0.86) = 1.7 (Low)</p>
+            <p>Residual Risk: 12 × (1 − 0.86) = 1.7 (Low)</p>
 
             <h4 className="font-semibold">6️⃣ Summary Flow</h4>
             <p>Rate Likelihood &amp; Consequence → Inherent Risk Score<br/>Rate Controls → Control Score &amp; Effectiveness<br/>Apply formula → Residual Risk<br/>Visualize on Heatmaps → Reporting &amp; Decision-making</p>

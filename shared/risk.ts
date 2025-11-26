@@ -113,9 +113,10 @@ export const DEFAULT_GLOBAL_RISK_CONFIG = (): RiskAssessmentConfig => ({
   controlScore: {
     scale: { min: 1, max: 5 },
     labels: [
-      { value: 1, label: 'Effective', color: 'Green' },
-      { value: 3, label: 'Ineffective', color: 'Orange' },
-      { value: 5, label: 'Not Implemented', color: 'Red' }
+      { value: 1, label: 'Very High', color: '#EF4444' },
+      { value: 2, label: 'High', color: '#F97316' },
+      { value: 3, label: 'Moderate', color: '#F59E0B' },
+      { value: 4, label: 'Low', color: '#10B981' }
     ],
     constraintControlLEQRisk: true
   },
@@ -125,11 +126,13 @@ export const DEFAULT_GLOBAL_RISK_CONFIG = (): RiskAssessmentConfig => ({
     parameter: 'residualRisk',
     thresholds: {
       ranges: [
-        { from: 1, to: 5, label: 'Low', color: 'Green' },
-        { from: 6, to: 12, label: 'Medium', color: 'Orange' },
-        { from: 13, to: 25, label: 'High', color: 'Red' }
+        { from: 1, to: 5, label: 'Very Low', color: '#10B981' },
+        { from: 6, to: 10, label: 'Low', color: '#A3E635' },
+        { from: 11, to: 15, label: 'Moderate', color: '#F59E0B' },
+        { from: 16, to: 20, label: 'High', color: '#F97316' },
+        { from: 21, to: 25, label: 'Very High', color: '#EF4444' }
       ],
-      heatmapColors: { Low: 'Green', Medium: 'Orange', High: 'Red' }
+      heatmapColors: { 'Very Low': '#10B981', Low: '#A3E635', Moderate: '#F59E0B', High: '#F97316', 'Very High': '#EF4444' }
     },
     constraintResidualLEQRisk: true
   },

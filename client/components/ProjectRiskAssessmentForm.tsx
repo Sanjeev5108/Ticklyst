@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,18 +11,44 @@ import { RiskAssessmentConfig, RiskCalcMode, RiskScoringModel, clamp } from '@sh
 interface Props {
   value: RiskAssessmentConfig;
   onChange: (cfg: RiskAssessmentConfig) => void;
+  onSave?: (cfg: RiskAssessmentConfig) => void;
 }
 
-export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
+export default function ProjectRiskAssessmentForm({ value, onChange, onSave }: Props) {
   const [cfg, setCfg] = React.useState<RiskAssessmentConfig>(value);
   const [openColorPickerFor, setOpenColorPickerFor] = React.useState<number | null>(null);
   const [breakpointErrors, setBreakpointErrors] = React.useState<string[]>([]);
+  // Keep distinct threshold ranges per-parameter to avoid flicker when switching between differently-scaled params
+  const [paramRanges, setParamRanges] = React.useState<Record<string, any[]>>({});
 
   React.useEffect(() => { setCfg(value); }, [value]);
   React.useEffect(() => { onChange(cfg); }, [cfg]);
 
   const mode = cfg.riskScore.mode as RiskCalcMode;
   const isStandard = cfg.riskScoringModel === 'standard';
+
+  // When in Flexible + Single Value mode, restrict parameters to [riskScore, controlScore, residualRisk]
+  React.useEffect(() => {
+    const modeIsSingle = !isStandard && mode === 'single';
+    if (modeIsSingle) {
+      const allowed = new Set(['riskScore','controlScore','residualRisk']);
+      const cur = cfg.residualRisk?.parameter;
+      if (!cur || !allowed.has(cur)) {
+        setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, parameter: 'riskScore' } } as any));
+      }
+    }
+  }, [isStandard, mode]);
+
+  // Keep cfg.residualRisk.thresholds.ranges synced to current parameter-specific cache
+  React.useEffect(() => {
+    const p = cfg.residualRisk?.parameter || 'residualRisk';
+    const wanted = paramRanges[p] && paramRanges[p].length ? paramRanges[p] : buildDefaultForParam(p);
+    if (!eqRanges(cfg.residualRisk.thresholds.ranges || [], wanted)) {
+      setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: wanted } } } as RiskAssessmentConfig));
+    }
+  }, [cfg.residualRisk?.parameter, paramRanges, cfg.riskScore.scale.min, cfg.riskScore.scale.max, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max]);
+
+  const eqRanges = (a: any[] = [], b: any[] = []) => a.length === b.length && a.every((r,i)=>r.from===b[i]?.from && r.to===b[i]?.to && r.label===b[i]?.label && r.color===b[i]?.color);
 
   const getBreakpointsFromRanges = (ranges: any[]): number[] => {
     if (ranges.length === 0) return [];
@@ -42,7 +69,47 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     return ranges;
   };
 
-  const calculateDisplayRange = (from: number, to: number): string => `${from}–${to}`;
+  const labels4 = ['Low','Moderate','High','Very High'];
+  const colors4 = ['#10B981','#F59E0B','#F97316','#EF4444'];
+  const labels5 = ['Very Low','Low','Moderate','High','Very High'];
+  const colors5 = ['#10B981','#A3E635','#F59E0B','#F97316','#EF4444'];
+
+  const getParamScale = (p?: string) => {
+    const param = p || cfg.residualRisk?.parameter || 'residualRisk';
+    if (param === 'likelihood') return cfg.riskScore?.likelihood?.scale || { min: 1, max: 5 };
+    if (param === 'consequence') return cfg.riskScore?.consequence?.scale || { min: 1, max: 5 };
+    if (param === 'controlScore') return cfg.controlScore?.scale || { min: 1, max: 5 };
+    return cfg.riskScore?.scale || { min: 1, max: 25 };
+  };
+
+  const buildDefaultForParam = (p: string) => {
+    const scl = getParamScale(p);
+    const min = Math.round(scl.min); const max = Math.round(scl.max);
+    if (p === 'likelihood' || p === 'consequence' || p === 'controlScore') {
+      const bps = [min, min+1, min+2, min+3, max];
+      return bps.slice(0,-1).map((from,i)=>({ from, to: bps[i+1], label: labels4[i], color: colors4[i] }));
+    }
+    const step = Math.max(1, Math.floor((max - min + 1) / 5));
+    return Array.from({length:5}).map((_,i)=>{
+      const from = min + (i*step);
+      const to = i===4 ? max : (min + ((i+1)*step) - 1);
+      return { from, to, label: labels5[i], color: colors5[i] };
+    });
+  };
+
+  // Seed per-parameter ranges once and keep cfg in sync with selected parameter
+  React.useEffect(() => {
+    setParamRanges(prev => {
+      const next = { ...prev };
+      const curParam = cfg.residualRisk?.parameter || 'residualRisk';
+      if (!next[curParam]) next[curParam] = (cfg.residualRisk?.thresholds?.ranges || []).slice();
+      return next;
+    });
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const calculateDisplayRange = (from: number, to: number): string => `${from} - ${to}`;
 
   const getParameterMin = (): number => {
     const p = cfg.residualRisk?.parameter || 'residualRisk';
@@ -95,66 +162,80 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
     setCfg(prev => {
       const newMin = derivedMin; const newMax = derivedMax;
       const control = { ...prev.controlScore, scale: { min: clamp(prev.controlScore.scale.min, newMin, newMax), max: clamp(prev.controlScore.scale.max, newMin, newMax) } };
-      const param = prev.residualRisk?.parameter || 'residualRisk';
-      let residual = prev.residualRisk;
-      if (param === 'riskScore' || param === 'residualRisk') {
-        const ranges = prev.residualRisk.thresholds.ranges || [];
-        const adjRanges = ranges.map(r => ({ from: clamp(Math.round(r.from), newMin, newMax), to: clamp(Math.round(r.to), newMin, newMax), label: r.label, color: r.color }));
-        residual = { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: adjRanges } };
+      const activeParam = prev.residualRisk?.parameter || 'residualRisk';
+      const next: RiskAssessmentConfig = { ...prev, riskScore: { ...prev.riskScore, scale: { min: newMin, max: newMax } }, controlScore: control } as RiskAssessmentConfig;
+      if (activeParam === 'riskScore' || activeParam === 'residualRisk') {
+        const ranges = (paramRanges[activeParam] && paramRanges[activeParam].length ? paramRanges[activeParam] : prev.residualRisk.thresholds.ranges) || [];
+        const adj = ranges.map(r => ({ from: clamp(Math.round(r.from), newMin, newMax), to: clamp(Math.round(r.to), newMin, newMax), label: r.label, color: r.color }));
+        setParamRanges(pr => ({ ...pr, [activeParam]: adj }));
+        next.residualRisk = { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: adj } } as any;
       }
-      return { ...prev, riskScore: { ...prev.riskScore, scale: { min: newMin, max: newMax } }, controlScore: control, residualRisk: residual } as RiskAssessmentConfig;
+      return next;
     });
-  }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale]);
+  }, [cfg.riskScore.mode, cfg.riskScore.likelihood?.scale, cfg.riskScore.consequence?.scale, paramRanges]);
 
-  // Clamp breakpoints when parameter changes or relevant scales change
+  // Initialize and lock ranges for Standard model based on selected parameter to avoid flicker between 1–5 and 1–25
   React.useEffect(() => {
+    if (cfg.riskScoringModel !== 'standard') return;
     const param = cfg.residualRisk?.parameter || 'residualRisk';
-    const ranges = cfg.residualRisk.thresholds.ranges || [];
-    if (!ranges.length) return;
 
-    // Calculate parameter-specific min/max without using getParameterMin/Max to avoid circular dependency
-    let min: number, max: number;
-    if (param === 'likelihood') {
-      min = cfg.riskScore?.likelihood?.scale?.min ?? 1;
-      max = cfg.riskScore?.likelihood?.scale?.max ?? 5;
-    } else if (param === 'consequence') {
-      min = cfg.riskScore?.consequence?.scale?.min ?? 1;
-      max = cfg.riskScore?.consequence?.scale?.max ?? 5;
-    } else if (param === 'controlScore') {
-      min = cfg.controlScore?.scale?.min ?? 1;
-      max = cfg.controlScore?.scale?.max ?? 5;
+    let desired: any[] = [];
+    if (param === 'likelihood' || param === 'consequence' || param === 'controlScore') {
+      const scl = getParamScale(param);
+      const min = Math.round(scl.min); const max = Math.round(scl.max);
+      const bps = [min, min+1, min+2, min+3, max];
+      desired = bps.slice(0,-1).map((from, i) => ({ from, to: bps[i+1], label: labels4[i], color: colors4[i] }));
     } else {
-      // riskScore or residualRisk
-      min = cfg.riskScore?.scale?.min ?? 1;
-      max = cfg.riskScore?.scale?.max ?? 25;
+      const scl = getParamScale(param);
+      const min = Math.round(scl.min); const max = Math.round(scl.max);
+      const step = Math.max(1, Math.floor((max - min + 1) / 5));
+      desired = Array.from({length:5}).map((_,i)=>{
+        const from = min + (i*step);
+        const to = i===4 ? max : (min + ((i+1)*step) - 1);
+        return { from, to, label: labels5[i], color: colors5[i] };
+      });
     }
 
-    const current = getBreakpointsFromRanges(ranges);
+    setParamRanges(prev => ({ ...prev, [param]: desired }));
+    if (!eqRanges(cfg.residualRisk.thresholds.ranges || [], desired)) {
+      setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: desired } } } as RiskAssessmentConfig));
+    }
+    setBreakpointErrors([]);
+  }, [cfg.riskScoringModel, cfg.residualRisk?.parameter, cfg.riskScore.scale.min, cfg.riskScore.scale.max, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max]);
+
+  // Clamp breakpoints for ACTIVE parameter only, using its own scale; persist to per-parameter cache
+  React.useEffect(() => {
+    if (cfg.riskScoringModel === 'standard') { setBreakpointErrors([]); return; }
+    const param = cfg.residualRisk?.parameter || 'residualRisk';
+    if (!paramRanges[param] || !paramRanges[param].length) return; // wait until seeded to avoid mixing scales
+    const activeRanges = paramRanges[param] || [];
+
+    let min: number, max: number;
+    if (param === 'likelihood') { min = cfg.riskScore?.likelihood?.scale?.min ?? 1; max = cfg.riskScore?.likelihood?.scale?.max ?? 5; }
+    else if (param === 'consequence') { min = cfg.riskScore?.consequence?.scale?.min ?? 1; max = cfg.riskScore?.consequence?.scale?.max ?? 5; }
+    else if (param === 'controlScore') { min = cfg.controlScore?.scale?.min ?? 1; max = cfg.controlScore?.scale?.max ?? 5; }
+    else { min = cfg.riskScore?.scale?.min ?? 1; max = cfg.riskScore?.scale?.max ?? 25; }
+
+    const current = getBreakpointsFromRanges(activeRanges);
     if (current.length === 0) return;
 
-    // Check if adjustment is needed
     const needsAdjustment = current[0] !== min || current[current.length - 1] !== max ||
       current.some((v, i) => i > 0 && i < current.length - 1 && (v < min + 1 || v > max - 1 || (i > 0 && v <= current[i - 1])));
-
     if (!needsAdjustment) return;
 
-    setCfg(prev => {
-      const next = [...current];
-      next[0] = min;
-      next[next.length - 1] = max;
-
-      for (let i = 1; i < next.length - 1; i++) {
-        next[i] = Math.min(Math.max(Math.round(next[i]), min + 1), max - 1);
-        if (next[i] <= next[i - 1]) next[i] = next[i - 1] + 1;
-        if (i + 1 < next.length && next[i] >= next[i + 1]) next[i] = Math.max(next[i + 1] - 1, min + 1);
-      }
-
-      const errs = validateBreakpoints(next, min, max);
-      setBreakpointErrors(errs);
-      const newRanges = getRangesFromBreakpoints(next, ranges);
-      return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
-    });
-  }, [cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max]);
+    const next = [...current];
+    next[0] = min; next[next.length - 1] = max;
+    for (let i = 1; i < next.length - 1; i++) {
+      next[i] = Math.min(Math.max(Math.round(next[i]), min + 1), max - 1);
+      if (next[i] <= next[i - 1]) next[i] = next[i - 1] + 1;
+      if (i + 1 < next.length && next[i] >= next[i + 1]) next[i] = Math.max(next[i + 1] - 1, min + 1);
+    }
+    const errs = validateBreakpoints(next, min, max);
+    setBreakpointErrors(errs);
+    const newRanges = getRangesFromBreakpoints(next, activeRanges);
+    setParamRanges(prev => ({ ...prev, [param]: newRanges }));
+    setCfg(prev => ({ ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig));
+  }, [cfg.riskScoringModel, cfg.residualRisk.parameter, cfg.riskScore.likelihood?.scale?.min, cfg.riskScore.likelihood?.scale?.max, cfg.riskScore.consequence?.scale?.min, cfg.riskScore.consequence?.scale?.max, cfg.controlScore.scale.min, cfg.controlScore.scale.max, cfg.riskScore.scale.min, cfg.riskScore.scale.max, paramRanges]);
 
   return (
     <Tabs defaultValue="risk" className="space-y-4">
@@ -280,16 +361,30 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label>Parameters</Label>
-                <Select value={cfg.residualRisk.parameter || 'residualRisk'} onValueChange={(v:any)=> setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v } })}>
-                  <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="likelihood">Likelihood</SelectItem>
-                    <SelectItem value="consequence">Consequence</SelectItem>
-                    <SelectItem value="riskScore">Risk Score</SelectItem>
-                    <SelectItem value="controlScore">Control Score</SelectItem>
-                    <SelectItem value="residualRisk">Residual Risk</SelectItem>
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const modeIsSingle = !isStandard && mode === 'single';
+                  const allowed = modeIsSingle ? ['riskScore','controlScore','residualRisk'] : ['likelihood','consequence','riskScore','controlScore','residualRisk'];
+                  const value = (cfg.residualRisk.parameter && allowed.includes(cfg.residualRisk.parameter)) ? cfg.residualRisk.parameter : (modeIsSingle ? 'riskScore' : (cfg.residualRisk.parameter || 'residualRisk'));
+                  return (
+                    <Select value={value} onValueChange={(v:any)=> {
+                      setParamRanges(prev => {
+                        if (prev[v] && prev[v].length) return prev;
+                        return { ...prev, [v]: buildDefaultForParam(v) };
+                      });
+                      const nextRanges = (paramRanges[v] && paramRanges[v].length) ? paramRanges[v] : buildDefaultForParam(v);
+                      setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, parameter: v, thresholds: { ...cfg.residualRisk.thresholds, ranges: nextRanges } } });
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Select parameter"/></SelectTrigger>
+                      <SelectContent>
+                        {allowed.includes('likelihood') && <SelectItem value="likelihood">Likelihood</SelectItem>}
+                        {allowed.includes('consequence') && <SelectItem value="consequence">Consequence</SelectItem>}
+                        {allowed.includes('riskScore') && <SelectItem value="riskScore">Risk Score</SelectItem>}
+                        {allowed.includes('controlScore') && <SelectItem value="controlScore">Control Score</SelectItem>}
+                        {allowed.includes('residualRisk') && <SelectItem value="residualRisk">Residual Risk</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
               </div>
             </div>
 
@@ -297,7 +392,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
               <h3 className="font-medium">Threshold Ranges</h3>
               <div className="space-y-2">
                 {(() => {
-                  const ranges = cfg.residualRisk.thresholds.ranges || [];
+                  const p = cfg.residualRisk?.parameter || 'residualRisk';
+                  const ranges = (paramRanges[p] && paramRanges[p].length ? paramRanges[p] : cfg.residualRisk.thresholds.ranges) || [];
                   const breakpoints = getBreakpointsFromRanges(ranges);
 
                   return breakpoints.length > 0 ? breakpoints.map((breakpoint, idx) => {
@@ -323,6 +419,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                               setBreakpointErrors(errors);
                               if (!errors[idx]) {
                                 const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                                const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                 setCfg(prev => ({
                                   ...prev,
                                   residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } }
@@ -352,6 +450,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                   const newRanges = [...ranges];
                                   if (newRanges[idx]) {
                                     newRanges[idx] = { ...newRanges[idx], label: e.target.value };
+                                    const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                    setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                     setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } });
                                   }
                                 }}
@@ -375,7 +475,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                         {['#000000','#FFFFFF','#1F2937','#4B5563','#2563EB','#F97316','#EF4444','#10B981','#F59E0B','#8B5CF6'].map(c => (
                                           <button key={c} type="button" title={c} className={"h-5 w-5 rounded border border-gray-300 " + (range?.color === c ? 'ring-2 ring-blue-500' : '')} style={{ backgroundColor: c }} onClick={() => {
                                             const newRanges = [...ranges];
-                                            if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: c }; setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
+                                            if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: c }; const p = cfg.residualRisk?.parameter || 'residualRisk'; setParamRanges(prev => ({ ...prev, [p]: newRanges })); setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
                                             setOpenColorPickerFor(null);
                                           }} />
                                         ))}
@@ -384,7 +484,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                     <div className="border-t pt-2">
                                       <Input placeholder="Custom color (#rrggbb)" value={range?.color || ''} onChange={(e) => {
                                         const newRanges = [...ranges];
-                                        if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: e.target.value }; setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
+                                        if (newRanges[idx]) { newRanges[idx] = { ...newRanges[idx], color: e.target.value }; const p = cfg.residualRisk?.parameter || 'residualRisk'; setParamRanges(prev => ({ ...prev, [p]: newRanges })); setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } }); }
                                       }} className="text-xs" />
                                     </div>
                                   </div>
@@ -400,6 +500,8 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                                 if (idx === 0 || idx === breakpoints.length - 1) return;
                                 const newBreakpoints = breakpoints.filter((_, i) => i !== idx);
                                 const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                                const p = cfg.residualRisk?.parameter || 'residualRisk';
+                                setParamRanges(prev => ({ ...prev, [p]: newRanges }));
                                 setCfg({ ...cfg, residualRisk: { ...cfg.residualRisk, thresholds: { ...cfg.residualRisk.thresholds, ranges: newRanges } } });
                                 setBreakpointErrors([]);
                               }} disabled={idx === 0 || idx === breakpoints.length - 1}>Remove</Button>
@@ -411,7 +513,7 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                   }) : <div className="text-sm text-gray-500">No breakpoints defined</div>;
                 })()}
               </div>
-              <div>
+              <div className="flex items-center justify-between">
                 <Button size="sm" onClick={() => {
                   setCfg(prev => {
                     const ranges = prev.residualRisk.thresholds.ranges || [];
@@ -432,9 +534,21 @@ export default function ProjectRiskAssessmentForm({ value, onChange }: Props) {
                     newBreakpoints.splice(bestGapIndex + 1, 0, clampedValue);
 
                     const newRanges = getRangesFromBreakpoints(newBreakpoints, ranges);
+                    const p = (prev.residualRisk?.parameter || 'residualRisk');
+                    setParamRanges(pr => ({ ...pr, [p]: newRanges }));
                     return { ...prev, residualRisk: { ...prev.residualRisk, thresholds: { ...prev.residualRisk.thresholds, ranges: newRanges } } } as RiskAssessmentConfig;
                   });
-                }} disabled={((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
+                }} disabled={isStandard || ((): boolean => { const bps = getBreakpointsFromRanges(cfg.residualRisk.thresholds.ranges || []); for (let i = 0; i < bps.length - 1; i++) { if (bps[i + 1] - bps[i] > 1) return false; } return true; })()}>Add Breakpoint</Button>
+
+                <div className="flex justify-end mt-2">
+                  <Button onClick={() => {
+                    if (onSave) {
+                      onSave(cfg);
+                    } else {
+                      toast({ title: 'Risk Assessment settings saved successfully.' });
+                    }
+                  }}>Save Settings</Button>
+                </div>
               </div>
             </div>
           </CardContent>

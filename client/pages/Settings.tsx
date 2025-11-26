@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AssignmentTypeStore } from '@/contexts/AssignmentTypeStore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import * as XLSX from 'xlsx';
+import { Filter, Rows3, Columns2, Download } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -43,6 +47,11 @@ function AssignmentTypesEditor() {
   const [items, setItems] = useState<{id:string; name:string; description?:string; active?:boolean}[]>([]);
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<Record<string,string>>({});
+  const [filterName, setFilterName] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all'|'active'|'purged'>('all');
+  const allFields = ['Assignment Type','Status'] as const;
+  const [selectedFields, setSelectedFields] = useState<string[]>([...allFields]);
+  const [groupBy, setGroupBy] = useState<'none'|'assignmentType'|'status'>('none');
   useEffect(() => {
     const setFromStore = () => setItems(AssignmentTypeStore.getAll());
     const unsub = AssignmentTypeStore.subscribe(setFromStore);
@@ -51,16 +60,114 @@ function AssignmentTypesEditor() {
   }, []);
   const add = () => { AssignmentTypeStore.add(newName); setNewName(''); };
   const save = (id: string) => { const v = (editing[id]||'').trim(); if (v) AssignmentTypeStore.rename(id, v); setEditing(prev => { const c = {...prev}; delete c[id]; return c; }); };
-  const remove = (id: string) => { AssignmentTypeStore.remove(id); };
+  const purge = (id: string) => { AssignmentTypeStore.setActive(id, false); };
+  const restore = (id: string) => { AssignmentTypeStore.setActive(id, true); };
+
+  const filtered = items.filter(it => {
+    const nameOk = !filterName || it.name.toLowerCase().includes(filterName.toLowerCase());
+    const statusOk = filterStatus === 'all' ? true : filterStatus === 'active' ? (it.active ?? true) : !(it.active ?? true);
+    return nameOk && statusOk;
+  });
+
+  const exportAssignment = () => {
+    const makeRow = (it: any) => {
+      const row: Record<string, any> = {};
+      if (selectedFields.includes('Assignment Type')) row['Assignment Type'] = it.name;
+      if (selectedFields.includes('Status')) row['Status'] = (it.active ?? true) ? 'Active' : 'Purged';
+      return row;
+    };
+    let rows: any[] = [];
+    if (groupBy === 'none') {
+      rows = filtered.map(makeRow);
+    } else {
+      const groups: Record<string, any[]> = {};
+      for (const it of filtered) {
+        const key = groupBy === 'status' ? ((it.active ?? true) ? 'Active' : 'Purged') : it.name;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(it);
+      }
+      const keys = Object.keys(groups).sort();
+      for (const k of keys) {
+        rows.push({ Group: k });
+        rows.push(...groups[k].map(makeRow));
+        rows.push({});
+      }
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Assignment');
+    XLSX.writeFile(wb, 'settings-assignment.xlsx');
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input placeholder="Add new assignment type" value={newName} onChange={(e)=>setNewName(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input placeholder="Add new assignment type" value={newName} onChange={(e)=>setNewName(e.target.value)} className="max-w-xs" />
         <Button onClick={add}>Add</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Filter className="h-4 w-4"/> Filter</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 z-[200]">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Assignment Type</Label>
+                  <Input value={filterName} onChange={(e)=>setFilterName(e.target.value)} placeholder="Search by name" />
+                </div>
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={filterStatus} onValueChange={(v:any)=>setFilterStatus(v)}>
+                    <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent className="z-[210]">
+                      <SelectItem value="purged">Purged</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>{ setFilterName(''); setFilterStatus('all'); }}>Reset</Button></div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Rows3 className="h-4 w-4"/> Group</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48">
+              <div className="grid gap-2">
+                {(['none','assignmentType','status'] as const).map(opt => (
+                  <Button key={opt} variant={groupBy===opt?'default':'outline'} size="sm" className="capitalize justify-start" onClick={()=>setGroupBy(opt)}>
+                    {opt === 'none' ? 'None' : (opt === 'assignmentType' ? 'Assignment Type' : 'Status')}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2"><Columns2 className="h-4 w-4"/> Fields</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(['Assignment Type','Status'] as const).map(f => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={selectedFields.includes(f)} onCheckedChange={(v)=> setSelectedFields(prev => v ? [...prev, f] : prev.filter(x=>x!==f))} />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields(['Assignment Type','Status'])}>All</Button>
+                  <Button size="sm" variant="outline" onClick={()=>setSelectedFields([])}>None</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" onClick={exportAssignment} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button>
+        </div>
       </div>
       <div className="space-y-2">
-        {items.map(item => (
+        {filtered.map(item => (
           <div key={item.id} className="flex items-center gap-2 border rounded p-2">
             {editing[item.id] !== undefined ? (
               <>
@@ -69,9 +176,16 @@ function AssignmentTypesEditor() {
               </>
             ) : (
               <>
-                <div className="flex-1 text-sm">{item.name}</div>
+                <div className={`flex-1 text-sm ${item.active === false ? 'line-through text-gray-500' : ''}`}>
+                  {item.name}
+                  {item.active === false && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">Purged</span>}
+                </div>
                 <Button size="sm" variant="outline" onClick={()=> setEditing(prev=>({ ...prev, [item.id]: item.name }))}>Rename</Button>
-                <Button size="sm" variant="destructive" onClick={()=>remove(item.id)}>Delete</Button>
+                {item.active === false ? (
+                  <Button size="sm" variant="secondary" onClick={()=>restore(item.id)}>Restore</Button>
+                ) : (
+                  <Button size="sm" variant="destructive" onClick={()=>purge(item.id)}>Purge</Button>
+                )}
               </>
             )}
           </div>
@@ -101,6 +215,68 @@ function RoleAccessEditor() {
   const [selectedRole, setSelectedRole] = React.useState<string>(ROLES[0]);
   const [selectedUser, setSelectedUser] = React.useState<string>('none');
 
+  const exportAccessControls = async () => {
+    try {
+      const md = await import('./ModularDashboard');
+      const modules = (md && md.modules) ? md.modules as any[] : [];
+      const idToName: Record<string,string> = {};
+      modules.forEach((m:any)=>{ idToName[m.id] = m.name; });
+
+      const fetchJson = async (key: string) => {
+        try { const res = await fetch(`/api/settings/${key}`); if (res.ok) return await res.json(); } catch {}
+        try { return JSON.parse(localStorage.getItem(key) || 'null') || {}; } catch { return {}; }
+      };
+
+      const roleMap: Record<string,string[]> = Object.keys(mapState||{}).length ? mapState : await fetchJson('roleModuleMap');
+      const roleScope: Record<string,string> = Object.keys(scopeState||{}).length ? scopeState : await fetchJson('roleProjectScope');
+      const userMap: Record<string,string[]> = Object.keys(userMapState||{}).length ? userMapState : await fetchJson('userModuleMap');
+      const userScope: Record<string,string> = Object.keys(userScopeState||{}).length ? userScopeState : await fetchJson('userProjectScope');
+
+      let employees: any[] = [];
+      try {
+        const raw = localStorage.getItem('employees');
+        if (raw) employees = JSON.parse(raw);
+        else {
+          const res = await fetch('/api/employees');
+          if (res.ok) employees = await res.json();
+        }
+      } catch {}
+
+      const toModuleNames = (ids: string[] = []) => (ids||[]).map(id => idToName[id] || id).join(', ');
+
+      const roleRows: any[] = [];
+      const ALL_ROLES = ['Admin','HR','Division Partner','Division Head','Team Leader','Team Member'];
+      for (const role of ALL_ROLES) {
+        const mods = roleMap[role] || [];
+        roleRows.push({ Role: role, Modules: toModuleNames(mods), Scope: roleScope[role] || 'all' });
+      }
+
+      const roleEmpRows: any[] = [];
+      (employees||[]).forEach((e:any)=>{
+        roleEmpRows.push({ Role: e.role || '', Employee: e.name || '', Email: e.email || '', Division: e.division || '', Status: (e.isActive ?? true) ? 'Active' : 'Purged' });
+      });
+
+      const empAccessRows: any[] = [];
+      const byId: Record<string, any> = {};
+      (employees||[]).forEach((e:any)=>{ if (e?.id) byId[String(e.id)] = e; });
+      Object.keys(userMap||{}).forEach(uid => {
+        const e = byId[uid] || {};
+        empAccessRows.push({ Employee: e.name || uid, Email: e.email || '', Modules: toModuleNames(userMap[uid]||[]), Scope: userScope[uid] || 'all' });
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.json_to_sheet(roleRows);
+      const ws2 = XLSX.utils.json_to_sheet(roleEmpRows);
+      const ws3 = XLSX.utils.json_to_sheet(empAccessRows);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Role Access Controls');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Role Employees');
+      XLSX.utils.book_append_sheet(wb, ws3, 'Employee Access');
+      XLSX.writeFile(wb, 'settings-access-controls.xlsx');
+    } catch (e) {
+      console.error('Export failed', e);
+    }
+  };
+
   React.useEffect(() => {
     let mounted = true;
     (async () => {
@@ -110,21 +286,34 @@ function RoleAccessEditor() {
         if (!mounted) return;
         setModulesList(list);
 
+        try {
+          const [roleMapRes, roleScopeRes, userMapRes, userScopeRes] = await Promise.all([
+            fetch('/api/settings/roleModuleMap'),
+            fetch('/api/settings/roleProjectScope'),
+            fetch('/api/settings/userModuleMap'),
+            fetch('/api/settings/userProjectScope')
+          ]);
+          if (roleMapRes.ok) setMapState(await roleMapRes.json());
+          if (roleScopeRes.ok) setScopeState(await roleScopeRes.json());
+          if (userMapRes.ok) setUserMapState(await userMapRes.json());
+          if (userScopeRes.ok) setUserScopeState(await userScopeRes.json());
+        } catch {}
+
         const stored = localStorage.getItem(ROLE_KEY);
-        if (stored) {
+        if (stored && Object.keys(mapState||{}).length===0) {
           try { setMapState(JSON.parse(stored)); } catch {}
         }
         const storedScope = localStorage.getItem(SCOPE_KEY);
-        if (storedScope) {
+        if (storedScope && Object.keys(scopeState||{}).length===0) {
           try { setScopeState(JSON.parse(storedScope)); } catch {}
         }
 
         const storedUserMap = localStorage.getItem(USER_KEY);
-        if (storedUserMap) {
+        if (storedUserMap && Object.keys(userMapState||{}).length===0) {
           try { setUserMapState(JSON.parse(storedUserMap)); } catch {}
         }
         const storedUserScope = localStorage.getItem(USER_SCOPE_KEY);
-        if (storedUserScope) {
+        if (storedUserScope && Object.keys(userScopeState||{}).length===0) {
           try { setUserScopeState(JSON.parse(storedUserScope)); } catch {}
         }
 
@@ -173,7 +362,7 @@ function RoleAccessEditor() {
     localStorage.setItem(USER_KEY, JSON.stringify(next));
   };
 
-  const toggleModuleTarget = (moduleId: string) => {
+  const toggleModuleTarget = async (moduleId: string) => {
     if (selectedUser && selectedUser !== 'none') {
       const uid = selectedUser;
       const next = { ...(userMapState || {}) };
@@ -181,6 +370,7 @@ function RoleAccessEditor() {
       const idx = next[uid].indexOf(moduleId);
       if (idx === -1) next[uid].push(moduleId); else next[uid].splice(idx,1);
       persistUserMap(next);
+      try { fetch('/api/settings/userModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) }).catch(() => {}); } catch {}
     } else {
       const role = selectedRole;
       setMapState(prev => {
@@ -189,6 +379,7 @@ function RoleAccessEditor() {
         const idx = copy[role].indexOf(moduleId);
         if (idx === -1) copy[role].push(moduleId); else copy[role].splice(idx,1);
         localStorage.setItem(ROLE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/roleModuleMap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     }
@@ -201,6 +392,7 @@ function RoleAccessEditor() {
         const copy = { ...(prev || {}) };
         copy[uid] = value;
         localStorage.setItem(USER_SCOPE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/userProjectScope', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     } else {
@@ -209,6 +401,7 @@ function RoleAccessEditor() {
         const copy = { ...(prev || {}) };
         copy[role] = value;
         localStorage.setItem(SCOPE_KEY, JSON.stringify(copy));
+        try { fetch('/api/settings/roleProjectScope', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(copy) }); } catch {}
         return copy;
       });
     }
@@ -274,6 +467,7 @@ function RoleAccessEditor() {
             </Select>
           </div>
         </div>
+        <div className="ml-2"><Button size="sm" onClick={exportAccessControls} className="flex items-center gap-2"><Download className="h-4 w-4"/> Export XLSX</Button></div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

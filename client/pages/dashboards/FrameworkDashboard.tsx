@@ -1,17 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Plus,
   ChevronRight,
@@ -19,11 +44,16 @@ import {
   X,
   MessageSquare,
   Pencil,
-  Trash
-} from 'lucide-react';
+  Trash,
+  Filter as FilterIcon,
+  Rows3,
+  Columns2,
+  Download,
+  Loader2,
+} from "lucide-react";
+import * as XLSX from "xlsx";
 
-
-type NodeType = 'process' | 'subprocess' | 'activity' | 'risk' | 'control';
+type NodeType = "process" | "subprocess" | "activity" | "risk" | "control";
 
 interface FrameworkNode {
   id: string;
@@ -78,17 +108,17 @@ interface ControlDetails {
 }
 
 type NodeDetails =
-  | ({ type: 'process' } & ProcessDetails)
-  | ({ type: 'subprocess' } & SubprocessDetails)
-  | ({ type: 'activity' } & ActivityDetails)
-  | ({ type: 'risk' } & RiskDetails)
-  | ({ type: 'control' } & ControlDetails);
+  | ({ type: "process" } & ProcessDetails)
+  | ({ type: "subprocess" } & SubprocessDetails)
+  | ({ type: "activity" } & ActivityDetails)
+  | ({ type: "risk" } & RiskDetails)
+  | ({ type: "control" } & ControlDetails);
 
 interface Client {
   id: string;
   name: string;
   description: string;
-  status: 'completed' | 'in-progress';
+  status: "completed" | "in-progress";
   industry: string;
   assignedProjects: number;
 }
@@ -98,63 +128,169 @@ interface Comment {
   author: string;
   content: string;
   timestamp: string;
-  type: 'note' | 'issue' | 'resolution';
+  type: "note" | "issue" | "resolution";
 }
 
 const riskCategories = ["Operational", "Financial", "Compliance", "Strategic"];
 const controlTypes = ["Preventive", "Detective", "Corrective", "Compensating"];
-const controlFrequencies = ["Daily", "Weekly", "Monthly", "Quarterly", "Annually", "Ad-hoc"];
-const UNASSIGNED_DEPT = 'UNASSIGNED';
-const DEFAULT_DEPT_OPTIONS = ["Finance", "Operations", "HR", "IT", "Procurement", "Sales", "Legal", "Compliance", "Internal Audit", "Other"];
+const controlFrequencies = [
+  "Daily",
+  "Weekly",
+  "Monthly",
+  "Quarterly",
+  "Annually",
+  "Ad-hoc",
+];
+const UNASSIGNED_DEPT = "UNASSIGNED";
+const DEFAULT_DEPT_OPTIONS = [
+  "Finance",
+  "Operations",
+  "HR",
+  "IT",
+  "Procurement",
+  "Sales",
+  "Legal",
+  "Compliance",
+  "Internal Audit",
+  "Other",
+];
 
-const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
+const MultiSelect = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: string[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const display =
+    value && value.length
+      ? value.length <= 2
+        ? value.join(", ")
+        : `${value.slice(0, 2).join(", ")} (+${value.length - 2})`
+      : placeholder || "Select";
+  const toggle = (opt: string) => {
+    let next = Array.isArray(value) ? [...value] : [];
+    const has = next.includes(opt);
+    if (has) next = next.filter((x) => x !== opt);
+    else next.push(opt);
+    onChange(next);
+  };
+  const stop = (e: any) => {
+    e.stopPropagation();
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="truncate">{display}</span>
+          <span className="ml-2 text-xs text-muted-foreground">Select</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="z-[80] w-72 p-0" data-popover-content>
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>No results.</CommandEmpty>
+          <CommandList className="max-h-60 overflow-y-auto">
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem key={opt} value={opt} onSelect={() => toggle(opt)}>
+                  <Checkbox
+                    className="mr-2"
+                    checked={value?.includes(opt)}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    onClick={stop}
+                    onCheckedChange={() => toggle(opt)}
+                  />{" "}
+                  {opt}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+        <div className="border-t p-2 flex justify-between">
+          <Button size="sm" variant="ghost" onClick={() => onChange([])}>
+            Clear
+          </Button>
+          <Button size="sm" onClick={() => onChange([...options])}>
+            Select All
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+const DepartmentsMultiSelect = ({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) => {
   const [open, setOpen] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>(() => {
     try {
-      const raw = localStorage.getItem('framework:departments');
+      const raw = localStorage.getItem("framework:departments");
       const arr = raw ? JSON.parse(raw) : null;
-      return Array.isArray(arr) && arr.every((x: any) => typeof x === 'string') ? arr : DEFAULT_DEPT_OPTIONS;
+      return Array.isArray(arr) && arr.every((x: any) => typeof x === "string")
+        ? arr
+        : DEFAULT_DEPT_OPTIONS;
     } catch {
       return DEFAULT_DEPT_OPTIONS;
     }
   });
   React.useEffect(() => {
     try {
-      localStorage.setItem('framework:departments', JSON.stringify(options));
+      localStorage.setItem("framework:departments", JSON.stringify(options));
     } catch {}
   }, [options]);
-  const [newDept, setNewDept] = React.useState('');
+  const [newDept, setNewDept] = React.useState("");
   const addNew = () => {
     const name = newDept.trim();
     if (!name) return;
     if (name.toUpperCase() === UNASSIGNED_DEPT) return;
-    const existing = options.find(o => o.toLowerCase() === name.toLowerCase());
+    const existing = options.find(
+      (o) => o.toLowerCase() === name.toLowerCase(),
+    );
     if (existing) {
       toggle(existing);
-      setNewDept('');
+      setNewDept("");
       return;
     }
     const next = [...options, name];
     setOptions(next);
     toggle(name);
-    setNewDept('');
+    setNewDept("");
   };
-  const display = value && value.length && !(value.length === 1 && value[0] === UNASSIGNED_DEPT)
-    ? (value.length <= 2 ? value.join(', ') : `${value.slice(0, 2).join(', ')} (+${value.length - 2})`)
-    : 'Unassigned';
+  const display =
+    value &&
+    value.length &&
+    !(value.length === 1 && value[0] === UNASSIGNED_DEPT)
+      ? value.length <= 2
+        ? value.join(", ")
+        : `${value.slice(0, 2).join(", ")} (+${value.length - 2})`
+      : "Unassigned";
   const toggle = (dep: string) => {
     let next = Array.isArray(value) ? [...value] : [];
     const has = next.includes(dep);
     if (dep === UNASSIGNED_DEPT) {
       next = has ? [] : [UNASSIGNED_DEPT];
     } else {
-      next = next.filter(d => d !== UNASSIGNED_DEPT);
-      if (has) next = next.filter(d => d !== dep); else next.push(dep);
+      next = next.filter((d) => d !== UNASSIGNED_DEPT);
+      if (has) next = next.filter((d) => d !== dep);
+      else next.push(dep);
     }
     onChange(next);
   };
   const stop = (e: any) => {
-    e.preventDefault();
+    // Stop bubbling so the parent CommandItem doesn't handle the click,
+    // but allow the checkbox's default behavior to toggle.
     e.stopPropagation();
   };
   return (
@@ -171,14 +307,33 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
           <CommandEmpty>No department found.</CommandEmpty>
           <CommandList className="max-h-60 overflow-y-auto">
             <CommandGroup heading="Options">
-              <CommandItem value={UNASSIGNED_DEPT} onSelect={() => toggle(UNASSIGNED_DEPT)}>
-                <Checkbox className="mr-2" checked={value?.includes(UNASSIGNED_DEPT)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(UNASSIGNED_DEPT)} /> Unassigned
+              <CommandItem
+                value={UNASSIGNED_DEPT}
+                onSelect={() => toggle(UNASSIGNED_DEPT)}
+              >
+                <Checkbox
+                  className="mr-2"
+                  checked={value?.includes(UNASSIGNED_DEPT)}
+                  onPointerDown={stop}
+                  onMouseDown={stop}
+                  onClick={stop}
+                  onCheckedChange={() => toggle(UNASSIGNED_DEPT)}
+                />{" "}
+                Unassigned
               </CommandItem>
             </CommandGroup>
             <CommandGroup heading="Departments">
-              {options.map(dep => (
+              {options.map((dep) => (
                 <CommandItem key={dep} value={dep} onSelect={() => toggle(dep)}>
-                  <Checkbox className="mr-2" checked={value?.includes(dep)} onClick={stop} onMouseDown={stop} onCheckedChange={() => toggle(dep)} /> {dep}
+                  <Checkbox
+                    className="mr-2"
+                    checked={value?.includes(dep)}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    onClick={stop}
+                    onCheckedChange={() => toggle(dep)}
+                  />{" "}
+                  {dep}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -190,9 +345,13 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
               placeholder="Add new department"
               value={newDept}
               onChange={(e) => setNewDept(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addNew();
+              }}
             />
-            <Button size="sm" onClick={addNew}>Add</Button>
+            <Button size="sm" onClick={addNew}>
+              Add
+            </Button>
           </div>
         </div>
       </PopoverContent>
@@ -200,31 +359,60 @@ const DepartmentsMultiSelect = ({ value, onChange }: { value: string[]; onChange
   );
 };
 
-const ProcessSelector = ({ processes, value, onSelect, placeholder }: { processes: FrameworkNode[]; value: string | null; onSelect: (id: string) => void; placeholder?: string }) => {
+const ProcessSelector = ({
+  processes,
+  value,
+  onSelect,
+  placeholder,
+}: {
+  processes: FrameworkNode[];
+  value: string | null;
+  onSelect: (id: string) => void;
+  placeholder?: string;
+}) => {
   const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState("");
   const items = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return processes;
-    return processes.filter(p => p.name.toLowerCase().includes(q));
+    return processes.filter((p) => p.name.toLowerCase().includes(q));
   }, [processes, query]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
-          <span className="truncate">{value ? (processes.find(p => p.id === value)?.name || value) : (query || placeholder || 'Select process')}</span>
+          <span className="truncate">
+            {value
+              ? processes.find((p) => p.id === value)?.name || value
+              : query || placeholder || "Select process"}
+          </span>
           <span className="ml-2 text-xs text-muted-foreground">Select</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="z-[80] p-0 w-[var(--radix-popper-anchor-width)] max-w-3xl" style={{ width: 'var(--radix-popper-anchor-width)' }}>
+      <PopoverContent
+        className="z-[80] p-0 w-[var(--radix-popper-anchor-width)] max-w-3xl"
+        style={{ width: "var(--radix-popper-anchor-width)" }}
+      >
         <Command>
-          <CommandInput placeholder="Type to search processes..." value={query} onValueChange={(v) => setQuery(v || '')} />
+          <CommandInput
+            placeholder="Type to search processes..."
+            value={query}
+            onValueChange={(v) => setQuery(v || "")}
+          />
           <CommandEmpty>No process found.</CommandEmpty>
           <CommandList className="max-h-72 overflow-y-auto">
             <CommandGroup>
-              {items.map(p => (
-                <CommandItem key={p.id} value={`${p.name} ${p.id}`} onSelect={() => { onSelect(p.id); setQuery(''); setOpen(false); }}>
+              {items.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  value={`${p.name} ${p.id}`}
+                  onSelect={() => {
+                    onSelect(p.id);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                >
                   {p.name}
                 </CommandItem>
               ))}
@@ -238,63 +426,88 @@ const ProcessSelector = ({ processes, value, onSelect, placeholder }: { processe
 
 export default function FrameworkDashboard() {
   const [activeTab, setActiveTab] = useState("completed");
-  const [selectedClient, setSelectedClient] = useState<string | null>('CLT-001');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClient, setSelectedClient] = useState<string | null>(
+    "CLT-001",
+  );
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const [clients] = useState<Client[]>([
     {
-      id: 'CLT-001',
-      name: 'Bull Machines India Pvt. LTD',
-      description: 'Manufacturing and production company specializing in industrial machinery',
-      status: 'in-progress',
-      industry: 'Manufacturing',
-      assignedProjects: 2
+      id: "CLT-001",
+      name: "Bull Machines India Pvt. LTD",
+      description:
+        "Manufacturing and production company specializing in industrial machinery",
+      status: "in-progress",
+      industry: "Manufacturing",
+      assignedProjects: 2,
     },
     {
-      id: 'CLT-002',
-      name: 'Supreme Mobiles',
-      description: 'Mobile phone retail and distribution company',
-      status: 'in-progress',
-      industry: 'Retail',
-      assignedProjects: 1
+      id: "CLT-002",
+      name: "Supreme Mobiles",
+      description: "Mobile phone retail and distribution company",
+      status: "in-progress",
+      industry: "Retail",
+      assignedProjects: 1,
     },
     {
-      id: 'CLT-003',
-      name: 'Thalapakatti Hospitality Pvt. LTD',
-      description: 'Restaurant chain and hospitality services',
-      status: 'completed',
-      industry: 'Hospitality',
-      assignedProjects: 1
+      id: "CLT-003",
+      name: "Thalapakatti Hospitality Pvt. LTD",
+      description: "Restaurant chain and hospitality services",
+      status: "completed",
+      industry: "Hospitality",
+      assignedProjects: 1,
     },
     {
-      id: 'CLT-004',
-      name: 'KTM',
-      description: 'Automotive and motorcycle manufacturing',
-      status: 'in-progress',
-      industry: 'Automotive',
-      assignedProjects: 3
+      id: "CLT-004",
+      name: "KTM",
+      description: "Automotive and motorcycle manufacturing",
+      status: "in-progress",
+      industry: "Automotive",
+      assignedProjects: 3,
     },
     {
-      id: 'CLT-005',
-      name: 'KMCH',
-      description: 'Healthcare and medical services provider',
-      status: 'completed',
-      industry: 'Healthcare',
-      assignedProjects: 1
-    }
+      id: "CLT-005",
+      name: "KMCH",
+      description: "Healthcare and medical services provider",
+      status: "completed",
+      industry: "Healthcare",
+      assignedProjects: 1,
+    },
   ]);
 
   const [nodes, setNodes] = useState<FrameworkNode[]>([]);
-  const [detailsById, setDetailsById] = useState<Record<string, NodeDetails>>({});
+  const [detailsById, setDetailsById] = useState<Record<string, NodeDetails>>(
+    {},
+  );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
-  const [treeSearch, setTreeSearch] = useState('');
-  const [universalSearch, setUniversalSearch] = useState('');
-  const [controlFilterValue, setControlFilterValue] = useState('ALL');
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(
+    null,
+  );
+  const [treeSearch, setTreeSearch] = useState("");
+  const [universalSearch, setUniversalSearch] = useState("");
+  const [controlFilterValue, setControlFilterValue] = useState("ALL");
 
   const [comments, setComments] = useState<Comment[]>([]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/framework/tree");
+        if (res.ok) {
+          const data = await res.json();
+          const fetched = ((data.nodes || []) as any[])
+            .slice()
+            .sort((a: any, b: any) => compareHier(a.id, b.id));
+          setNodes(fetched as any[]);
+          setDetailsById((data.detailsById || {}) as any);
+          return;
+        }
+      } catch {}
+    })();
+  }, []);
+
+  /* Sample import kept commented for reference
   useEffect(() => {
     const SAMPLE_URL = 'https://cdn.builder.io/o/assets%2F977aa5fd74e44b0b93e04285eac4a20c%2Feee14d66d4fb432282ea6ee92ec74183?alt=media&token=416386ad-d7e8-48b3-8b35-0a67061828b1&apiKey=977aa5fd74e44b0b93e04285eac4a20c';
     if (nodes.length) return; // import once
@@ -455,70 +668,125 @@ export default function FrameworkDashboard() {
     };
 
     importData();
-  }, [nodes.length]);
-
+  }, [nodes.length]);*/
 
   const getCommentTypeColor = (type: string) => {
     const colors = {
-      'note': 'bg-blue-100 text-blue-800',
-      'issue': 'bg-red-100 text-red-800',
-      'resolution': 'bg-green-100 text-green-800'
+      note: "bg-blue-100 text-blue-800",
+      issue: "bg-red-100 text-red-800",
+      resolution: "bg-green-100 text-green-800",
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   const childType: Record<NodeType, NodeType | null> = {
-    process: 'subprocess',
-    subprocess: 'activity',
-    activity: 'risk',
-    risk: 'control',
+    process: "subprocess",
+    subprocess: "activity",
+    activity: "risk",
+    risk: "control",
     control: null,
   };
 
-  const getRowBorderClass = (t: NodeType) => (
-    t === 'process' ? 'border-blue-300' :
-    t === 'subprocess' ? 'border-emerald-300' :
-    t === 'activity' ? 'border-amber-300' :
-    t === 'risk' ? 'border-red-300' : 'border-purple-300'
-  );
-  const getTypeColorClass = (t: NodeType) => (
-    t === 'process' ? 'text-blue-700' :
-    t === 'subprocess' ? 'text-emerald-700' :
-    t === 'activity' ? 'text-amber-700' :
-    t === 'risk' ? 'text-red-700' : 'text-purple-700'
-  );
+  const getRowBorderClass = (t: NodeType) =>
+    t === "process"
+      ? "border-blue-300"
+      : t === "subprocess"
+        ? "border-emerald-300"
+        : t === "activity"
+          ? "border-amber-300"
+          : t === "risk"
+            ? "border-red-300"
+            : "border-purple-300";
+  const getTypeColorClass = (t: NodeType) =>
+    t === "process"
+      ? "text-blue-700"
+      : t === "subprocess"
+        ? "text-emerald-700"
+        : t === "activity"
+          ? "text-amber-700"
+          : t === "risk"
+            ? "text-red-700"
+            : "text-purple-700";
 
   const toggleExpanded = (id: string) => {
-    setNodes(prev => prev.map(n => n.id === id ? { ...n, isExpanded: !n.isExpanded } : n));
+    setNodes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isExpanded: !n.isExpanded } : n)),
+    );
   };
 
   const createDefaultDetails = (node: FrameworkNode): NodeDetails => {
-    if (node.type === 'process') return { type: 'process', process_id: node.id, process_name: node.name, process_description: '', process_category: '', departments_involved: [] };
-    if (node.type === 'subprocess') return { type: 'subprocess', sub_process_id: node.id, sub_process_name: node.name, sub_process_description: '', linked_process_id: node.parentId || '', departments_involved: [] };
-    if (node.type === 'activity') {
-      const sub = nodes.find(n => n.id === node.parentId);
-      const procId = sub?.parentId || '';
-      return { type: 'activity', activity_id: node.id, activity_name: node.name, activity_description: '', linked_process_id: procId, linked_sub_process_id: node.parentId || '', departments_involved: [] };
+    if (node.type === "process")
+      return {
+        type: "process",
+        process_id: node.id,
+        process_name: node.name,
+        process_description: "",
+        process_category: "",
+        departments_involved: [],
+      };
+    if (node.type === "subprocess")
+      return {
+        type: "subprocess",
+        sub_process_id: node.id,
+        sub_process_name: node.name,
+        sub_process_description: "",
+        linked_process_id: node.parentId || "",
+        departments_involved: [],
+      };
+    if (node.type === "activity") {
+      const sub = nodes.find((n) => n.id === node.parentId);
+      const procId = sub?.parentId || "";
+      return {
+        type: "activity",
+        activity_id: node.id,
+        activity_name: node.name,
+        activity_description: "",
+        linked_process_id: procId,
+        linked_sub_process_id: node.parentId || "",
+        departments_involved: [],
+      };
     }
-    if (node.type === 'risk') return { type: 'risk', risk_id: node.id, risk_name: node.name, risk_description: '', risk_category: 'Operational', inherent_risk_score: 0, departments_involved: [] };
-    return { type: 'control', control_id: node.id, control_description: node.name, control_type: 'Preventive', control_frequency: 'Monthly', control_owner: '', control_effectiveness_score: 0, departments_involved: [] };
+    if (node.type === "risk")
+      return {
+        type: "risk",
+        risk_id: node.id,
+        risk_name: node.name,
+        risk_description: "",
+        risk_category: "Operational",
+        inherent_risk_score: 0,
+        departments_involved: [],
+      };
+    return {
+      type: "control",
+      control_id: node.id,
+      control_description: node.name,
+      control_type: "Preventive",
+      control_frequency: "Monthly",
+      control_owner: "",
+      control_effectiveness_score: 0,
+      departments_involved: [],
+    };
   };
 
-  const addNode = (parent?: FrameworkNode) => {
-    const type: NodeType = parent ? (childType[parent.type] as NodeType) : 'process';
+  const addNode = async (parent?: FrameworkNode) => {
+    const type: NodeType = parent
+      ? (childType[parent.type] as NodeType)
+      : "process";
     if (!type) return;
 
     const getNextProcessId = () => {
-      const procs = nodes.filter(n => n.type === 'process');
+      const procs = nodes.filter((n) => n.type === "process");
       const max = procs.reduce((m, p) => {
-        const n = parseInt(p.id.replace(/^P/, ''), 10);
+        const n = parseInt(p.id.replace(/^P/, ""), 10);
         return isNaN(n) ? m : Math.max(m, n);
       }, 0);
       return `P${max + 1}`;
     };
 
     const getNextSubprocessId = (processId: string) => {
-      const subs = nodes.filter(n => n.type === 'subprocess' && n.parentId === processId);
+      const subs = nodes.filter(
+        (n) => n.type === "subprocess" && n.parentId === processId,
+      );
       const max = subs.reduce((m, s) => {
         const match = s.id.match(/^P\d+\.(\d+)$/);
         const n = match ? parseInt(match[1], 10) : NaN;
@@ -528,7 +796,9 @@ export default function FrameworkDashboard() {
     };
 
     const getNextActivityId = (subprocessId: string) => {
-      const acts = nodes.filter(n => n.type === 'activity' && n.parentId === subprocessId);
+      const acts = nodes.filter(
+        (n) => n.type === "activity" && n.parentId === subprocessId,
+      );
       const max = acts.reduce((m, a) => {
         const match = a.id.match(/^P\d+\.\d+\.(\d+)$/);
         const n = match ? parseInt(match[1], 10) : NaN;
@@ -538,7 +808,9 @@ export default function FrameworkDashboard() {
     };
 
     const getNextRiskId = (activityId: string) => {
-      const risks = nodes.filter(n => n.type === 'risk' && n.parentId === activityId);
+      const risks = nodes.filter(
+        (n) => n.type === "risk" && n.parentId === activityId,
+      );
       const max = risks.reduce((m, r) => {
         const match = r.id.match(/\/R(\d+)$/);
         const n = match ? parseInt(match[1], 10) : NaN;
@@ -548,7 +820,9 @@ export default function FrameworkDashboard() {
     };
 
     const getNextControlId = (riskId: string) => {
-      const ctrls = nodes.filter(n => n.type === 'control' && n.parentId === riskId);
+      const ctrls = nodes.filter(
+        (n) => n.type === "control" && n.parentId === riskId,
+      );
       const max = ctrls.reduce((m, c) => {
         const match = c.id.match(/\/C(\d+)$/);
         const n = match ? parseInt(match[1], 10) : NaN;
@@ -557,24 +831,83 @@ export default function FrameworkDashboard() {
       return `${riskId}/C${max + 1}`;
     };
 
-    let id = '';
-    if (type === 'process') id = getNextProcessId();
-    else if (type === 'subprocess') id = getNextSubprocessId(parent!.id);
-    else if (type === 'activity') id = getNextActivityId(parent!.id);
-    else if (type === 'risk') id = getNextRiskId(parent!.id);
+    let id = "";
+    if (type === "process") id = getNextProcessId();
+    else if (type === "subprocess") id = getNextSubprocessId(parent!.id);
+    else if (type === "activity") id = getNextActivityId(parent!.id);
+    else if (type === "risk") id = getNextRiskId(parent!.id);
     else id = getNextControlId(parent!.id);
 
-    const name = type === 'process' ? 'New Process' : type === 'subprocess' ? 'New Subprocess' : type === 'activity' ? 'New Activity' : type === 'risk' ? 'New Risk' : 'New Control';
-    const node: FrameworkNode = { id, type, name, parentId: parent?.id, isExpanded: true };
-    setNodes(prev => [...prev, node]);
-    setDetailsById(prev => ({ ...prev, [id]: createDefaultDetails(node) }));
-    if (parent && !parent.isExpanded) toggleExpanded(parent.id);
-    setSelectedNodeId(id);
-    if (type === 'process') setSelectedProcessId(id);
+    const name =
+      type === "process"
+        ? "New Process"
+        : type === "subprocess"
+          ? "New Subprocess"
+          : type === "activity"
+            ? "New Activity"
+            : type === "risk"
+              ? "New Risk"
+              : "New Control";
+    const node: FrameworkNode = {
+      id,
+      type,
+      name,
+      parentId: parent?.id,
+      isExpanded: true,
+    };
+    const details = createDefaultDetails(node);
+
+    // Prevent duplicate process names (case-insensitive)
+    if (type === "process") {
+      const exists = nodes.some(
+        (n) =>
+          n.type === "process" &&
+          n.name.trim().toLowerCase() === name.trim().toLowerCase(),
+      );
+      if (exists) {
+        toast({
+          title:
+            "A process with this name already exists. Please use a different name.",
+        });
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch("/api/framework/nodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          type,
+          name,
+          parentId: parent?.id || null,
+          details,
+        }),
+      });
+      if (res.status === 409) {
+        toast({
+          title:
+            "A process with this name already exists. Please use a different name.",
+        });
+        return;
+      }
+      if (!res.ok) throw new Error("create_failed");
+      setNodes((prev) =>
+        [...prev, node].sort((a, b) => compareHier(a.id, b.id)),
+      );
+      setDetailsById((prev) => ({ ...prev, [id]: details }));
+      if (parent && !parent.isExpanded) toggleExpanded(parent.id);
+      setSelectedNodeId(id);
+      if (type === "process") setSelectedProcessId(id);
+      toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} added` });
+    } catch (e) {
+      toast({ title: "Failed to add" });
+    }
   };
 
   const collectDescendantIds = (id: string, acc: string[] = []) => {
-    const children = nodes.filter(n => n.parentId === id);
+    const children = nodes.filter((n) => n.parentId === id);
     for (const c of children) {
       acc.push(c.id);
       collectDescendantIds(c.id, acc);
@@ -582,22 +915,36 @@ export default function FrameworkDashboard() {
     return acc;
   };
 
-  const deleteNode = (id: string) => {
-    const toDelete = new Set([id, ...collectDescendantIds(id)]);
-    setNodes(prev => prev.filter(n => !toDelete.has(n.id)));
-    setDetailsById(prev => {
-      const copy = { ...prev } as Record<string, NodeDetails>;
-      for (const k of Array.from(toDelete)) delete copy[k];
-      return copy;
-    });
-    if (selectedNodeId && toDelete.has(selectedNodeId)) setSelectedNodeId(null);
+  const deleteNode = async (id: string) => {
+    try {
+      const res = await fetch(`/api/framework/nodes/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok && res.status !== 204) throw new Error("delete_failed");
+      const toDelete = new Set([id, ...collectDescendantIds(id)]);
+      setNodes((prev) =>
+        prev
+          .filter((n) => !toDelete.has(n.id))
+          .sort((a, b) => compareHier(a.id, b.id)),
+      );
+      setDetailsById((prev) => {
+        const copy = { ...prev } as Record<string, NodeDetails>;
+        for (const k of Array.from(toDelete)) delete copy[k];
+        return copy;
+      });
+      if (selectedNodeId && toDelete.has(selectedNodeId))
+        setSelectedNodeId(null);
+      toast({ title: "Deleted successfully" });
+    } catch (e) {
+      toast({ title: "Failed to delete" });
+    }
   };
 
   const getLevel = (node: FrameworkNode) => {
     let level = 0;
     let current = node;
     while (current.parentId) {
-      const parent = nodes.find(n => n.id === current.parentId);
+      const parent = nodes.find((n) => n.id === current.parentId);
       if (!parent) break;
       level += 1;
       current = parent;
@@ -607,19 +954,46 @@ export default function FrameworkDashboard() {
 
   const isParentExpanded = (node: FrameworkNode): boolean => {
     if (!node.parentId) return true;
-    const parent = nodes.find(n => n.id === node.parentId);
+    const parent = nodes.find((n) => n.id === node.parentId);
     if (!parent) return true;
     return !!parent.isExpanded && isParentExpanded(parent);
   };
 
-  const visibleNodes = nodes.filter(n => isParentExpanded(n));
+  const visibleNodes = nodes.filter((n) => isParentExpanded(n));
+
+  const parseHierId = (id: string) => {
+    // Expected forms: P1, P1.2, P1.2.3, P1.2.3/R1, P1.2.3/R1/C3
+    const parts = id.split("/");
+    const path = parts[0] || "";
+    const tail1 = parts[1] || "";
+    const tail2 = parts[2] || "";
+    const dot = path.split(".");
+    const procStr = dot[0] || "P0";
+    const proc = parseInt(procStr.replace(/^P/i, ""), 10) || 0;
+    const sub = dot[1] ? parseInt(dot[1], 10) || 0 : 0;
+    const act = dot[2] ? parseInt(dot[2], 10) || 0 : 0;
+    const risk = tail1 ? parseInt(tail1.replace(/^R/i, ""), 10) || 0 : 0;
+    const ctrl = tail2 ? parseInt(tail2.replace(/^C/i, ""), 10) || 0 : 0;
+    return { proc, sub, act, risk, ctrl };
+  };
+
+  const compareHier = (a: string, b: string) => {
+    const A = parseHierId(a);
+    const B = parseHierId(b);
+    if (A.proc !== B.proc) return A.proc - B.proc;
+    if (A.sub !== B.sub) return A.sub - B.sub;
+    if (A.act !== B.act) return A.act - B.act;
+    if (A.risk !== B.risk) return A.risk - B.risk;
+    if (A.ctrl !== B.ctrl) return A.ctrl - B.ctrl;
+    return a.localeCompare(b);
+  };
 
   const getAncestorIds = (id: string) => {
     const out: string[] = [];
-    let current = nodes.find(n => n.id === id);
+    let current = nodes.find((n) => n.id === id);
     while (current?.parentId) {
       out.push(current.parentId);
-      current = nodes.find(n => n.id === current!.parentId);
+      current = nodes.find((n) => n.id === current!.parentId);
     }
     return out;
   };
@@ -628,31 +1002,76 @@ export default function FrameworkDashboard() {
     const q = treeSearch.trim().toLowerCase();
     if (!q) return true;
     const d = detailsById[n.id] as any;
-    const hay = [n.name, n.type,
-      d?.process_description, d?.process_category,
+    const hay = [
+      n.name,
+      n.type,
+      d?.process_description,
+      d?.process_category,
       d?.sub_process_description,
       d?.activity_description,
-      d?.risk_description, d?.risk_category,
-      d?.control_description, d?.control_type, d?.control_frequency, d?.control_owner
-    ].filter(Boolean).map((s: any) => String(s).toLowerCase());
+      d?.risk_description,
+      d?.risk_category,
+      d?.control_description,
+      d?.control_type,
+      d?.control_frequency,
+      d?.control_owner,
+    ]
+      .filter(Boolean)
+      .map((s: any) => String(s).toLowerCase());
     return hay.some((s: string) => s.includes(q));
   };
 
+  useEffect(() => {
+    if (!selectedProcessId) return;
+    const q = treeSearch.trim().toLowerCase();
+    if (!q) return;
+    const baseIds = [
+      selectedProcessId,
+      ...collectDescendantIds(selectedProcessId),
+    ];
+    const scopeAll = nodes.filter((n) => {
+      if (!baseIds.includes(n.id)) return false;
+      if (controlFilterValue !== "ALL" && n.type === "control") {
+        return (detailsById[n.id] as any)?.control_type === controlFilterValue;
+      }
+      return true;
+    });
+    const matchIds = new Set(
+      scopeAll.filter(matchesTreeSearch).map((n) => n.id),
+    );
+    if (matchIds.size === 0) return;
+    const toExpand = new Set<string>();
+    for (const id of Array.from(matchIds)) {
+      for (const a of getAncestorIds(id)) toExpand.add(a);
+    }
+    setNodes((prev) => {
+      let changed = false;
+      const next = prev.map((n) => {
+        if (toExpand.has(n.id) && n.isExpanded !== true) {
+          changed = true;
+          return { ...n, isExpanded: true };
+        }
+        return n;
+      });
+      return changed ? next : prev;
+    });
+  }, [treeSearch, selectedProcessId, nodes, controlFilterValue, detailsById]);
+
   const passesTypeFilters = (n: FrameworkNode) => {
-    if (controlFilterValue !== 'ALL' && n.type === 'control') {
+    if (controlFilterValue !== "ALL" && n.type === "control") {
       return (detailsById[n.id] as any)?.control_type === controlFilterValue;
     }
     return true;
   };
 
   const updateDetails = (id: string, patch: Partial<any>) => {
-    setDetailsById(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+    setDetailsById((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   };
 
-  const getFilteredClients = (status: 'completed' | 'in-progress') => {
+  const getFilteredClients = (status: "completed" | "in-progress") => {
     return clients
-      .filter(client => client.status === status)
-      .filter(client => {
+      .filter((client) => client.status === status)
+      .filter((client) => {
         if (!searchTerm) return true;
         const query = searchTerm.toLowerCase();
         return (
@@ -672,13 +1091,16 @@ export default function FrameworkDashboard() {
   };
 
   const renderCompletedClients = () => {
-    const completedClients = getFilteredClients('completed');
+    const completedClients = getFilteredClients("completed");
 
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {completedClients.map((client) => (
-            <Card key={client.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <Card
+              key={client.id}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{client.name}</CardTitle>
@@ -718,8 +1140,7 @@ export default function FrameworkDashboard() {
             <p className="text-gray-500">
               {searchTerm
                 ? `No completed framework audits found matching "${searchTerm}"`
-                : 'No completed framework audits'
-              }
+                : "No completed framework audits"}
             </p>
           </div>
         )}
@@ -728,13 +1149,16 @@ export default function FrameworkDashboard() {
   };
 
   const renderInProgressClients = () => {
-    const inProgressClients = getFilteredClients('in-progress');
+    const inProgressClients = getFilteredClients("in-progress");
 
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {inProgressClients.map((client) => (
-            <Card key={client.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <Card
+              key={client.id}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{client.name}</CardTitle>
@@ -774,8 +1198,7 @@ export default function FrameworkDashboard() {
             <p className="text-gray-500">
               {searchTerm
                 ? `No in-progress framework audits found matching "${searchTerm}"`
-                : 'No in-progress framework audits assigned'
-              }
+                : "No in-progress framework audits assigned"}
             </p>
           </div>
         )}
@@ -783,8 +1206,134 @@ export default function FrameworkDashboard() {
     );
   };
 
+  // Export toolbar state for Framework
+  const [fwFilter, setFwFilter] = useState<
+    "all" | "process" | "subprocess" | "activity" | "risk_related"
+  >("all");
+  const [isFwImporting, setIsFwImporting] = useState(false);
+  const [fwGroupBy, setFwGroupBy] = useState<
+    "none" | "process" | "subprocess" | "activity" | "risk"
+  >("none");
+  const fwAllFields = [
+    "Process",
+    "Subprocess",
+    "Activity",
+    "Risk",
+    "Control",
+    "Risk Category",
+    "Control type",
+    "Reference",
+  ];
+  const [fwSelectedFields, setFwSelectedFields] = useState<string[]>([
+    "Process",
+    "Subprocess",
+    "Activity",
+    "Risk",
+    "Control",
+    "Risk Category",
+    "Control type",
+    "Reference",
+  ]);
+
+  const uniq = (arr: (string | undefined | null)[]) =>
+    Array.from(new Set(arr.filter(Boolean) as string[])).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  const fwProcessOptions = React.useMemo(
+    () => uniq(nodes.filter((n) => n.type === "process").map((n) => n.name)),
+    [nodes],
+  );
+  const fwSubprocessOptions = React.useMemo(
+    () => uniq(nodes.filter((n) => n.type === "subprocess").map((n) => n.name)),
+    [nodes],
+  );
+  const fwActivityOptions = React.useMemo(
+    () => uniq(nodes.filter((n) => n.type === "activity").map((n) => n.name)),
+    [nodes],
+  );
+  const fwRiskOptions = React.useMemo(
+    () => uniq(nodes.filter((n) => n.type === "risk").map((n) => n.name)),
+    [nodes],
+  );
+  const fwControlOptions = React.useMemo(
+    () => uniq(nodes.filter((n) => n.type === "control").map((n) => n.name)),
+    [nodes],
+  );
+
+  const [fwSelProcesses, setFwSelProcesses] = useState<string[]>([]);
+  const [fwSelSubprocesses, setFwSelSubprocesses] = useState<string[]>([]);
+  const [fwSelActivities, setFwSelActivities] = useState<string[]>([]);
+  const [fwSelRisks, setFwSelRisks] = useState<string[]>([]);
+  const [fwSelControls, setFwSelControls] = useState<string[]>([]);
+
+  const getPathNames = React.useCallback(
+    (n: FrameworkNode) => {
+      let cur: FrameworkNode | undefined = n;
+      let pName = "";
+      let sName = "";
+      let aName = "";
+      let rName = "";
+      let cName = "";
+      while (cur) {
+        if (cur.type === "process") pName = cur.name;
+        else if (cur.type === "subprocess") sName = cur.name;
+        else if (cur.type === "activity") aName = cur.name;
+        else if (cur.type === "risk") rName = rName || cur.name;
+        else if (cur.type === "control") cName = cName || cur.name;
+        cur = cur.parentId
+          ? nodes.find((x) => x.id === cur!.parentId)
+          : undefined;
+      }
+      return { pName, sName, aName, rName, cName };
+    },
+    [nodes],
+  );
+
+  const matchesNameSelections = React.useCallback(
+    (n: FrameworkNode) => {
+      const { pName, sName, aName, rName, cName } = getPathNames(n);
+      if (fwSelProcesses.length && !fwSelProcesses.includes(pName))
+        return false;
+      if (fwSelSubprocesses.length && !fwSelSubprocesses.includes(sName))
+        return false;
+      if (fwSelActivities.length && !fwSelActivities.includes(aName))
+        return false;
+      if (fwSelRisks.length && !fwSelRisks.includes(rName)) return false;
+      if (fwSelControls.length && !fwSelControls.includes(cName)) return false;
+      return true;
+    },
+    [
+      getPathNames,
+      fwSelProcesses,
+      fwSelSubprocesses,
+      fwSelActivities,
+      fwSelRisks,
+      fwSelControls,
+    ],
+  );
+
   const renderFrameworkEditor = () => {
     const isReadOnly = false;
+
+    const processStats = (() => {
+      if (!selectedProcessId) return null;
+      const scopeIds = new Set<string>([
+        selectedProcessId,
+        ...collectDescendantIds(selectedProcessId),
+      ]);
+      let subprocessCount = 0;
+      let activityCount = 0;
+      let riskCount = 0;
+      let controlCount = 0;
+      for (const n of nodes) {
+        if (!scopeIds.has(n.id)) continue;
+        if (n.type === "subprocess") subprocessCount += 1;
+        else if (n.type === "activity") activityCount += 1;
+        else if (n.type === "risk") riskCount += 1;
+        else if (n.type === "control") controlCount += 1;
+      }
+      return { subprocessCount, activityCount, riskCount, controlCount };
+    })();
 
     return (
       <div className="space-y-4">
@@ -792,7 +1341,14 @@ export default function FrameworkDashboard() {
           <h3 className="text-lg font-semibold">Framework Editor</h3>
           <div className="flex gap-2">
             {selectedProcessId && (
-              <Button variant="outline" size="sm" onClick={() => { setSelectedProcessId(null); setSelectedNodeId(null); }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedProcessId(null);
+                  setSelectedNodeId(null);
+                }}
+              >
                 ← Back to Processes
               </Button>
             )}
@@ -805,19 +1361,467 @@ export default function FrameworkDashboard() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Export toolbar placed above Add Process */}
+        <div className="flex items-center justify-end gap-2 mt-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <FilterIcon className="h-4 w-4" /> Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[720px] z-[60]" data-popover-content>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Process</Label>
+                  <MultiSelect
+                    options={fwProcessOptions}
+                    value={fwSelProcesses}
+                    onChange={setFwSelProcesses}
+                    placeholder="All"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Subprocess</Label>
+                  <MultiSelect
+                    options={fwSubprocessOptions}
+                    value={fwSelSubprocesses}
+                    onChange={setFwSelSubprocesses}
+                    placeholder="All"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Activity</Label>
+                  <MultiSelect
+                    options={fwActivityOptions}
+                    value={fwSelActivities}
+                    onChange={setFwSelActivities}
+                    placeholder="All"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Risk</Label>
+                  <MultiSelect
+                    options={fwRiskOptions}
+                    value={fwSelRisks}
+                    onChange={setFwSelRisks}
+                    placeholder="All"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Control</Label>
+                  <MultiSelect
+                    options={fwControlOptions}
+                    value={fwSelControls}
+                    onChange={setFwSelControls}
+                    placeholder="All"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setFwSelProcesses([]);
+                      setFwSelSubprocesses([]);
+                      setFwSelActivities([]);
+                      setFwSelRisks([]);
+                      setFwSelControls([]);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Rows3 className="h-4 w-4" /> Group
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="grid gap-2">
+                {(
+                  ["none", "process", "subprocess", "activity", "risk"] as const
+                ).map((opt) => (
+                  <Button
+                    key={opt}
+                    variant={fwGroupBy === opt ? "default" : "outline"}
+                    size="sm"
+                    className="capitalize justify-start"
+                    onClick={() => setFwGroupBy(opt)}
+                  >
+                    {opt === "none"
+                      ? "None"
+                      : opt === "risk"
+                        ? "Risk related"
+                        : opt}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Columns2 className="h-4 w-4" /> Fields
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-2">
+                {fwAllFields.map((f) => (
+                  <label key={f} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={fwSelectedFields.includes(f)}
+                      onCheckedChange={(v) =>
+                        setFwSelectedFields((prev) =>
+                          v ? [...prev, f] : prev.filter((x) => x !== f),
+                        )
+                      }
+                    />
+                    <span>{f}</span>
+                  </label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFwSelectedFields([...fwAllFields])}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setFwSelectedFields([
+                        "Process",
+                        "Subprocess",
+                        "Activity",
+                        "Risk",
+                        "Control",
+                        "Risk Category",
+                        "Control type",
+                        "Reference",
+                      ])
+                    }
+                  >
+                    Default
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFwSelectedFields([])}
+                  >
+                    None
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <input
+            id="fw-import-input"
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.currentTarget.files?.[0];
+              if (!file) return;
+              setIsFwImporting(true);
+              try {
+                const data = await file.arrayBuffer();
+                const wb = XLSX.read(data, { type: "array" });
+                const sheetName =
+                  wb.SheetNames.find((n) =>
+                    n.toLowerCase().includes("framework"),
+                  ) || wb.SheetNames[0];
+                const ws = wb.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+                const res = await fetch("/api/framework/import-rows", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ rows }),
+                });
+                if (!res.ok) throw new Error("import_failed");
+                const result = await res.json();
+                const errCount = Array.isArray(result?.errors)
+                  ? result.errors.length
+                  : 0;
+                toast({
+                  title: "Import completed",
+                  description: errCount
+                    ? `${errCount} row(s) had issues`
+                    : "All rows imported",
+                });
+                if (errCount) {
+                  console.warn("Import errors", result.errors);
+                }
+                try {
+                  const r = await fetch("/api/framework/tree");
+                  if (r.ok) {
+                    const data = await r.json();
+                    const fetched = ((data.nodes || []) as any[])
+                      .slice()
+                      .sort((a: any, b: any) => compareHier(a.id, b.id));
+                    setNodes(fetched as any[]);
+                    setDetailsById((data.detailsById || {}) as any);
+                  }
+                } catch {}
+              } catch (e) {
+                toast({ title: "Import failed" });
+              } finally {
+                setIsFwImporting(false);
+                e.currentTarget.value = "";
+              }
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isFwImporting}
+            onClick={() =>
+              !isFwImporting &&
+              document.getElementById("fw-import-input")?.click()
+            }
+          >
+            {isFwImporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Importing...
+              </>
+            ) : (
+              "Import XLSX"
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/framework/template");
+                if (!res.ok) throw new Error("template_failed");
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "framework-template.xlsx";
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch {
+                toast({ title: "Template download failed" });
+              }
+            }}
+          >
+            Download Template
+          </Button>
+          <Button
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => {
+              // collect nodes within scope (selected process or all)
+              const baseIds = !selectedProcessId
+                ? nodes.map((n) => n.id)
+                : [
+                    selectedProcessId,
+                    ...collectDescendantIds(selectedProcessId),
+                  ];
+              const allowed = nodes.filter((n) => baseIds.includes(n.id));
+              let list = allowed;
+              // Apply name-based selections to export as well
+              if (
+                fwSelProcesses.length ||
+                fwSelSubprocesses.length ||
+                fwSelActivities.length ||
+                fwSelRisks.length ||
+                fwSelControls.length
+              ) {
+                const matchIds = new Set(
+                  list.filter(matchesNameSelections).map((n) => n.id),
+                );
+                const includeIds = new Set<string>(matchIds);
+                for (const id of Array.from(matchIds)) {
+                  for (const a of getAncestorIds(id)) includeIds.add(a);
+                }
+                list = list.filter((n) => includeIds.has(n.id));
+              }
+
+              const rowsBase = list.map((n) => {
+                // climb ancestors to resolve names
+                let cur: FrameworkNode | undefined = n;
+                let pName = "";
+                let sName = "";
+                let aName = "";
+                let riskName = "";
+                let controlName = "";
+                while (cur) {
+                  if (cur.type === "process") pName = cur.name;
+                  else if (cur.type === "subprocess") sName = cur.name;
+                  else if (cur.type === "activity") aName = cur.name;
+                  else if (cur.type === "risk") riskName = riskName || cur.name;
+                  else if (cur.type === "control")
+                    controlName = controlName || cur.name;
+                  cur = cur.parentId
+                    ? nodes.find((x) => x.id === cur!.parentId)
+                    : undefined;
+                }
+                const d: any = detailsById[n.id];
+                const riskDept =
+                  (n.type === "risk" ? d?.departments_involved : undefined) ||
+                  (n.type === "control"
+                    ? (detailsById[n.parentId || ""] as any)
+                        ?.departments_involved
+                    : undefined) ||
+                  [];
+                const ctrlDept =
+                  (n.type === "control"
+                    ? d?.departments_involved
+                    : undefined) || [];
+                const rcat =
+                  (n.type === "risk"
+                    ? d?.risk_category
+                    : (
+                        detailsById[
+                          n.type === "control" ? n.parentId || "" : ""
+                        ] as any
+                      )?.risk_category) || "";
+                const ctype =
+                  (n.type === "control" ? d?.control_type : "") || "";
+                const ref =
+                  (n.type === "control" ? d?.control_owner : "") || "";
+                const row: Record<string, any> = {};
+                if (fwSelectedFields.includes("Process"))
+                  row["Process"] = pName;
+                if (fwSelectedFields.includes("Subprocess"))
+                  row["Subprocess"] = sName;
+                if (fwSelectedFields.includes("Activity"))
+                  row["Activity"] = aName;
+                if (fwSelectedFields.includes("Risk")) row["Risk"] = riskName;
+                if (fwSelectedFields.includes("Control"))
+                  row["Control"] = controlName;
+                if (fwSelectedFields.includes("Risk Category"))
+                  row["Risk Category"] = rcat;
+                if (fwSelectedFields.includes("Control type"))
+                  row["Control type"] = ctype;
+                if (fwSelectedFields.includes("Reference"))
+                  row["Reference"] = ref || n.id;
+                return row;
+              });
+
+              // group if needed
+              let rows: any[] = [];
+              if (fwGroupBy === "none") rows = rowsBase;
+              else {
+                const groups: Record<string, any[]> = {};
+                for (const r of rowsBase) {
+                  let key = "";
+                  if (fwGroupBy === "process") key = r["Process"] || "";
+                  else if (fwGroupBy === "subprocess")
+                    key = r["Subprocess"] || "";
+                  else if (fwGroupBy === "activity") key = r["Activity"] || "";
+                  else if (fwGroupBy === "risk") key = r["Risk"] || "";
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(r);
+                }
+                const keys = Object.keys(groups).sort();
+                for (const k of keys) {
+                  rows.push({ Group: k });
+                  rows.push(...groups[k]);
+                  rows.push({});
+                }
+              }
+
+              const wb = XLSX.utils.book_new();
+              // enforce output column order
+              const preferredOrder = [
+                "Process",
+                "Subprocess",
+                "Activity",
+                "Risk",
+                "Risk Category",
+                "Control",
+                "Control type",
+                "Reference",
+              ];
+              const cols = preferredOrder.filter((c) =>
+                fwSelectedFields.includes(c),
+              );
+              const ws1 = XLSX.utils.json_to_sheet(rows, { header: cols });
+              XLSX.utils.book_append_sheet(wb, ws1, "Framework");
+
+              // Risk Log sheet
+              const scopeIds = !selectedProcessId
+                ? nodes.map((n) => n.id)
+                : [
+                    selectedProcessId,
+                    ...collectDescendantIds(selectedProcessId),
+                  ];
+              const risks = nodes.filter(
+                (n) => scopeIds.includes(n.id) && n.type === "risk",
+              );
+              const rrows = risks.map((n) => {
+                let cur: FrameworkNode | undefined = n;
+                let p = "";
+                let s = "";
+                let a = "";
+                while (cur) {
+                  if (cur.type === "process") p = cur.name;
+                  else if (cur.type === "subprocess") s = cur.name;
+                  else if (cur.type === "activity") a = cur.name;
+                  cur = cur.parentId
+                    ? nodes.find((x) => x.id === cur!.parentId)
+                    : undefined;
+                }
+                const det: any = detailsById[n.id];
+                return {
+                  Process: p,
+                  Subprocess: s,
+                  Activity: a,
+                  Risk: n.name,
+                  "Risk Category": det?.risk_category || "",
+                };
+              });
+              const ws2 = XLSX.utils.json_to_sheet(rrows);
+              XLSX.utils.book_append_sheet(wb, ws2, "Risk Log");
+
+              XLSX.writeFile(wb, "framework.xlsx");
+            }}
+          >
+            <Download className="h-4 w-4" /> Export XLSX
+          </Button>
+        </div>
         {selectedProcessId && (
           <div className="grid grid-cols-1 gap-3">
-            <Input placeholder="Search in tree..." className="w-full" value={treeSearch} onChange={(e) => setTreeSearch(e.target.value)} />
+            <Input
+              placeholder="Search in tree..."
+              className="w-full"
+              value={treeSearch}
+              onChange={(e) => setTreeSearch(e.target.value)}
+            />
           </div>
         )}
 
         {!selectedProcessId && (
           <div className="w-full max-w-3xl">
             <ProcessSelector
-              processes={nodes.filter(n => n.type === 'process')}
+              processes={nodes.filter((n) => n.type === "process")}
               value={selectedProcessId}
-              onSelect={(id) => { setSelectedProcessId(id); setSelectedNodeId(id); }}
+              onSelect={(id) => {
+                setSelectedProcessId(id);
+                setSelectedNodeId(id);
+              }}
               placeholder="Select or search process..."
             />
           </div>
@@ -825,275 +1829,809 @@ export default function FrameworkDashboard() {
 
         <div className="grid grid-cols-1 gap-6 mt-4">
           {selectedProcessId && (
-          <Card className="h-[520px] overflow-hidden">
-            <CardHeader>
-              <CardTitle>Process &rarr; Subprocess &rarr; Activity &rarr; Risk &rarr; Control</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 h-full">
-              <ScrollArea className="h-[460px]">
-                <div className="divide-y pr-2 pb-3">
-                  {(() => {
-                    const baseIds = !selectedProcessId
-                      ? nodes.filter(n => n.type === 'process').map(n => n.id)
-                      : [selectedProcessId, ...collectDescendantIds(selectedProcessId)];
-                    const allowed = visibleNodes.filter(n => baseIds.includes(n.id) && passesTypeFilters(n));
-                    let list = allowed;
-                    if (!selectedProcessId && universalSearch.trim()) {
-                      const q = universalSearch.trim().toLowerCase();
-                      list = allowed.filter(n => n.type === 'process' && (n.name.toLowerCase().includes(q) || String((detailsById[n.id] as any)?.process_description || '').toLowerCase().includes(q)));
-                    }
-                    if (treeSearch.trim()) {
-                      const matchIds = new Set(allowed.filter(matchesTreeSearch).map(n => n.id));
-                      const includeIds = new Set<string>(matchIds);
-                      for (const id of Array.from(matchIds)) {
-                        for (const a of getAncestorIds(id)) includeIds.add(a);
+            <Card className="h-[520px] overflow-hidden">
+              <CardHeader>
+                <CardTitle>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Process &rarr; Subprocess &rarr; Activity &rarr; Risk &rarr;
+                      Control
+                    </span>
+                    {processStats && (
+                      <span className="text-xs sm:text-sm font-normal text-slate-600">
+                        Subprocess: {processStats.subprocessCount} | Activity: {processStats.activityCount} | Risk: {processStats.riskCount} | Control: {processStats.controlCount}
+                      </span>
+                    )}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 h-full">
+                <ScrollArea className="h-[460px]">
+                  <div className="divide-y pr-2 pb-3">
+                    {(() => {
+                      const baseIds = !selectedProcessId
+                        ? nodes
+                            .filter((n) => n.type === "process")
+                            .map((n) => n.id)
+                        : [
+                            selectedProcessId,
+                            ...collectDescendantIds(selectedProcessId),
+                          ];
+                      const allowed = visibleNodes.filter(
+                        (n) => baseIds.includes(n.id) && passesTypeFilters(n),
+                      );
+                      let list = allowed;
+                      // Apply name-based selections
+                      if (
+                        fwSelProcesses.length ||
+                        fwSelSubprocesses.length ||
+                        fwSelActivities.length ||
+                        fwSelRisks.length ||
+                        fwSelControls.length
+                      ) {
+                        const matchIds = new Set(
+                          list.filter(matchesNameSelections).map((n) => n.id),
+                        );
+                        const includeIds = new Set<string>(matchIds);
+                        for (const id of Array.from(matchIds)) {
+                          for (const a of getAncestorIds(id)) includeIds.add(a);
+                        }
+                        list = list.filter((n) => includeIds.has(n.id));
                       }
-                      list = allowed.filter(n => includeIds.has(n.id));
-                    }
-                    if (selectedProcessId && universalSearch.trim()) {
-                      const q2 = universalSearch.trim().toLowerCase();
-                      const matchIds2 = new Set(list.filter(n => {
-                        const d:any = detailsById[n.id];
-                        const hay = [n.name, n.type, d?.process_description, d?.sub_process_description, d?.activity_description, d?.risk_description, d?.control_description]
-                          .filter(Boolean).map((s:any)=>String(s).toLowerCase());
-                        return hay.some((s:string)=>s.includes(q2));
-                      }).map(n=>n.id));
-                      const include2 = new Set<string>(matchIds2);
-                      for (const id of Array.from(matchIds2)) {
-                        for (const a of getAncestorIds(id)) include2.add(a);
+                      if (!selectedProcessId && universalSearch.trim()) {
+                        const q = universalSearch.trim().toLowerCase();
+                        list = allowed.filter(
+                          (n) =>
+                            n.type === "process" &&
+                            (n.name.toLowerCase().includes(q) ||
+                              String(
+                                (detailsById[n.id] as any)
+                                  ?.process_description || "",
+                              )
+                                .toLowerCase()
+                                .includes(q)),
+                        );
                       }
-                      list = list.filter(n => include2.has(n.id));
-                    }
-                    return list.map((n) => {
-                      const level = getLevel(n);
-                      const hasChildren = nodes.some(c => c.parentId === n.id);
-                      return (
-                        <div key={n.id} className={`flex items-center py-2 px-1 border-l-4 ${getRowBorderClass(n.type)} ${selectedNodeId === n.id ? 'bg-purple-50' : ''}`}>
-                          <div className="flex items-center w-full" style={{ paddingLeft: `${level * 16}px` }}>
-                            {selectedProcessId && hasChildren && (
-                              <button onClick={() => toggleExpanded(n.id)} className="mr-2 rounded p-1 hover:bg-slate-100">
-                                {n.isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              </button>
-                            )}
-                            {!hasChildren && <span className="w-6" />}
-                            <button className="text-left flex-1" onClick={() => { if (!selectedProcessId && n.type === 'process') { setSelectedProcessId(n.id); setSelectedNodeId(n.id); } else { setSelectedNodeId(n.id); setIsDetailsOpen(true); } }}>
-                              <div className="text-sm font-medium">{n.name}</div>
-                              <div className={`text-xs capitalize ${getTypeColorClass(n.type)}`}>{n.type}</div>
-                            </button>
-                            {!isReadOnly && (
-                              <div className="flex items-center gap-2">
-                                {selectedProcessId && childType[n.type] && (
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => addNode(n)} title={`Add ${childType[n.type]}`}>
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
+                      if (treeSearch.trim()) {
+                        const scopeAll = nodes.filter(
+                          (n) => baseIds.includes(n.id) && passesTypeFilters(n),
+                        );
+                        const matchIds = new Set(
+                          scopeAll.filter(matchesTreeSearch).map((n) => n.id),
+                        );
+                        const includeIds = new Set<string>(matchIds);
+                        for (const id of Array.from(matchIds)) {
+                          for (const a of getAncestorIds(id)) includeIds.add(a);
+                        }
+                        list = allowed.filter((n) => includeIds.has(n.id));
+                      }
+                      if (selectedProcessId && universalSearch.trim()) {
+                        const q2 = universalSearch.trim().toLowerCase();
+                        const matchIds2 = new Set(
+                          list
+                            .filter((n) => {
+                              const d: any = detailsById[n.id];
+                              const hay = [
+                                n.name,
+                                n.type,
+                                d?.process_description,
+                                d?.sub_process_description,
+                                d?.activity_description,
+                                d?.risk_description,
+                                d?.control_description,
+                              ]
+                                .filter(Boolean)
+                                .map((s: any) => String(s).toLowerCase());
+                              return hay.some((s: string) => s.includes(q2));
+                            })
+                            .map((n) => n.id),
+                        );
+                        const include2 = new Set<string>(matchIds2);
+                        for (const id of Array.from(matchIds2)) {
+                          for (const a of getAncestorIds(id)) include2.add(a);
+                        }
+                        list = list.filter((n) => include2.has(n.id));
+                      }
+                      return [...list]
+                        .sort((a, b) => compareHier(a.id, b.id))
+                        .map((n) => {
+                          const level = getLevel(n);
+                          const hasChildren = nodes.some(
+                            (c) => c.parentId === n.id,
+                          );
+                          return (
+                            <div
+                              key={n.id}
+                              className={`flex items-center py-2 px-1 border-l-4 ${getRowBorderClass(n.type)} ${selectedNodeId === n.id ? "bg-purple-50" : ""}`}
+                            >
+                              <div
+                                className="flex items-center w-full"
+                                style={{ paddingLeft: `${level * 16}px` }}
+                              >
+                                {selectedProcessId && hasChildren && (
+                                  <button
+                                    onClick={() => toggleExpanded(n.id)}
+                                    className="mr-2 rounded p-1 hover:bg-slate-100"
+                                  >
+                                    {n.isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
                                 )}
-                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setSelectedNodeId(n.id); setIsDetailsOpen(true); }} title="Edit">
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button variant="outline" size="icon" className="h-7 w-7 text-red-600" onClick={() => deleteNode(n.id)} title="Delete">
-                                  <Trash className="h-3 w-3" />
-                                </Button>
+                                {!hasChildren && <span className="w-6" />}
+                                <button
+                                  className="text-left flex-1"
+                                  onClick={() => {
+                                    if (
+                                      !selectedProcessId &&
+                                      n.type === "process"
+                                    ) {
+                                      setSelectedProcessId(n.id);
+                                      setSelectedNodeId(n.id);
+                                    } else {
+                                      setSelectedNodeId(n.id);
+                                      setIsDetailsOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <div className="text-sm font-medium">
+                                    {n.name}
+                                  </div>
+                                  <div
+                                    className={`text-xs capitalize ${getTypeColorClass(n.type)}`}
+                                  >
+                                    {n.type}
+                                  </div>
+                                </button>
+                                {!isReadOnly && (
+                                  <div className="flex items-center gap-2">
+                                    {selectedProcessId && childType[n.type] && (
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => addNode(n)}
+                                        title={`Add ${childType[n.type]}`}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setSelectedNodeId(n.id);
+                                        setIsDetailsOpen(true);
+                                      }}
+                                      title="Edit"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7 text-red-600"
+                                      onClick={() => deleteNode(n.id)}
+                                      title="Delete"
+                                    >
+                                      <Trash className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
+                          );
+                        });
+                    })()}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+
+          <Dialog
+            open={isDetailsOpen && !!selectedNodeId}
+            onOpenChange={setIsDetailsOpen}
+          >
+            <DialogContent
+              className="max-w-3xl max-h-[85vh] overflow-auto"
+              onInteractOutside={(e) => {
+                const evt: any = e;
+                const orig =
+                  (evt.detail?.originalEvent?.target as HTMLElement) ||
+                  (evt.target as HTMLElement | null);
+                const inPopover =
+                  !!orig && orig.closest("[data-popover-content]");
+                const path: any[] =
+                  (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+                const inPopoverViaPath =
+                  Array.isArray(path) &&
+                  path.some(
+                    (n: any) =>
+                      n?.nodeType === 1 &&
+                      (n as Element).hasAttribute?.("data-popover-content"),
+                  );
+                const cx = evt.detail?.originalEvent?.clientX;
+                const cy = evt.detail?.originalEvent?.clientY;
+                let inPopoverViaRect = false;
+                if (typeof cx === "number" && typeof cy === "number") {
+                  document
+                    .querySelectorAll("[data-popover-content]")
+                    .forEach((el) => {
+                      const r = (el as Element).getBoundingClientRect();
+                      if (
+                        cx >= r.left &&
+                        cx <= r.right &&
+                        cy >= r.top &&
+                        cy <= r.bottom
+                      )
+                        inPopoverViaRect = true;
+                    });
+                }
+                if (inPopover || inPopoverViaPath || inPopoverViaRect) return;
+                e.preventDefault();
+              }}
+              onPointerDownOutside={(e) => {
+                const evt: any = e;
+                const orig =
+                  (evt.detail?.originalEvent?.target as HTMLElement) ||
+                  (evt.target as HTMLElement | null);
+                const inPopover =
+                  !!orig && orig.closest("[data-popover-content]");
+                const path: any[] =
+                  (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+                const inPopoverViaPath =
+                  Array.isArray(path) &&
+                  path.some(
+                    (n: any) =>
+                      n?.nodeType === 1 &&
+                      (n as Element).hasAttribute?.("data-popover-content"),
+                  );
+                const cx = evt.detail?.originalEvent?.clientX;
+                const cy = evt.detail?.originalEvent?.clientY;
+                let inPopoverViaRect = false;
+                if (typeof cx === "number" && typeof cy === "number") {
+                  document
+                    .querySelectorAll("[data-popover-content]")
+                    .forEach((el) => {
+                      const r = (el as Element).getBoundingClientRect();
+                      if (
+                        cx >= r.left &&
+                        cx <= r.right &&
+                        cy >= r.top &&
+                        cy <= r.bottom
+                      )
+                        inPopoverViaRect = true;
+                    });
+                }
+                if (inPopover || inPopoverViaPath || inPopoverViaRect) return;
+                e.preventDefault();
+              }}
+              onFocusOutside={(e) => {
+                const evt: any = e;
+                const orig =
+                  (evt.detail?.originalEvent?.target as HTMLElement) ||
+                  (evt.target as HTMLElement | null);
+                const inPopover =
+                  !!orig && orig.closest("[data-popover-content]");
+                const path: any[] =
+                  (evt.detail?.originalEvent?.composedPath?.() || []) as any[];
+                const inPopoverViaPath =
+                  Array.isArray(path) &&
+                  path.some(
+                    (n: any) =>
+                      n?.nodeType === 1 &&
+                      (n as Element).hasAttribute?.("data-popover-content"),
+                  );
+                if (inPopover || inPopoverViaPath) return;
+                e.preventDefault();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>Details</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {selectedNodeId &&
+                  (() => {
+                    const node = nodes.find((n) => n.id === selectedNodeId)!;
+                    const d = detailsById[selectedNodeId!];
+                    if (!node || !d) return null;
+                    if (node.type === "process") {
+                      const det = d as Extract<
+                        NodeDetails,
+                        { type: "process" }
+                      >;
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Process ID</Label>
+                              <Input value={det.process_id} readOnly />
+                            </div>
+                            <div>
+                              <Label>Process Name</Label>
+                              <Input
+                                value={det.process_name}
+                                onChange={(e) =>
+                                  updateDetails(node.id, {
+                                    process_name: e.target.value,
+                                  })
+                                }
+                                disabled={isReadOnly}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={det.process_description}
+                              onChange={(e) =>
+                                updateDetails(node.id, {
+                                  process_description: e.target.value,
+                                })
+                              }
+                              disabled={isReadOnly}
+                              rows={4}
+                            />
+                          </div>
+                          <div>
+                            <Label>Departments Involved</Label>
+                            <DepartmentsMultiSelect
+                              value={det.departments_involved}
+                              onChange={(v) =>
+                                updateDetails(node.id, {
+                                  departments_involved: v,
+                                })
+                              }
+                            />
                           </div>
                         </div>
                       );
-                    });
+                    }
+                    if (node.type === "subprocess") {
+                      const det = d as Extract<
+                        NodeDetails,
+                        { type: "subprocess" }
+                      >;
+                      const processes = nodes.filter(
+                        (n) => n.type === "process",
+                      );
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Subprocess ID</Label>
+                              <Input value={det.sub_process_id} readOnly />
+                            </div>
+                            <div>
+                              <Label>Subprocess Name</Label>
+                              <Input
+                                value={det.sub_process_name}
+                                onChange={(e) =>
+                                  updateDetails(node.id, {
+                                    sub_process_name: e.target.value,
+                                  })
+                                }
+                                disabled={isReadOnly}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={det.sub_process_description}
+                              onChange={(e) =>
+                                updateDetails(node.id, {
+                                  sub_process_description: e.target.value,
+                                })
+                              }
+                              disabled={isReadOnly}
+                              rows={4}
+                            />
+                          </div>
+                          <div>
+                            <Label>Linked Process</Label>
+                            <Input
+                              value={
+                                nodes.find(
+                                  (n) => n.id === det.linked_process_id,
+                                )?.name || det.linked_process_id
+                              }
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label>Departments Involved</Label>
+                            <DepartmentsMultiSelect
+                              value={det.departments_involved}
+                              onChange={(v) =>
+                                updateDetails(node.id, {
+                                  departments_involved: v,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (node.type === "activity") {
+                      const det = d as Extract<
+                        NodeDetails,
+                        { type: "activity" }
+                      >;
+                      const processes = nodes.filter(
+                        (n) => n.type === "process",
+                      );
+                      const selectedProcId =
+                        det.linked_process_id ||
+                        (() => {
+                          const sub = nodes.find(
+                            (n) => n.id === det.linked_sub_process_id,
+                          );
+                          return sub?.parentId || "";
+                        })();
+                      const subs = nodes.filter(
+                        (n) =>
+                          n.type === "subprocess" &&
+                          (!selectedProcId || n.parentId === selectedProcId),
+                      );
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Activity ID</Label>
+                              <Input value={det.activity_id} readOnly />
+                            </div>
+                            <div>
+                              <Label>Activity Name</Label>
+                              <Input
+                                value={det.activity_name}
+                                onChange={(e) =>
+                                  updateDetails(node.id, {
+                                    activity_name: e.target.value,
+                                  })
+                                }
+                                disabled={isReadOnly}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={det.activity_description}
+                              onChange={(e) =>
+                                updateDetails(node.id, {
+                                  activity_description: e.target.value,
+                                })
+                              }
+                              disabled={isReadOnly}
+                              rows={4}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Linked Process</Label>
+                              <Input
+                                value={
+                                  processes.find((p) => p.id === selectedProcId)
+                                    ?.name || selectedProcId
+                                }
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <Label>Linked Subprocess</Label>
+                              <Input
+                                value={
+                                  subs.find(
+                                    (s) => s.id === det.linked_sub_process_id,
+                                  )?.name || det.linked_sub_process_id
+                                }
+                                readOnly
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Departments Involved</Label>
+                            <DepartmentsMultiSelect
+                              value={det.departments_involved}
+                              onChange={(v) =>
+                                updateDetails(node.id, {
+                                  departments_involved: v,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (node.type === "risk") {
+                      const det = d as Extract<NodeDetails, { type: "risk" }>;
+                      const activityNode = nodes.find(
+                        (n) => n.id === node.parentId,
+                      );
+                      const subprocessNode = activityNode
+                        ? nodes.find((n) => n.id === activityNode.parentId)
+                        : undefined;
+                      const processNode = subprocessNode
+                        ? nodes.find((n) => n.id === subprocessNode.parentId)
+                        : undefined;
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Risk ID</Label>
+                              <Input value={det.risk_id} readOnly />
+                            </div>
+                            <div>
+                              <Label>Risk Name</Label>
+                              <Input
+                                value={det.risk_name}
+                                onChange={(e) =>
+                                  updateDetails(node.id, {
+                                    risk_name: e.target.value,
+                                  })
+                                }
+                                disabled={isReadOnly}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={det.risk_description}
+                              onChange={(e) =>
+                                updateDetails(node.id, {
+                                  risk_description: e.target.value,
+                                })
+                              }
+                              disabled={isReadOnly}
+                              rows={4}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Category</Label>
+                              <Select
+                                value={det.risk_category}
+                                onValueChange={(v) =>
+                                  updateDetails(node.id, { risk_category: v })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {riskCategories.map((c) => (
+                                    <SelectItem key={c} value={c}>
+                                      {c}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <Label>Linked Process</Label>
+                              <Input
+                                value={processNode?.name || processNode?.id || ""}
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <Label>Linked Subprocess</Label>
+                              <Input
+                                value={
+                                  subprocessNode?.name || subprocessNode?.id || ""
+                                }
+                                readOnly
+                              />
+                            </div>
+                            <div>
+                              <Label>Linked Activity</Label>
+                              <Input
+                                value={activityNode?.name || activityNode?.id || ""}
+                                readOnly
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    const det = d as Extract<NodeDetails, { type: "control" }>;
+                    const riskNode = nodes.find((n) => n.id === node.parentId);
+                    const activityNode = riskNode
+                      ? nodes.find((n) => n.id === riskNode.parentId)
+                      : undefined;
+                    const subprocessNode = activityNode
+                      ? nodes.find((n) => n.id === activityNode.parentId)
+                      : undefined;
+                    const processNode = subprocessNode
+                      ? nodes.find((n) => n.id === subprocessNode.parentId)
+                      : undefined;
+                    return (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Control ID</Label>
+                            <Input value={det.control_id} readOnly />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Control Description</Label>
+                          <Textarea
+                            value={det.control_description}
+                            onChange={(e) =>
+                              updateDetails(node.id, {
+                                control_description: e.target.value,
+                              })
+                            }
+                            rows={4}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Control Type</Label>
+                            <Select
+                              value={det.control_type}
+                              onValueChange={(v) =>
+                                updateDetails(node.id, { control_type: v })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {controlTypes.map((t) => (
+                                  <SelectItem key={t} value={t}>
+                                    {t}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Linked Process</Label>
+                            <Input
+                              value={processNode?.name || processNode?.id || ""}
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label>Linked Subprocess</Label>
+                            <Input
+                              value={
+                                subprocessNode?.name || subprocessNode?.id || ""
+                              }
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Linked Activity</Label>
+                            <Input
+                              value={activityNode?.name || activityNode?.id || ""}
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label>Linked Risk</Label>
+                            <Input
+                              value={riskNode?.name || riskNode?.id || ""}
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Reference</Label>
+                            <Input
+                              value={det.control_owner}
+                              onChange={(e) =>
+                                updateDetails(node.id, {
+                                  control_owner: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
                   })()}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-          )}
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      selectedNodeId && setDetailsById((prev) => ({ ...prev }))
+                    }
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!selectedNodeId) {
+                        setIsDetailsOpen(false);
+                        return;
+                      }
+                      const node = nodes.find((n) => n.id === selectedNodeId)!;
+                      const d: any = detailsById[selectedNodeId];
+                      let name = node.name;
+                      if (node.type === "process") name = d.process_name;
+                      else if (node.type === "subprocess")
+                        name = d.sub_process_name;
+                      else if (node.type === "activity") name = d.activity_name;
+                      else if (node.type === "risk") name = d.risk_name;
+                      else if (node.type === "control")
+                        name = d.control_description;
+                      try {
+                        // Client-side duplicate check for process rename
+                        if (node.type === "process") {
+                          const exists = nodes.some(
+                            (n) =>
+                              n.type === "process" &&
+                              n.id !== selectedNodeId &&
+                              n.name.trim().toLowerCase() ===
+                                String(name || "")
+                                  .trim()
+                                  .toLowerCase(),
+                          );
+                          if (exists) {
+                            toast({
+                              title:
+                                "A process with this name already exists. Please use a different name.",
+                            });
+                            return;
+                          }
+                        }
 
-        <Dialog open={isDetailsOpen && !!selectedNodeId} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-auto" onInteractOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>Details</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedNodeId && (() => {
-                const node = nodes.find(n => n.id === selectedNodeId)!;
-                const d = detailsById[selectedNodeId!];
-                if (!node || !d) return null;
-                if (node.type === 'process') {
-                  const det = d as Extract<NodeDetails, {type:'process'}>;
-                  return (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Process ID</Label>
-                          <Input value={det.process_id} readOnly />
-                        </div>
-                        <div>
-                          <Label>Process Name</Label>
-                          <Input value={det.process_name} onChange={e => updateDetails(node.id, { process_name: e.target.value })} disabled={isReadOnly} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Description</Label>
-                        <Textarea value={det.process_description} onChange={e => updateDetails(node.id, { process_description: e.target.value })} disabled={isReadOnly} rows={4} />
-                      </div>
-                      <div>
-                        <Label>Departments Involved</Label>
-                        <DepartmentsMultiSelect value={det.departments_involved} onChange={(v) => updateDetails(node.id, { departments_involved: v })} />
-                      </div>
-                    </div>
-                  );
-                }
-                if (node.type === 'subprocess') {
-                  const det = d as Extract<NodeDetails, {type:'subprocess'}>;
-                  const processes = nodes.filter(n => n.type === 'process');
-                  return (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Subprocess ID</Label>
-                          <Input value={det.sub_process_id} readOnly />
-                        </div>
-                        <div>
-                          <Label>Subprocess Name</Label>
-                          <Input value={det.sub_process_name} onChange={e => updateDetails(node.id, { sub_process_name: e.target.value })} disabled={isReadOnly} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Description</Label>
-                        <Textarea value={det.sub_process_description} onChange={e => updateDetails(node.id, { sub_process_description: e.target.value })} disabled={isReadOnly} rows={4} />
-                      </div>
-                      <div>
-                        <Label>Linked Process</Label>
-                      <Input value={(nodes.find(n => n.id === det.linked_process_id)?.name) || det.linked_process_id} readOnly />
-                      </div>
-                      <div>
-                        <Label>Departments Involved</Label>
-                        <DepartmentsMultiSelect value={det.departments_involved} onChange={(v) => updateDetails(node.id, { departments_involved: v })} />
-                      </div>
-                    </div>
-                  );
-                }
-                if (node.type === 'activity') {
-                  const det = d as Extract<NodeDetails, {type:'activity'}>;
-  const processes = nodes.filter(n => n.type === 'process');
-  const selectedProcId = det.linked_process_id || (() => {
-    const sub = nodes.find(n => n.id === det.linked_sub_process_id);
-    return sub?.parentId || '';
-  })();
-  const subs = nodes.filter(n => n.type === 'subprocess' && (!selectedProcId || n.parentId === selectedProcId));
-                  return (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Activity ID</Label>
-                          <Input value={det.activity_id} readOnly />
-                        </div>
-                        <div>
-                          <Label>Activity Name</Label>
-                          <Input value={det.activity_name} onChange={e => updateDetails(node.id, { activity_name: e.target.value })} disabled={isReadOnly} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Description</Label>
-                        <Textarea value={det.activity_description} onChange={e => updateDetails(node.id, { activity_description: e.target.value })} disabled={isReadOnly} rows={4} />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Linked Process</Label>
-                          <Input value={(processes.find(p => p.id === selectedProcId)?.name) || selectedProcId} readOnly />
-                        </div>
-                        <div>
-                          <Label>Linked Subprocess</Label>
-                          <Input value={(subs.find(s => s.id === det.linked_sub_process_id)?.name) || det.linked_sub_process_id} readOnly />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Departments Involved</Label>
-                        <DepartmentsMultiSelect value={det.departments_involved} onChange={(v) => updateDetails(node.id, { departments_involved: v })} />
-                      </div>
-                    </div>
-                  );
-                }
-                if (node.type === 'risk') {
-                  const det = d as Extract<NodeDetails, {type:'risk'}>;
-                  return (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Risk ID</Label>
-                          <Input value={det.risk_id} readOnly />
-                        </div>
-                        <div>
-                          <Label>Risk Name</Label>
-                          <Input value={det.risk_name} onChange={e => updateDetails(node.id, { risk_name: e.target.value })} disabled={isReadOnly} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Description</Label>
-                        <Textarea value={det.risk_description} onChange={e => updateDetails(node.id, { risk_description: e.target.value })} disabled={isReadOnly} rows={4} />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Category</Label>
-                          <Select value={det.risk_category} onValueChange={v => updateDetails(node.id, { risk_category: v })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {riskCategories.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                const det = d as Extract<NodeDetails, {type:'control'}>;
-                return (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label>Control ID</Label>
-                        <Input value={det.control_id} readOnly />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Control Description</Label>
-                      <Textarea value={det.control_description} onChange={e => updateDetails(node.id, { control_description: e.target.value })} rows={4} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label>Control Type</Label>
-                        <Select value={det.control_type} onValueChange={v => updateDetails(node.id, { control_type: v })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {controlTypes.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label>Reference</Label>
-                        <Input value={det.control_owner} onChange={e => updateDetails(node.id, { control_owner: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-              <div className="pt-2 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => selectedNodeId && setDetailsById(prev => ({ ...prev }))}>Reset</Button>
-                <Button onClick={() => setIsDetailsOpen(false)}>Save</Button>
+                        const res = await fetch(
+                          `/api/framework/nodes/${selectedNodeId}`,
+                          {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name, details: d }),
+                          },
+                        );
+                        if (res.status === 409) {
+                          toast({
+                            title:
+                              "A process with this name already exists. Please use a different name.",
+                          });
+                          return;
+                        }
+                        if (!res.ok) throw new Error("update_failed");
+                        setNodes((prev) =>
+                          prev.map((n) =>
+                            n.id === selectedNodeId ? { ...n, name } : n,
+                          ),
+                        );
+                        setIsDetailsOpen(false);
+                        toast({ title: "Saved" });
+                      } catch (e) {
+                        toast({ title: "Save failed" });
+                      }
+                    }}
+                  >
+                    Save
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {isReadOnly && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-yellow-800 text-sm">
-              <strong>Read-Only Mode:</strong> This framework audit is completed and cannot be edited. You can only view and add comments.
+              <strong>Read-Only Mode:</strong> This framework audit is completed
+              and cannot be edited. You can only view and add comments.
             </p>
           </div>
         )}
@@ -1110,15 +2648,24 @@ export default function FrameworkDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-blue-200 pl-4 py-2">
+                  <div
+                    key={comment.id}
+                    className="border-l-4 border-blue-200 pl-4 py-2"
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-medium">{comment.author}</span>
-                        <Badge className={`text-xs ${getCommentTypeColor(comment.type)}`}>
+                        <span className="text-xs font-medium">
+                          {comment.author}
+                        </span>
+                        <Badge
+                          className={`text-xs ${getCommentTypeColor(comment.type)}`}
+                        >
                           {comment.type}
                         </Badge>
                       </div>
-                      <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                      <span className="text-xs text-gray-500">
+                        {comment.timestamp}
+                      </span>
                     </div>
                     <p className="text-sm text-gray-700">{comment.content}</p>
                   </div>
@@ -1132,17 +2679,18 @@ export default function FrameworkDashboard() {
   };
 
   if (selectedClient) {
-    const client = clients.find(c => c.id === selectedClient);
+    const client = clients.find((c) => c.id === selectedClient);
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Framework Module</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+            {client && null}
+          </div>
         </div>
 
         <Card className="shadow-lg">
-          <CardContent className="p-6">
-            {renderFrameworkEditor()}
-          </CardContent>
+          <CardContent className="p-6">{renderFrameworkEditor()}</CardContent>
         </Card>
       </div>
     );
@@ -1151,8 +2699,13 @@ export default function FrameworkDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Framework Module</h1>
-        <Badge className="bg-purple-100 text-purple-800">Framework Access</Badge>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">Framework</h1>
+          {selectedClient && null}
+        </div>
+        <Badge className="bg-purple-100 text-purple-800">
+          Framework Access
+        </Badge>
       </div>
 
       {/* Search Bar */}
@@ -1170,7 +2723,7 @@ export default function FrameworkDashboard() {
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => setSearchTerm("")}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
               <span className="text-slate-400 hover:text-slate-600 transition-colors">

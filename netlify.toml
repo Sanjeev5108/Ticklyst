@@ -5,11 +5,17 @@
 
 
 [functions]
-  external_node_modules = ["express"]
+  external_node_modules = ["express", "pg", "exceljs", "nodemailer"]
   node_bundler = "esbuild"
-  
+
 [[redirects]]
   force = true
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# SPA fallback so /reset-password and other client routes work
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

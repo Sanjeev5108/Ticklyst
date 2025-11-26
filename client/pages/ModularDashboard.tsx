@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import {
   Briefcase,
   Users,
@@ -14,22 +15,8 @@ import {
   Settings as SettingsIcon,
   MessageSquare,
   Calendar,
-  TrendingUp
-} from 'lucide-react';
-import HRDashboard from './dashboards/HRDashboard';
-import AdminDashboard from './dashboards/AdminDashboard';
-import Settings from './Settings';
-import DivisionPartnerDashboard from './dashboards/DivisionPartnerDashboard';
-import DivisionHeadDashboard from './dashboards/DivisionHeadDashboard';
-import TeamMemberDashboard from './dashboards/TeamMemberDashboard';
-import FrameworkDashboard from './dashboards/FrameworkDashboard';
-import FieldworkDashboard from './dashboards/FieldworkDashboard';
-import ATRDashboard from './dashboards/ATRDashboard';
-import RiskAssessmentDashboard from './dashboards/RiskAssessmentDashboard';
-import ReviewDashboard from './dashboards/ReviewDashboard';
-import StatementOfApplicability from './dashboards/StatementOfApplicability';
-import ClientManagement from './ClientManagement';
-import ProjectManagement from './ProjectManagement';
+  TrendingUp,
+} from "lucide-react";
 
 interface Module {
   id: string;
@@ -37,175 +24,198 @@ interface Module {
   icon: React.ComponentType<any>;
   description: string;
   roles: string[];
-  component?: React.ComponentType;
+  route: string;
 }
 
 export const modules: Module[] = [
   {
-    id: 'client',
-    name: 'Client',
+    id: "client",
+    name: "Client",
     icon: Briefcase,
-    description: 'Manage client information and relationships',
-    roles: ['Admin', 'Division Partner', 'Division Head'],
-    component: ClientManagement
+    description: "Manage client information and relationships",
+    roles: ["Admin", "Division Partner", "Division Head"],
+    route: "/client",
   },
   {
-    id: 'employee',
-    name: 'Employee',
+    id: "employee",
+    name: "Employee",
     icon: Users,
-    description: 'Employee management and role assignments',
-    roles: ['Admin', 'HR'],
-    component: HRDashboard
+    description: "Employee management and role assignments",
+    roles: ["Admin", "HR"],
+    route: "/employee",
   },
   {
-    id: 'projects',
-    name: 'Projects',
+    id: "projects",
+    name: "Projects",
     icon: FolderOpen,
-    description: 'Project creation and management',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ProjectManagement
+    description: "Project creation and management",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/projects",
   },
   {
-    id: 'framework',
-    name: 'Framework',
+    id: "framework",
+    name: "Framework",
     icon: FileText,
-    description: 'Audit framework and process management',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: FrameworkDashboard
+    description: "Audit framework and process management",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/framework",
   },
   {
-    id: 'risk-assessment',
-    name: 'Risk Assessment',
+    id: "risk-assessment",
+    name: "Risk Assessment",
     icon: TrendingUp,
-    description: 'Configure risk models, scales, and thresholds',
-    roles: ['Admin'],
-    component: RiskAssessmentDashboard
+    description: "Configure risk models, scales, and thresholds",
+    roles: ["Admin"],
+    route: "/risk-assessment",
   },
   {
-    id: 'fieldwork',
-    name: 'Fieldwork',
+    id: "fieldwork",
+    name: "Fieldwork",
     icon: BarChart3,
-    description: 'Fieldwork execution and tracking',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: FieldworkDashboard
+    description: "Fieldwork execution and tracking",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/fieldwork",
   },
   {
-    id: 'review',
-    name: 'Review',
+    id: "review",
+    name: "Review",
     icon: MessageSquare,
-    description: 'Review submitted fieldwork and provide comments',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ReviewDashboard
+    description: "Review submitted fieldwork and provide comments",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/review",
   },
   {
-    id: 'atr',
-    name: 'ATR',
+    id: "atr",
+    name: "ATR",
     icon: ClipboardList,
-    description: 'Audit Track Reports',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: ATRDashboard
+    description: "Audit Track Reports",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/atr",
   },
   {
-    id: 'soa',
-    name: 'Statement of Applicability',
+    id: "soa",
+    name: "Statement of Applicability",
     icon: ListChecks,
-    description: 'Decide checklist applicability by industry, client, and period',
-    roles: ['Admin', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: StatementOfApplicability
+    description:
+      "Decide checklist applicability by industry, client, and period",
+    roles: [
+      "Admin",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/statement-of-applicability",
   },
   {
-    id: 'settings',
-    name: 'Settings',
+    id: "settings",
+    name: "Settings",
     icon: SettingsIcon,
-    description: 'System configuration and preferences',
-    roles: ['Admin', 'HR', 'Division Partner', 'Division Head', 'Team Leader', 'Team Member'],
-    component: Settings
-  }
+    description: "System configuration and preferences",
+    roles: [
+      "Admin",
+      "HR",
+      "Division Partner",
+      "Division Head",
+      "Team Leader",
+      "Team Member",
+    ],
+    route: "/settings",
+  },
 ];
 
 // Role -> moduleId[] mapping stored in localStorage under key 'roleModuleMap'
-const ROLE_MODULE_KEY = 'roleModuleMap';
+const ROLE_MODULE_KEY = "roleModuleMap";
 
-const getStoredRoleModuleMap = (): Record<string,string[]> => {
+const getStoredRoleModuleMap = (): Record<string, string[]> => {
   const raw = localStorage.getItem(ROLE_MODULE_KEY);
-  if (!raw) {
-    // build default map from the modules.roles arrays
-    const map: Record<string,string[]> = {};
-    modules.forEach(m => {
-      (m.roles || []).forEach(r => {
-        if (!map[r]) map[r] = [];
-        if (!map[r].includes(m.id)) map[r].push(m.id);
-      });
-    });
-    localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(map));
-    return map;
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
   }
-  try { return JSON.parse(raw) as Record<string,string[]>; } catch { return {}; }
 };
 
 export default function ModularDashboard() {
   const { user } = useAuth();
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Filter modules based on user role and dynamic role-module mapping
-  const roleModuleMap = getStoredRoleModuleMap();
-  const availableModules = modules.filter(module => {
-    const role = user?.role || '';
+  const [roleModuleMap, setRoleModuleMap] = useState<Record<string, string[]>>(
+    () => getStoredRoleModuleMap(),
+  );
+  const availableModules = modules.filter((module) => {
+    const role = user?.role || "";
     if (!role) return false;
+    const allowedFromUser = user?.allowedModules;
+    if (allowedFromUser && allowedFromUser.length) {
+      return allowedFromUser.includes(module.id);
+    }
     const allowed = roleModuleMap[role];
     if (!allowed) {
-      // fallback to static roles defined on module
       return module.roles.includes(role);
     }
     return allowed.includes(module.id);
   });
 
-  // Mock data for status cards
-  const statusCards = [
-    {
-      title: 'Ongoing Audits',
-      value: '12',
-      icon: TrendingUp,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    },
-    {
-      title: 'Pending Comments',
-      value: '8',
-      icon: MessageSquare,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Upcoming Deadlines',
-      value: '5',
-      icon: Calendar,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50'
-    }
-  ];
-
-  if (selectedModule) {
-    const module = modules.find(m => m.id === selectedModule);
-    if (module?.component) {
-      const Component = module.component;
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <button 
-              onClick={() => setSelectedModule(null)}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              ← Back to Home
-            </button>
-            <span className="text-gray-400">|</span>
-            <h2 className="text-xl font-semibold">{module.name}</h2>
-          </div>
-          <Component />
-        </div>
-      );
-    }
-  }
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/roleModuleMap");
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            setRoleModuleMap(data);
+            localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(data));
+          }
+        } else if (!localStorage.getItem(ROLE_MODULE_KEY)) {
+          const map: Record<string, string[]> = {};
+          modules.forEach((m) => {
+            (m.roles || []).forEach((r) => {
+              if (!map[r]) map[r] = [];
+              if (!map[r].includes(m.id)) map[r].push(m.id);
+            });
+          });
+          setRoleModuleMap(map);
+          localStorage.setItem(ROLE_MODULE_KEY, JSON.stringify(map));
+        }
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -214,39 +224,16 @@ export default function ModularDashboard() {
         <h1 className="text-3xl font-bold text-gray-900">
           Welcome, {user?.username}
         </h1>
-        <Badge className="bg-blue-100 text-blue-800">
-          {user?.role}
-        </Badge>
-      </div>
-
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statusCards.map((card, index) => (
-          <Card key={index} className={`${card.bgColor} border-0`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {card.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {card.value}
-                  </p>
-                </div>
-                <card.icon className={`h-8 w-8 ${card.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <Badge className="bg-blue-100 text-blue-800">{user?.role}</Badge>
       </div>
 
       {/* Module Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {availableModules.map((module) => (
-          <Card 
-            key={module.id} 
+          <Card
+            key={module.id}
             className="hover:shadow-lg transition-shadow cursor-pointer bg-white border border-gray-200"
-            onClick={() => setSelectedModule(module.id)}
+            onClick={() => navigate(module.route)}
           >
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
@@ -257,9 +244,7 @@ export default function ModularDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
                     {module.name}
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    {module.description}
-                  </p>
+                  <p className="text-sm text-gray-600">{module.description}</p>
                 </div>
               </div>
             </CardContent>
@@ -276,7 +261,8 @@ export default function ModularDashboard() {
               No modules available
             </h3>
             <p className="text-gray-600">
-              Your role does not have access to any modules. Contact your administrator for assistance.
+              Your role does not have access to any modules. Contact your
+              administrator for assistance.
             </p>
           </CardContent>
         </Card>
